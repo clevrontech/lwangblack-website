@@ -81,8 +81,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 tl.to(mainBottle, {
                     scale: 0.75,
-                    rotation: -12,
-                    xPercent: -35, // Sweeps left elegantly
+                    rotation: 12, // changed to positive for right swing
+                    xPercent: 35, // Sweeps right elegantly
                     yPercent: -10, // slight lift
                     duration: 1,
                     ease: "power2.inOut"

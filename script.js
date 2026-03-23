@@ -45,25 +45,48 @@ document.addEventListener("DOMContentLoaded", () => {
             // Fade in the bottle initially
             gsap.to(mainBottle, { opacity: 1, duration: 2, ease: "power2.out" });
 
-            // 1. Starts center, huge.
-            // 2. On scroll, it scales down, rotates, and moves to the right. Ends at #discover section.
-            const tl = gsap.timeline({
-                scrollTrigger: {
-                    trigger: "body",
-                    start: "top top",
-                    endTrigger: "#discover",
-                    end: "bottom center",
-                    scrub: 1.5
-                }
+            let mm = gsap.matchMedia();
+
+            // Desktop animation
+            mm.add("(min-width: 769px)", () => {
+                const tl = gsap.timeline({
+                    scrollTrigger: {
+                        trigger: "body",
+                        start: "top top",
+                        endTrigger: "#discover",
+                        end: "bottom center",
+                        scrub: 1.5
+                    }
+                });
+                tl.to(mainBottle, {
+                    scale: 0.6,
+                    rotation: 15,
+                    xPercent: 30, // move to the right
+                    yPercent: -15, // slight lift
+                    duration: 1,
+                    ease: "power1.inOut"
+                });
             });
 
-            tl.to(mainBottle, {
-                scale: 0.6,
-                rotation: 15,
-                xPercent: 30, // move to the right
-                yPercent: -15, // slight lift
-                duration: 1,
-                ease: "power1.inOut"
+            // Mobile animation (stay centered)
+            mm.add("(max-width: 768px)", () => {
+                const tl = gsap.timeline({
+                    scrollTrigger: {
+                        trigger: "body",
+                        start: "top top",
+                        endTrigger: "#discover",
+                        end: "bottom center",
+                        scrub: 1.5
+                    }
+                });
+                tl.to(mainBottle, {
+                    scale: 0.7,
+                    rotation: 5,
+                    xPercent: 0, // perfectly centered
+                    yPercent: 0, // no top shift
+                    duration: 1,
+                    ease: "power1.inOut"
+                });
             });
 
             // Scroll the entire bottle wrapper up synchronously with the document scroll

@@ -332,6 +332,7 @@ h1, h2, h3, h4, h5, h6 {
 
     /* Layout & Sections */
     .fullscreen-section { padding: 4rem 1.2rem; min-height: auto; }
+    .fullscreen-section.hero { padding-top: 10rem !important; }
     .split-section { gap: 1.5rem; }
     .glass-panel { padding: 2rem 1.2rem; }
     .vertical-line { margin: 2rem auto; height: 60px; }

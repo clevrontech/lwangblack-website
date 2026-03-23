@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             });
 
-            // Mobile animation (stay centered)
+            // Mobile animation (sweep smoothly to side)
             mm.add("(max-width: 768px)", () => {
                 const tl = gsap.timeline({
                     scrollTrigger: {
@@ -80,12 +80,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 });
                 tl.to(mainBottle, {
-                    scale: 0.7,
-                    rotation: 5,
-                    xPercent: 0, // perfectly centered
-                    yPercent: 0, // no top shift
+                    scale: 0.75,
+                    rotation: -12,
+                    xPercent: -35, // Sweeps left elegantly
+                    yPercent: -10, // slight lift
                     duration: 1,
-                    ease: "power1.inOut"
+                    ease: "power2.inOut"
                 });
             });
 

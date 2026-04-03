@@ -868,3 +868,22 @@ body .nav-brand {
   margin-bottom: 3rem;
   font-weight: 400;
 }
+
+/* ── Variant Buttons (Global pill design) ── */
+.variant-options { display: flex; gap: 0.6rem; margin-top: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.variant-btn {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #a0aab2;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.65rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 50px;
+  transition: all 0.15s cubic-bezier(0.16,1,0.3,1);
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.variant-btn:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+.variant-btn.selected { background: #fff; color: #002347; border-color: #fff; font-weight: 600; }

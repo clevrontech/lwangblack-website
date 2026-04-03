@@ -142,10 +142,8 @@
       const product = window.LB_PRODUCTS[currentProductId];
       if (product && product.variantImages && product.variantImages[val]) {
         const img = document.getElementById('pp-image');
-        gsap.to(img, { opacity: 0.1, duration: 0.2, onComplete: () => {
-          img.src = product.variantImages[val];
-          gsap.to(img, { opacity: 1, duration: 0.3 });
-        }});
+        img.style.opacity = 0;
+           setTimeout(() => { img.src = product.variantImages[val]; gsap.to(img, {opacity: 1, duration: 0.2}); }, 50);
       }
     }
 

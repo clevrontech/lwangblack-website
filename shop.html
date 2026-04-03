@@ -57,15 +57,6 @@
     .filter-btn:hover, .filter-btn.active {
       background: var(--text-primary); color: var(--bg-primary); border-color: var(--text-primary);
     }
-    .variant-options { display: flex; gap: 0.5rem; margin-top: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
-    .variant-btn {
-        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted);
-        padding: 0.4rem 0.9rem; font-size: 0.7rem; cursor: pointer; border-radius: 50px;
-        transition: all 0.3s;
-        font-family: var(--font-body); text-transform: uppercase; letter-spacing: 1px;
-    }
-    .variant-btn:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
-    .variant-btn.selected { background: #fff; color: #0a0b0a; border-color: #fff; font-weight: 500;}
     .product-badge {
       position: absolute;
       top: 1rem; left: 1rem;
@@ -343,10 +334,8 @@
         const prod = window.LB_PRODUCTS[pid];
         if (prod && prod.variantImages && prod.variantImages[vName]) {
            const img = card.querySelector('.product-img');
-           gsap.to(img, { opacity: 0.1, duration: 0.2, onComplete: () => {
-               img.src = prod.variantImages[vName];
-               gsap.to(img, { opacity: 1, duration: 0.3 });
-           }});
+           img.style.opacity = 0;
+           setTimeout(() => { img.src = prod.variantImages[vName]; gsap.to(img, {opacity: 1, duration: 0.2}); }, 50);
         }
       });
     });

@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 // ── Inline user store (replace with DB later) ──────────────────────────────
 // Passwords are bcrypt hashed. Default password for all: "lwangblack2024"
 // Hash generated with bcrypt.hashSync('lwangblack2024', 10)
-const DEFAULT_HASH = '$2a$10$xGjhpT2EIH0CeyGG/kI0Qe8J4L6rNzWQ5Y3mPUvq8X9vD1bqCFGO6';
+const DEFAULT_HASH = '$2a$10$GEsLFLPMRUmJwptLs7oMG.cVXjCHvGoqQYjlfGUlQ7UV9.BnOROSK';
 
 const USERS = [
   {

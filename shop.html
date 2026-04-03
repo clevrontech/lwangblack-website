@@ -334,8 +334,7 @@
         const prod = window.LB_PRODUCTS[pid];
         if (prod && prod.variantImages && prod.variantImages[vName]) {
            const img = card.querySelector('.product-img');
-           img.style.opacity = 0;
-           setTimeout(() => { img.src = prod.variantImages[vName]; gsap.to(img, {opacity: 1, duration: 0.2}); }, 50);
+           img.src = prod.variantImages[vName];
         }
       });
     });

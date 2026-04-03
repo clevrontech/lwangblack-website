@@ -80,9 +80,9 @@ const LB_PRODUCTS = {
     variants: ['Black', 'White', 'Pink', 'Grey'],
     variantImages: {
       'Black': 'https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC07397.jpg?v=1768363098',
-      'White': 'https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00397.jpg?v=1768363279',
-      'Pink': 'https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00404.jpg?v=1768363279',
-      'Grey': 'https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00400.jpg?v=1768363260'
+      'White': 'https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00400.jpg?v=1768363260',
+      'Pink': 'https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00393.jpg?v=1768363279',
+      'Grey': 'https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00397.jpg?v=1768363279'
     },
     prices: {
       NP: { amount: 4300,  currency: 'NPR', symbol: 'Rs', display: 'Rs 4,300' },
@@ -348,3 +348,18 @@ window.getProductPrice = getProductPrice;
 window.isProductAvailable = isProductAvailable;
 window.getShippingRates = getShippingRates;
 window.formatPrice = formatPrice;
+
+// Preload variant images
+if (typeof window !== 'undefined' && window.document) {
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      Object.values(LB_PRODUCTS).forEach(p => {
+        if (p.variantImages) {
+          Object.values(p.variantImages).forEach(src => {
+            if (src) { const img = new Image(); img.src = src; }
+          });
+        }
+      });
+    }, 200);
+  });
+}

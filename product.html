@@ -10,6 +10,15 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="region-style.css?v=3" />
   <link rel="stylesheet" href="ecommerce.css" />
+  <style>
+    /* Make navbar absolute on product page so it unpins on scroll */
+    .site-nav {
+      position: absolute !important;
+      background: transparent !important;
+    }
+    .pp-image-wrap::-webkit-scrollbar { display: none; }
+    .pp-image-wrap { scrollbar-width: none; }
+  </style>
 </head>
 <body>
 
@@ -51,9 +60,9 @@
     <!-- Main Split Grid -->
     <div class="pp-grid">
       <!-- Left: Image -->
-      <div class="pp-image-wrap">
-        <img src="" alt="Product Image" class="pp-image" id="pp-image" onerror="this.src='images/product-hero-500g.jpg'" />
-      </div>
+    <div class="pp-image-wrap" id="pp-image-wrap">
+      <!-- Dynamic images injected here -->
+    </div>
 
       <!-- Right: Details -->
       <div class="pp-details" id="pp-details">
@@ -133,16 +142,27 @@
       input.value = val;
     }
 
+    let scrollTimeout;
+
     function selectVariant(val, btn) {
+      if (selectedVariant === val) return;
       selectedVariant = val;
       const buttons = document.querySelectorAll('.variant-btn');
       buttons.forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
+      if (btn) btn.classList.add('selected');
 
       const product = window.LB_PRODUCTS[currentProductId];
-      if (product && product.variantImages && product.variantImages[val]) {
-        const img = document.getElementById('pp-image');
-        img.src = product.variantImages[val];
+      if (product && product.variants && product.variantImages) {
+        const index = product.variants.indexOf(val);
+        if (index !== -1) {
+          const imgWrap = document.getElementById('pp-image-wrap');
+          const width = imgWrap.clientWidth;
+          // Temporarily disable scroll listener to prevent jitter
+          imgWrap.dataset.autoScrolling = 'true';
+          imgWrap.scrollTo({ left: index * width, behavior: 'smooth' });
+          clearTimeout(scrollTimeout);
+          scrollTimeout = setTimeout(() => { imgWrap.dataset.autoScrolling = 'false'; }, 600);
+        }
       }
     }
 
@@ -181,8 +201,37 @@
 
       // Basic Details
       document.title = `${product.name} – Lwang Black`;
-      document.getElementById('pp-crumb-name').textContent = product.name;
-      document.getElementById('pp-image').src = product.image;
+      // Setup Image Gallery
+      const imgWrap = document.getElementById('pp-image-wrap');
+      if (product.variants && product.variants.length > 0 && product.variantImages) {
+        imgWrap.style.display = 'flex';
+        imgWrap.style.overflowX = 'auto';
+        imgWrap.style.scrollSnapType = 'x mandatory';
+        imgWrap.innerHTML = product.variants.map((v) => {
+          const src = product.variantImages[v] || product.image;
+          return `<img src="${src}" class="pp-image" style="flex: 0 0 100%; scroll-snap-align: start;" alt="${product.name} - ${v}" />`;
+        }).join('');
+
+        imgWrap.addEventListener('scroll', () => {
+          if (imgWrap.dataset.autoScrolling === 'true') return;
+          const scrollLeft = imgWrap.scrollLeft;
+          const width = imgWrap.clientWidth;
+          const index = Math.round(scrollLeft / width);
+          const variant = product.variants[index];
+          if (variant && variant !== selectedVariant) {
+            selectedVariant = variant;
+            document.querySelectorAll('.variant-btn').forEach(b => {
+              if (b.textContent === variant) b.classList.add('selected');
+              else b.classList.remove('selected');
+            });
+          }
+        });
+      } else {
+        imgWrap.style.display = 'block';
+        imgWrap.style.overflowX = 'hidden';
+        imgWrap.innerHTML = `<img src="${product.image}" id="pp-image" class="pp-image" alt="${product.name}" />`;
+      }
+
       document.getElementById('pp-category').textContent = product.category.toUpperCase();
       document.getElementById('pp-title').textContent = product.name;
       document.getElementById('pp-desc').textContent = product.description;

@@ -95,6 +95,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 /* FILTERS */
 .filter-bar{display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap}
 .fselect{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);padding:.48rem .85rem;border-radius:8px;font-family:var(--font);font-size:.75rem;outline:none;cursor:pointer}
+.fselect option, .form-input option{background:var(--bg2);color:var(--text)}
 .fsearch{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);padding:.48rem .85rem;border-radius:8px;font-family:var(--font);font-size:.75rem;outline:none;flex:1;min-width:180px;max-width:340px}
 .fsearch:focus,.fselect:focus{border-color:var(--accent)}
 /* MODAL */

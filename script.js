@@ -119,7 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 { y: 50, autoAlpha: 0 },
                 {
                     y: 0, autoAlpha: 1,
-                    duration: 1.2,
+                    duration: 0.8,
                     ease: "power3.out",
                     scrollTrigger: {
                         trigger: el,
@@ -136,8 +136,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 { autoAlpha: 0 },
                 {
                     autoAlpha: 1,
-                    duration: 1.5,
-                    ease: "power2.out",
+                    duration: 0.8,
+                    ease: "power3.out",
                     stagger: 0.1,
                     scrollTrigger: {
                         trigger: el,

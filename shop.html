@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="icon" type="image/png" href="images/logo-hero.png" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shop Lwang Black – Premium Clove Coffee | Nepal's Boldest Brew</title>
@@ -33,7 +34,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css?v=3" />
   <link rel="stylesheet" href="region-style.css?v=3" />
   <link rel="stylesheet" href="ecommerce.css?v=3" />
@@ -291,8 +292,9 @@
     return `
       <div class="product-card" data-category="${p.category}" data-product-id="${p.id}" id="product-${p.id}">
         ${badgeHtml}
-        <a href="product.html?id=${p.id}" style="display:block; overflow:hidden; border-radius:8px;">
+        <a href="product.html?id=${p.id}" style="display:block; position:relative; overflow:hidden; border-radius:12px;">
           <img src="${p.image}" alt="${pName}" class="product-img" style="cursor:pointer;" onerror="this.src='images/product-hero-500g.jpg'" />
+          <button class="btn-quick-add add-btn" data-id="${p.id}" onclick="event.preventDefault(); addToCartFromShop('${p.id}', this)">QUICK ADD +</button>
         </a>
         <span class="label-micro" style="margin-bottom:0.5rem;${labelColor}">${p.category.toUpperCase()}${badgeText && p.category==='bundles' ? ' — BEST VALUE' : ''}</span>
         <h2 style="font-family:var(--font-heading); font-size:1.8rem; margin-bottom:1rem; font-weight:400;">

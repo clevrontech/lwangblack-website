@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="icon" type="image/png" href="images/logo-hero.png" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shop Lwang Black Coffee – Catalogue | Clove Coffee, Accessories & Gift Sets</title>
@@ -19,7 +20,7 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="region-style.css?v=3" />
   <link rel="stylesheet" href="ecommerce.css" />
@@ -162,7 +163,10 @@
 
               html += `
               <div class="product-card" data-category="${prod.category}" data-product-id="${id}" onclick="if(!event.target.classList.contains('add-btn') && !event.target.classList.contains('variant-btn')) window.location='product.html?id=${id}'" style="cursor: pointer;">
-                  <img src="${prod.image}" alt="${prod.name}" class="product-img" loading="lazy" />
+                  <div style="position:relative; width: 100%; height: auto; display: block; overflow: hidden; margin-bottom: 2rem;">
+                      <img src="${prod.image}" alt="${prod.name}" class="product-img" loading="lazy" style="margin-bottom: 0;" />
+                      <button class="btn-quick-add add-btn" data-id="${id}">QUICK ADD +</button>
+                  </div>
                   <span class="label-micro" style="margin-bottom: 0.5rem;">${prod.category.toUpperCase()} ${prod.badge ? "— " + prod.badge : ""}</span>
                   <h3 style="font-size: 1.8rem; margin-bottom: 1rem;">${prod.name}</h3>
                   <p style="margin-bottom: ${variantsHtml ? '1rem' : '2rem'}; flex-grow: 1; color: var(--text-muted); font-size: 0.9rem;">${prod.description}</p>

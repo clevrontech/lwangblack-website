@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="icon" type="image/png" href="images/logo-hero.png" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Product Details – Lwang Black</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="region-style.css?v=3" />
   <link rel="stylesheet" href="ecommerce.css" />
@@ -86,7 +87,7 @@
               <input type="number" class="pp-qty-input" id="pp-qty" value="1" min="1" max="99" readonly />
               <button class="pp-qty-btn" onclick="updateLocalQty(1)">+</button>
             </div>
-            <button class="btn-solid pp-add-btn" id="pp-add-to-cart" onclick="triggerAddToCart()">ADD TO CART</button>
+            <button class="btn-solid pp-add-btn" id="pp-add-to-cart" onclick="triggerAddToCart()" style="border-radius: 0; padding: 1.2rem 3rem; background: #ffffff; color: #000000; font-family: var(--font-heading); font-size: 1rem; width: 100%; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);">ADD TO CART</button>
           </div>
         </div>
 
@@ -100,10 +101,10 @@
         </div>
 
         <!-- Trust Badges -->
-        <div class="pp-trust">
-          <div class="pp-trust-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2e624c" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Secure Checkout</div>
-          <div class="pp-trust-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2e624c" stroke-width="1.5"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Fast Shipping</div>
-          <div class="pp-trust-item" id="pp-trust-stock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2e624c" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg> In Stock</div>
+        <div class="pp-trust" style="margin-top: 2rem; display: flex; flex-direction: column; gap: 0.8rem; font-family: var(--font-micro); font-size: 0.70rem; color: rgba(255,255,255,0.7); letter-spacing: 1px; text-transform: uppercase;">
+          <div class="pp-trust-item" style="display: flex; align-items: center; gap: 0.8rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Secure Checkout</div>
+          <div class="pp-trust-item" style="display: flex; align-items: center; gap: 0.8rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Fast Shipping</div>
+          <div class="pp-trust-item" id="pp-trust-stock" style="display: flex; align-items: center; gap: 0.8rem; color: var(--accent-urgent);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-urgent)" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg> Only 12 left in stock - order soon</div>
         </div>
       </div>
     </div>

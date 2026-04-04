@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="icon" type="image/png" href="images/logo-hero.png" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout – Lwang Black | Secure Global Checkout</title>
@@ -9,7 +10,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="region-style.css?v=3" />
   <link rel="stylesheet" href="ecommerce.css" />
@@ -23,29 +24,13 @@
   </div>
 
   <!-- NAVIGATION -->
-    <nav class="site-nav" id="siteNav">
-    <!-- Left links -->
-    <div class="nav-links nav-left">
-      <a href="index.html" id="nav-home" data-i18n="nav.home">HOME</a>
-      <a href="shop.html" id="nav-shop" data-i18n="nav.shop">SHOP</a>
-      <a href="reviews.html" id="nav-reviews" data-i18n="nav.reviews">REVIEWS</a>
-    </div>
-
-    <!-- Center: logo + flag bar below it -->
+  <nav class="site-nav" id="siteNav" style="justify-content: center;">
+    <!-- Center: logo only -->
     <div class="nav-center">
       <a href="index.html" class="nav-brand" id="navBrand">
-        <img src="images/logo-hero.png" alt="Lwang Black Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+        <img src="images/logo-hero.png" alt="Lwang Black Logo" style="height: 40px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
         <span style="display:none; font-family:var(--font-heading); font-size:1.5rem; color:#fff;">LWANG BLACK</span>
       </a>
-      <!-- Flag bar injected here by region.js -->
-    </div>
-
-    <!-- Right links + region switcher -->
-    <div class="nav-links nav-right">
-      <a href="health-benefits.html" id="nav-benefits" data-i18n="nav.benefits">BENEFITS</a>
-      <a href="contact.html" id="nav-contact" data-i18n="nav.contact">CONTACT</a>
-      <!-- Region Switcher injected here by region.js -->
-      <a href="shop.html" class="btn-solid" style="padding:0.5rem 1.5rem;" id="nav-cta">SHOP NOW</a>
     </div>
   </nav>
 

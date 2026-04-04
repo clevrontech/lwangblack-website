@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-AU">
 <head>
+  <link rel="icon" type="image/png" href="images/logo-hero.png" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lwang Black – Nepal's Premium Clove-Infused Coffee | Global Delivery</title>
@@ -37,7 +38,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="style.css?v=3" />
@@ -138,34 +139,30 @@
   ══════════════════════════════════════════ -->
   <section class="fullscreen-section centered hero" id="heroSection" style="padding-top:5rem; position:relative;">
 
-    <div class="hero-reveal" style="text-align:center;">
-      <div style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:3rem;">
-        <div style="display:flex; gap:12px; align-items:center;">
-          <img src="https://flagcdn.com/au.svg" width="24" height="18" style="border-radius:2px;" alt="AU" title="Australia" />
-          <img src="https://flagcdn.com/np.svg" width="24" height="18" style="border-radius:2px;" alt="NP" title="Nepal" />
-          <img src="https://flagcdn.com/us.svg" width="24" height="18" style="border-radius:2px;" alt="US" title="United States" />
-          <img src="https://flagcdn.com/jp.svg" width="24" height="18" style="border-radius:2px;" alt="JP" title="Japan" />
-          <img src="https://flagcdn.com/ca.svg" width="24" height="18" style="border-radius:2px;" alt="CA" title="Canada" />
-          <img src="https://flagcdn.com/nz.svg" width="24" height="18" style="border-radius:2px;" alt="NZ" title="New Zealand" />
-        </div>
-        <span class="label-micro" style="margin:0;">OUR LOCAL PRESENCE</span>
+    <div style="position:absolute; left:3rem; bottom:3rem; display:flex; flex-direction:column; align-items:flex-start; gap:1rem; z-index:10; opacity: 0.9;">
+      <span class="label-micro" style="margin:0; letter-spacing: 3px; font-size: 0.7rem;">OUR LOCAL PRESENCE</span>
+      <div style="display:flex; flex-direction:row; gap:16px; align-items:center;">
+        <img src="https://flagcdn.com/au.svg" width="32" height="24" style="border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5);" alt="AU" title="Australia" />
+        <img src="https://flagcdn.com/np.svg" width="32" height="24" style="border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5);" alt="NP" title="Nepal" />
+        <img src="https://flagcdn.com/us.svg" width="32" height="24" style="border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5);" alt="US" title="United States" />
+        <img src="https://flagcdn.com/jp.svg" width="32" height="24" style="border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5);" alt="JP" title="Japan" />
+        <img src="https://flagcdn.com/ca.svg" width="32" height="24" style="border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5);" alt="CA" title="Canada" />
+        <img src="https://flagcdn.com/nz.svg" width="32" height="24" style="border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5);" alt="NZ" title="New Zealand" />
       </div>
+    </div>
 
+    <div class="hero-reveal" style="text-align:center;">
       <div style="margin: 2rem 0;">
-        <a href="shop.html" class="hero-shop-btn" id="heroShopBtn"
-           style="display:inline-flex;align-items:center;gap:16px;padding:1.4rem 4rem;background:#ffffff;color:#0a0b0a;border-radius:50px;font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:700;letter-spacing:4px;text-transform:uppercase;text-decoration:none;box-shadow:0 0 0 10px rgba(34,34,34,0.7); transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-          <span>SHOP NOW</span>
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background:rgba(10,11,10,0.1);border-radius:50%;">
-            <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
-              <path d="M1 7h12M8 2l5 5-5 5" stroke="#0a0b0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
+        <p style="font-family: var(--font-micro); font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 1rem; color: #ffffff;">WORLDWIDE 🌎 DELIVERY</p>
+        <a href="shop.html" id="heroShopBtn"
+           style="display:inline-flex;align-items:center;justify-content:center;gap:1.5rem;padding:1.2rem 4rem;background:transparent;border:1px solid rgba(255,255,255,0.4);color:#ffffff;border-radius:50px;font-family:var(--font-heading);font-size:1rem;font-weight:800;letter-spacing:4px;text-transform:uppercase;text-decoration:none;transition: all 0.3s cubic-bezier(0.16,1,0.3,1); position:relative; overflow:hidden;" onmouseover="this.style.transform='scale(1.02)'; this.style.background='rgba(255,255,255,0.1)'; this.style.borderColor='#ffffff';" onmouseout="this.style.transform='scale(1)'; this.style.background='transparent'; this.style.borderColor='rgba(255,255,255,0.4)';">
+          <span style="position:relative; z-index:2;">SHOP NOW</span>
         </a>
       </div>
 
 
-      <span class="label-micro" data-i18n="hero.label">CLOVE + COFFEE FUSION · NEPAL'S FINEST</span>
-      <p class="subtitle" style="margin:1rem auto 2rem;" data-i18n="hero.subtitle">
+      <span class="label-micro" style="color: var(--text-primary); opacity: 0.9;" data-i18n="hero.label">CLOVE + COFFEE FUSION · NEPAL'S FINEST</span>
+      <p class="subtitle" style="margin:1rem auto 2rem; color: #ffffff;" data-i18n="hero.subtitle">
         Din को सुरुवात एक कप Motivation बाट।
       </p>
       <div class="hero-cta-group">
@@ -382,7 +379,6 @@
           <button class="footer-flag-btn" onclick="GeoRouter.set('AU')" title="Australia"><img src="https://flagcdn.com/au.svg" alt="AU" /></button>
           <button class="footer-flag-btn" onclick="GeoRouter.set('NP')" title="Nepal"><img src="https://flagcdn.com/np.svg" alt="NP" /></button>
           <button class="footer-flag-btn" onclick="GeoRouter.set('US')" title="United States"><img src="https://flagcdn.com/us.svg" alt="US" /></button>
-          <button class="footer-flag-btn" onclick="GeoRouter.set('GB')" title="United Kingdom"><img src="https://flagcdn.com/gb.svg" alt="GB" /></button>
           <button class="footer-flag-btn" onclick="GeoRouter.set('CA')" title="Canada"><img src="https://flagcdn.com/ca.svg" alt="CA" /></button>
           <button class="footer-flag-btn" onclick="GeoRouter.set('JP')" title="Japan"><img src="https://flagcdn.com/jp.svg" alt="JP" /></button>
           <button class="footer-flag-btn" onclick="GeoRouter.set('NZ')" title="New Zealand"><img src="https://flagcdn.com/nz.svg" alt="NZ" /></button>
@@ -441,8 +437,7 @@
     </div>
   </div>
 
-  <!-- Cart Toast -->
-  <div id="cartToast">ADDED TO CART</div>
+
 
   <!-- Main Script -->
   <script src="script.js"></script>

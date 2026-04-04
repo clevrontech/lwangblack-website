@@ -6,16 +6,16 @@
   <title>Shop Lwang Black Coffee – Catalogue | Clove Coffee, Accessories & Gift Sets</title>
   <meta name="description" content="Shop Lwang Black's full range: 250g & 500g clove-infused coffee, Drip Bags, French Press, Gift Sets, T-shirts and more. Fast delivery across Nepal." />
   <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://www.lwangblack.com.au/catalogue" />
+  <link rel="canonical" href="https://www.lwangblack.co/catalogue.html" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Shop Lwang Black – Clove Coffee Catalogue" />
-  <meta property="og:description" content="250g, 500g, Gift Sets, Accessories. Nepal's premium clove-infused coffee. Fast delivery." />
-  <meta property="og:url" content="https://www.lwangblack.com.au/catalogue" />
-  <meta property="og:image" content="https://www.lwangblack.com.au/images/product-hero-500g.jpg" />
+  <meta property="og:title" content="Shop Lwang Black — Clove Coffee Catalogue" />
+  <meta property="og:description" content="250g, 500g, Gift Sets, Accessories. Nepal's premium clove-infused coffee. Ships worldwide." />
+  <meta property="og:url" content="https://www.lwangblack.co/catalogue.html" />
+  <meta property="og:image" content="https://cdn2.blanxer.com/uploads/68b26f1169953999df49c53a/product_image-dsc07374-1109.webp" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Shop Lwang Black – Clove Coffee Catalogue" />
-  <meta name="twitter:description" content="250g, 500g, Gift Sets, Accessories. Fast delivery across Nepal." />
-  <meta name="twitter:image" content="https://www.lwangblack.com.au/images/product-hero-500g.jpg" />
+  <meta name="twitter:title" content="Shop Lwang Black — Clove Coffee Catalogue" />
+  <meta name="twitter:description" content="250g, 500g, Gift Sets, Accessories. Ships worldwide." />
+  <meta name="twitter:image" content="https://cdn2.blanxer.com/uploads/68b26f1169953999df49c53a/product_image-dsc07374-1109.webp" />
   
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,8 +24,15 @@
   <link rel="stylesheet" href="region-style.css?v=3" />
   <link rel="stylesheet" href="ecommerce.css" />
   
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
   
   <style>
       .filters-container {
@@ -50,6 +57,8 @@
   </style>
 </head>
 <body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- PRELOADER -->
   <div id="preloader">
@@ -57,40 +66,45 @@
       <img src="images/logo-hero.png" alt="Lwang Black" style="height: 60px; object-fit: contain;" onerror="this.style.display='none'" />
   </div>
 
-  <!-- FIXED PARALLAX BACKGROUND -->
   <!-- Removed bottle animation -->
 
   <!-- NAVIGATION -->
-    <nav class="site-nav" id="siteNav">
-    <!-- Left links -->
+  <nav class="site-nav" id="siteNav" role="navigation" aria-label="Main navigation">
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
     <div class="nav-links nav-left">
       <a href="index.html" id="nav-home" data-i18n="nav.home">HOME</a>
       <a href="shop.html" id="nav-shop" data-i18n="nav.shop">SHOP</a>
       <a href="reviews.html" id="nav-reviews" data-i18n="nav.reviews">REVIEWS</a>
     </div>
-
-    <!-- Center: logo + flag bar below it -->
     <div class="nav-center">
       <a href="index.html" class="nav-brand" id="navBrand">
         <img src="images/logo-hero.png" alt="Lwang Black Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
         <span style="display:none; font-family:var(--font-heading); font-size:1.5rem; color:#fff;">LWANG BLACK</span>
       </a>
-      <!-- Flag bar injected here by region.js -->
     </div>
-
-    <!-- Right links + region switcher -->
     <div class="nav-links nav-right">
       <a href="health-benefits.html" id="nav-benefits" data-i18n="nav.benefits">BENEFITS</a>
       <a href="contact.html" id="nav-contact" data-i18n="nav.contact">CONTACT</a>
-      <!-- Region Switcher injected here by region.js -->
       <a href="shop.html" class="btn-solid" style="padding:0.5rem 1.5rem;" id="nav-cta">SHOP NOW</a>
     </div>
   </nav>
+  <div class="nav-mobile-overlay" id="navMobileOverlay">
+    <a href="index.html">HOME</a>
+    <a href="shop.html">SHOP</a>
+    <a href="reviews.html">REVIEWS</a>
+    <a href="health-benefits.html">BENEFITS</a>
+    <a href="contact.html">CONTACT</a>
+    <a href="shop.html" class="btn-solid">SHOP NOW</a>
+  </div>
 
   <!-- === HERO === -->
   <section class="fullscreen-section centered hero" style="min-height: 60vh; padding-top: 10rem;">
       <div class="hero-reveal" style="text-align: center;">
-          <h1 class="title-massive" style="font-size: clamp(4rem, 10vw, 8rem);">CATALOGUE</h1>
+          <h1 class="title-massive" style="font-size: clamp(4rem, 10vw, 8rem);" id="main-content">CATALOGUE</h1>
 
           <p class="subtitle" style="margin: 0 auto;">Clove coffee, accessories, bundles & apparel — shipped across Nepal</p>
       </div>
@@ -125,13 +139,13 @@
   <!-- Toast -->
   <div id="cartToast">ADDED TO CART</div>
 
-  <script src="i18n.js"></script>
-  <script src="pricing.js"></script>
-  <script src="au-currency-converter.js"></script>
-  <script src="geo-router.js"></script>
-  <script src="region.js"></script>
-  <script src="cart.js"></script>
-  <script src="script.js"></script>
+  <script src="i18n.js" defer></script>
+  <script src="pricing.js" defer></script>
+  <script src="au-currency-converter.js" defer></script>
+  <script src="geo-router.js" defer></script>
+  <script src="region.js" defer></script>
+  <script src="cart.js" defer></script>
+  <script src="script.js" defer></script>
   <script>
       // Update Prices dynamically based on Region
       function renderCatalogueProducts() {
@@ -175,6 +189,28 @@
               `;
           }
           grid.innerHTML = html;
+
+          // GTM: view_item_list event
+          if (window.dataLayer) {
+              const activeFilterBtn = document.querySelector('.filter-btn.active');
+              const filter = activeFilterBtn ? activeFilterBtn.dataset.filter : 'all';
+              window.dataLayer.push({
+                  event: 'view_item_list',
+                  ecommerce: {
+                      item_list_id: filter === 'all' ? 'catalogue_main' : `catalogue_${filter}`,
+                      item_list_name: filter === 'all' ? 'Catalogue Main' : `Catalogue: ${filter}`,
+                      items: Object.values(window.LB_PRODUCTS)
+                          .filter(p => filter === 'all' || p.category === filter)
+                          .map((p, index) => ({
+                              item_id: p.id,
+                              item_name: p.name,
+                              index: index + 1,
+                              item_category: p.category,
+                              price: window.getProductPrice(p.id, code)?.amount || 0
+                          }))
+                  }
+              });
+          }
 
           // Re-apply filter logic to show/hide correctly
           const activeFilterBtn = document.querySelector('.filter-btn.active');

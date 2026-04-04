@@ -7,16 +7,16 @@
   <title>Health Benefits of Clove Coffee – Lwang Black | 7 Science-Backed Reasons</title>
   <meta name="description" content="Discover the 7 evidence-backed health benefits of Lwang Black clove coffee: immunity, gut health, antioxidants, heart & brain protection, energy focus, and more." />
   <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://www.lwangblack.com.au/health-benefits" />
+  <link rel="canonical" href="https://www.lwangblack.co/health-benefits.html" />
   <meta property="og:type" content="article" />
   <meta property="og:title" content="7 Health Benefits of Lwang Black Clove Coffee" />
   <meta property="og:description" content="Science-backed: Immunity, No Bloating, Antioxidants, Heart & Brain, Energy Focus. Nepal's boldest health coffee." />
-  <meta property="og:url" content="https://www.lwangblack.com.au/health-benefits" />
-  <meta property="og:image" content="https://www.lwangblack.com.au/images/product-hero-500g.jpg" />
+  <meta property="og:url" content="https://www.lwangblack.co/health-benefits.html" />
+  <meta property="og:image" content="https://cdn2.blanxer.com/uploads/68b26f1169953999df49c53a/product_image-dsc07374-1109.webp" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="7 Health Benefits of Lwang Black Clove Coffee" />
   <meta name="twitter:description" content="Immunity, gut health, antioxidants, heart & brain, energy focus – 7 science-backed benefits." />
-  <meta name="twitter:image" content="https://www.lwangblack.com.au/images/product-hero-500g.jpg" />
+  <meta name="twitter:image" content="https://cdn2.blanxer.com/uploads/68b26f1169953999df49c53a/product_image-dsc07374-1109.webp" />
 
   <!-- JSON-LD FAQPage Schema -->
   <script type="application/ld+json">
@@ -49,8 +49,15 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="region-style.css?v=3" />
   
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
 
   <style>
       .benefit-grid {
@@ -79,6 +86,8 @@
   </style>
 </head>
 <body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- PRELOADER -->
   <div id="preloader">
@@ -87,36 +96,42 @@
   </div>
 
   <!-- NAVIGATION -->
-    <nav class="site-nav" id="siteNav">
-    <!-- Left links -->
+  <nav class="site-nav" id="siteNav" role="navigation" aria-label="Main navigation">
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
     <div class="nav-links nav-left">
       <a href="index.html" id="nav-home" data-i18n="nav.home">HOME</a>
       <a href="shop.html" id="nav-shop" data-i18n="nav.shop">SHOP</a>
       <a href="reviews.html" id="nav-reviews" data-i18n="nav.reviews">REVIEWS</a>
     </div>
-
-    <!-- Center: logo + flag bar below it -->
     <div class="nav-center">
       <a href="index.html" class="nav-brand" id="navBrand">
         <img src="images/logo-hero.png" alt="Lwang Black Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
         <span style="display:none; font-family:var(--font-heading); font-size:1.5rem; color:#fff;">LWANG BLACK</span>
       </a>
-      <!-- Flag bar injected here by region.js -->
     </div>
-
-    <!-- Right links + region switcher -->
     <div class="nav-links nav-right">
       <a href="health-benefits.html" id="nav-benefits" data-i18n="nav.benefits">BENEFITS</a>
       <a href="contact.html" id="nav-contact" data-i18n="nav.contact">CONTACT</a>
-      <!-- Region Switcher injected here by region.js -->
       <a href="shop.html" class="btn-solid" style="padding:0.5rem 1.5rem;" id="nav-cta">SHOP NOW</a>
     </div>
   </nav>
+  <div class="nav-mobile-overlay" id="navMobileOverlay">
+    <a href="index.html">HOME</a>
+    <a href="shop.html">SHOP</a>
+    <a href="reviews.html">REVIEWS</a>
+    <a href="health-benefits.html">BENEFITS</a>
+    <a href="contact.html">CONTACT</a>
+    <a href="shop.html" class="btn-solid">SHOP NOW</a>
+  </div>
 
   <!-- === HERO === -->
   <section class="fullscreen-section centered hero" style="min-height: 80vh; padding-top: 10rem;">
       <div class="hero-reveal" style="text-align: center;">
-          <h1 class="title-massive" style="font-size: clamp(3rem, 8vw, 6rem);">THE SCIENCE OF<br />FUSION</h1>
+          <h1 class="title-massive" style="font-size: clamp(3rem, 8vw, 6rem);" id="main-content">THE SCIENCE OF<br />FUSION</h1>
 
           <p class="subtitle" style="margin: 0 auto;">Seven evidence-backed reasons why Lwang Black is more than just a great cup of coffee.</p>
       </div>
@@ -235,18 +250,18 @@
               <div>
                   <span class="label-micro">FAQ</span>
                   <h2 class="title-large" style="margin-bottom: 3rem;">SCIENCE FAQ</h2>
-                  <div class="faq-list">
-                      <div class="faq-item">
-                          <div class="faq-q">How do cloves support immunity?</div>
-                          <div class="faq-a">Cloves are rich in eugenol, an antimicrobial and antiviral compound that inhibits harmful bacteria.</div>
+                  <div class="faq-list" role="list">
+                      <div class="faq-item" role="listitem">
+                          <button class="faq-q" role="button" aria-expanded="false" tabindex="0">How do cloves support immunity?</button>
+                          <div class="faq-a" role="region">Cloves are rich in eugenol, an antimicrobial and antiviral compound that inhibits harmful bacteria.</div>
                       </div>
-                      <div class="faq-item">
-                          <div class="faq-q">Why is it better for digestion?</div>
-                          <div class="faq-a">It reduces gas and stimulates digestive enzymes, smoothing out the stomach discomfort often associated with black coffee.</div>
+                      <div class="faq-item" role="listitem">
+                          <button class="faq-q" role="button" aria-expanded="false" tabindex="0">Why is it better for digestion?</button>
+                          <div class="faq-a" role="region">It reduces gas and stimulates digestive enzymes, smoothing out the stomach discomfort often associated with black coffee.</div>
                       </div>
-                      <div class="faq-item">
-                          <div class="faq-q">How often to drink?</div>
-                          <div class="faq-a">We recommend 1–2 cups per day for optimal, cumulative benefits.</div>
+                      <div class="faq-item" role="listitem">
+                          <button class="faq-q" role="button" aria-expanded="false" tabindex="0">How often to drink?</button>
+                          <div class="faq-a" role="region">We recommend 1–2 cups per day for optimal, cumulative benefits.</div>
                       </div>
                   </div>
               </div>

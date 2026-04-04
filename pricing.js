@@ -363,17 +363,5 @@ window.isProductAvailable = isProductAvailable;
 window.getShippingRates = getShippingRates;
 window.formatPrice = formatPrice;
 
-// Preload variant images
-if (typeof window !== 'undefined' && window.document) {
-  window.addEventListener('load', () => {
-    setTimeout(() => {
-      Object.values(LB_PRODUCTS).forEach(p => {
-        if (p.variantImages) {
-          Object.values(p.variantImages).forEach(src => {
-            if (src) { const img = new Image(); img.src = src; }
-          });
-        }
-      });
-    }, 200);
-  });
-}
+// Variant image preloading removed for performance
+// Images load on-demand when variants are selected

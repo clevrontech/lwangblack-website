@@ -22,6 +22,38 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function initGSAP() {
+        // --- HAMBURGER MENU TOGGLE ---
+        const hamburger = document.getElementById('navHamburger');
+        const mobileOverlay = document.getElementById('navMobileOverlay');
+        if (hamburger && mobileOverlay) {
+            hamburger.addEventListener('click', function() {
+                const isOpen = this.classList.toggle('active');
+                mobileOverlay.classList.toggle('open', isOpen);
+                this.setAttribute('aria-expanded', isOpen);
+                this.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+                document.body.style.overflow = isOpen ? 'hidden' : '';
+            });
+            // Close on link click
+            mobileOverlay.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    hamburger.classList.remove('active');
+                    mobileOverlay.classList.remove('open');
+                    hamburger.setAttribute('aria-expanded', 'false');
+                    document.body.style.overflow = '';
+                });
+            });
+            // Close on Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && mobileOverlay.classList.contains('open')) {
+                    hamburger.classList.remove('active');
+                    mobileOverlay.classList.remove('open');
+                    hamburger.setAttribute('aria-expanded', 'false');
+                    document.body.style.overflow = '';
+                    hamburger.focus();
+                }
+            });
+        }
+
         // --- HERO TEXT ENTRANCE ---
         gsap.fromTo(".hero-reveal", 
             { y: 50, opacity: 0 },
@@ -147,22 +179,36 @@ document.addEventListener("DOMContentLoaded", () => {
             );
         });
 
-        // --- FAQ ACCORDION ---
+        // --- FAQ ACCORDION (with ARIA) ---
         const faqItems = document.querySelectorAll('.faq-item');
         faqItems.forEach(item => {
             const q = item.querySelector('.faq-q');
             const a = item.querySelector('.faq-a');
             if(q && a) {
                 q.addEventListener('click', () => {
+                    const isOpen = a.style.maxHeight;
+                    // Close all others
                     faqItems.forEach(other => {
                         if(other !== item) {
-                            other.querySelector('.faq-a').style.maxHeight = null;
+                            const otherA = other.querySelector('.faq-a');
+                            const otherQ = other.querySelector('.faq-q');
+                            if (otherA) otherA.style.maxHeight = null;
+                            if (otherQ) otherQ.setAttribute('aria-expanded', 'false');
                         }
                     });
-                    if(a.style.maxHeight) {
+                    if(isOpen) {
                         a.style.maxHeight = null;
+                        q.setAttribute('aria-expanded', 'false');
                     } else {
                         a.style.maxHeight = a.scrollHeight + "px";
+                        q.setAttribute('aria-expanded', 'true');
+                    }
+                });
+                // Keyboard support
+                q.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        q.click();
                     }
                 });
             }
@@ -194,14 +240,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const promoForm = document.getElementById('promoForm');
 
         if (promoPopup && !sessionStorage.getItem('lwangblack_promo_shown')) {
-            // Show popup 2 seconds after GSAP initialized
+            // Show popup 2.5 seconds after GSAP initialized
             setTimeout(() => {
                 promoPopup.classList.add('active');
+                // GTM event
+                if (window.dataLayer) window.dataLayer.push({ event: 'popup_view', promotion_name: '10% off first order' });
             }, 2500);
 
-            const closePromo = () => {
+            const closePromo = (method) => {
                 promoPopup.classList.remove('active');
                 sessionStorage.setItem('lwangblack_promo_shown', 'true');
+                if (window.dataLayer) window.dataLayer.push({ event: 'popup_dismiss', method: method || 'close' });
             };
 
             if (promoCloseBtn) promoCloseBtn.addEventListener('click', closePromo);

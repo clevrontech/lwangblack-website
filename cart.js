@@ -55,13 +55,33 @@ const LB_CART = {
     this.renderDrawer();
     this.openDrawer();
     this._showToast(`✓ ${product.name} added to cart`);
+
+    // GTM: add_to_cart event
+    if (window.dataLayer) {
+      window.dataLayer.push({
+        event: 'add_to_cart',
+        currency: priceObj.currency,
+        value: priceObj.amount,
+        items: [{ item_id: productId, item_name: product.name, price: priceObj.amount, quantity: 1, item_variant: variant || '' }]
+      });
+    }
   },
 
   /** Remove item */
   remove(key) {
+    const removing = this.load().find(i => i.key === key);
     const items = this.load().filter(i => i.key !== key);
     this.save(items);
     this.renderDrawer();
+    // GTM: remove_from_cart event
+    if (window.dataLayer && removing) {
+      window.dataLayer.push({
+        event: 'remove_from_cart',
+        currency: removing.currency,
+        value: removing.price * removing.qty,
+        items: [{ item_id: removing.productId, item_name: removing.name, price: removing.price, quantity: removing.qty }]
+      });
+    }
   },
 
   /** Update quantity */
@@ -98,6 +118,15 @@ const LB_CART = {
     document.getElementById('lb-cart-drawer')?.classList.add('open');
     document.getElementById('lb-cart-overlay')?.classList.add('show');
     document.body.style.overflow = 'hidden';
+    // GTM: view_cart event
+    if (window.dataLayer) {
+      const totals = this.getTotals();
+      window.dataLayer.push({
+        event: 'view_cart',
+        currency: totals.currency,
+        value: totals.subtotal
+      });
+    }
   },
 
   /** Close cart drawer */

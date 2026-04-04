@@ -7,13 +7,13 @@
   <title>Customer Reviews – Lwang Black | Real Stories, Real Results</title>
   <meta name="description" content="Read honest reviews from Lwang Black customers. See why hundreds of coffee lovers across Nepal and beyond trust our clove-infused specialty coffee." />
   <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://www.lwangblack.com.au/reviews" />
+  <link rel="canonical" href="https://www.lwangblack.co/reviews.html" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Customer Reviews – Lwang Black" />
   <meta property="og:description" content="Trusted by hundreds of happy customers. Real reviews from real coffee lovers across Nepal and the world." />
-  <meta property="og:url" content="https://www.lwangblack.com.au/reviews" />
+  <meta property="og:url" content="https://www.lwangblack.co/reviews.html" />
   <meta property="og:image" content="images/logo-hero.png" />
 
   <!-- Twitter Card -->
@@ -28,8 +28,15 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="region-style.css?v=3" />
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
 
   <!-- JSON-LD Schema -->
   <script type="application/ld+json">
@@ -176,6 +183,8 @@
   </style>
 </head>
 <body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- PRELOADER -->
   <div id="preloader">
@@ -184,36 +193,42 @@
   </div>
 
   <!-- NAVIGATION -->
-    <nav class="site-nav" id="siteNav">
-    <!-- Left links -->
+  <nav class="site-nav" id="siteNav" role="navigation" aria-label="Main navigation">
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
     <div class="nav-links nav-left">
       <a href="index.html" id="nav-home" data-i18n="nav.home">HOME</a>
       <a href="shop.html" id="nav-shop" data-i18n="nav.shop">SHOP</a>
       <a href="reviews.html" id="nav-reviews" data-i18n="nav.reviews">REVIEWS</a>
     </div>
-
-    <!-- Center: logo + flag bar below it -->
     <div class="nav-center">
       <a href="index.html" class="nav-brand" id="navBrand">
         <img src="images/logo-hero.png" alt="Lwang Black Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
         <span style="display:none; font-family:var(--font-heading); font-size:1.5rem; color:#fff;">LWANG BLACK</span>
       </a>
-      <!-- Flag bar injected here by region.js -->
     </div>
-
-    <!-- Right links + region switcher -->
     <div class="nav-links nav-right">
       <a href="health-benefits.html" id="nav-benefits" data-i18n="nav.benefits">BENEFITS</a>
       <a href="contact.html" id="nav-contact" data-i18n="nav.contact">CONTACT</a>
-      <!-- Region Switcher injected here by region.js -->
       <a href="shop.html" class="btn-solid" style="padding:0.5rem 1.5rem;" id="nav-cta">SHOP NOW</a>
     </div>
   </nav>
+  <div class="nav-mobile-overlay" id="navMobileOverlay">
+    <a href="index.html">HOME</a>
+    <a href="shop.html">SHOP</a>
+    <a href="reviews.html">REVIEWS</a>
+    <a href="health-benefits.html">BENEFITS</a>
+    <a href="contact.html">CONTACT</a>
+    <a href="shop.html" class="btn-solid">SHOP NOW</a>
+  </div>
 
   <!-- HERO -->
   <section class="fullscreen-section centered hero" style="min-height: 70vh; padding-top: 10rem;">
       <div class="hero-reveal" style="text-align: center;">
-          <h1 class="title-massive" style="font-size: clamp(3rem, 8vw, 6rem);">REAL<br />STORIES</h1>
+          <h1 class="title-massive" style="font-size: clamp(3rem, 8vw, 6rem);" id="main-content">REAL<br />STORIES</h1>
 
           <p class="subtitle" style="margin: 0 auto;">Trusted by hundreds of happy customers across Nepal and the world. Here's what they're saying.</p>
       </div>

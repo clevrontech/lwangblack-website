@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Checkout – Lwang Black | Secure Global Checkout</title>
-  <meta name="description" content="Complete your Lwang Black order. Secure checkout with DHL global shipping and PayPal payment." />
-  <meta name="robots" content="noindex" />
+  <title>Checkout — Lwang Black | Secure Global Checkout</title>
+  <meta name="description" content="Complete your Lwang Black order. Secure checkout with DHL global shipping and multiple payment options." />
+  <meta name="robots" content="noindex, nofollow" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,8 +13,17 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="region-style.css?v=3" />
   <link rel="stylesheet" href="ecommerce.css" />
+
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
 </head>
 <body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- PRELOADER -->
   <div id="preloader">
@@ -23,34 +32,41 @@
   </div>
 
   <!-- NAVIGATION -->
-    <nav class="site-nav" id="siteNav">
-    <!-- Left links -->
+  <nav class="site-nav" id="siteNav" role="navigation" aria-label="Main navigation">
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
     <div class="nav-links nav-left">
       <a href="index.html" id="nav-home" data-i18n="nav.home">HOME</a>
       <a href="shop.html" id="nav-shop" data-i18n="nav.shop">SHOP</a>
       <a href="reviews.html" id="nav-reviews" data-i18n="nav.reviews">REVIEWS</a>
     </div>
-
-    <!-- Center: logo + flag bar below it -->
     <div class="nav-center">
       <a href="index.html" class="nav-brand" id="navBrand">
         <img src="images/logo-hero.png" alt="Lwang Black Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
         <span style="display:none; font-family:var(--font-heading); font-size:1.5rem; color:#fff;">LWANG BLACK</span>
       </a>
-      <!-- Flag bar injected here by region.js -->
     </div>
-
-    <!-- Right links + region switcher -->
     <div class="nav-links nav-right">
       <a href="health-benefits.html" id="nav-benefits" data-i18n="nav.benefits">BENEFITS</a>
       <a href="contact.html" id="nav-contact" data-i18n="nav.contact">CONTACT</a>
-      <!-- Region Switcher injected here by region.js -->
       <a href="shop.html" class="btn-solid" style="padding:0.5rem 1.5rem;" id="nav-cta">SHOP NOW</a>
     </div>
   </nav>
+  <div class="nav-mobile-overlay" id="navMobileOverlay">
+    <a href="index.html">HOME</a>
+    <a href="shop.html">SHOP</a>
+    <a href="reviews.html">REVIEWS</a>
+    <a href="health-benefits.html">BENEFITS</a>
+    <a href="contact.html">CONTACT</a>
+    <a href="shop.html" class="btn-solid">SHOP NOW</a>
+  </div>
 
   <!-- CHECKOUT PAGE -->
-  <main class="fullscreen-section co-page" style="padding-top:9rem; align-items:flex-start; min-height:unset;">
+  <main class="fullscreen-section co-page" style="padding-top:9rem; align-items:flex-start; min-height:unset;" id="main-content">
+    <h1 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">Checkout</h1>
 
     <!-- Region Block (shown if not supported) -->
     <div id="co-region-block" class="co-region-block" style="display:none; max-width:600px; margin:0 auto;">
@@ -157,10 +173,28 @@
         <div class="co-summary-line"><span>Shipping</span><span id="co-sum-ship">—</span></div>
         <div class="co-summary-divider"></div>
         <div class="co-summary-total"><span>Total</span><span id="co-sum-total">—</span></div>
+ 
+        <!-- Promo Code -->
+        <div class="co-promo-wrap" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dotted rgba(255,255,255,0.1);">
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="co-promo-input" class="co-input" placeholder="PROMO CODE" style="height: 40px; font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase;" />
+            <button class="btn-solid" style="height: 40px; padding: 0 1rem; font-size: 0.6rem; border-radius: 8px;">APPLY</button>
+          </div>
+        </div>
+
         <div class="co-summary-badges">
-          <span class="co-badge">🔒 Secure SSL</span>
-          <span class="co-badge">📦 DHL Delivery</span>
-          <span class="co-badge">✓ Buyer Protected</span>
+          <span class="co-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Secure SSL
+          </span>
+          <span class="co-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><rect x="1" y="3" width="15" height="13"/><polyline points="16 8 20 8 23 11 23 16 16 16"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            DHL Express
+          </span>
+          <span class="co-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Buyer Protection
+          </span>
         </div>
       </div>
     </div>
@@ -203,6 +237,26 @@
       checkRegion(country);
       buildCountrySelects();
       renderOrderSummary();
+
+      // GTM begin_checkout event
+      const currentCart = LB_CART.load();
+      const totals = LB_CART.getTotals();
+      if (currentCart.length > 0) {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+          'event': 'begin_checkout',
+          'ecommerce': {
+            'value': totals.subtotal,
+            'currency': totals.currency || 'NPR',
+            'items': currentCart.map(item => ({
+              'item_id': item.id,
+              'item_name': item.name,
+              'price': item.price,
+              'quantity': item.qty
+            }))
+          }
+        });
+      }
     });
 
     document.addEventListener('lb:regionChanged', (e) => {

@@ -31,3 +31,4 @@ module.exports = async (req, res) => {
     return res.status(401).json({ error: 'Unauthorized: ' + err.message });
   }
 };
+

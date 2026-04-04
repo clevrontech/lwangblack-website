@@ -1,6 +1,6 @@
 const fs = require('fs');
 async function getImages() {
-  const url = 'https://www.lwangblack.com.au/products.json?limit=250';
+  const url = 'https://www.lwangblack.co/products.json?limit=250';
   const res = await fetch(url);
   const data = await res.json();
   let result = {};
@@ -15,3 +15,4 @@ async function getImages() {
   fs.writeFileSync('C:\\Users\\Rishaaav\\.gemini\\antigravity\\images.json', JSON.stringify(result, null, 2));
 }
 getImages();
+

@@ -154,3 +154,4 @@ function buildConverterUI() {
 }
 
 document.addEventListener('DOMContentLoaded', initAUCurrencyConverter);
+

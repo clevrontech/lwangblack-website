@@ -1,10 +1,10 @@
 /**
  * LWANG BLACK — MULTI-REGION PRICING ENGINE
- * Real products from lwangblack.com.au with exact names, images & prices
+ * Real products from lwangblack.co with exact names, images & prices
  */
 
 // Base CDN URL for Lwang Black product images
-const CDN = 'https://www.lwangblack.com.au/cdn/shop/files/';
+const CDN = 'https://www.lwangblack.co/cdn/shop/files/';
 
 const LB_PRODUCTS = {
   '250g': {
@@ -365,3 +365,4 @@ window.formatPrice = formatPrice;
 
 // Variant image preloading removed for performance
 // Images load on-demand when variants are selected
+

@@ -47,3 +47,4 @@ html = html.replace('Brewdistrict 24 | Klassieke craft bieren, gebrouwen zonder 
 
 Path("index.html").write_text(html, encoding="utf-8")
 print("Successfully generated index.html")
+

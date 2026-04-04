@@ -246,7 +246,7 @@ async function loadIpLog(){
 // ── USERS ──
 function getUsers(){
   const s=JSON.parse(localStorage.getItem('lb_custom_users')||'[]');
-  return[{name:'Store Owner',username:'owner',role:'owner',country:null,email:'owner@lwangblack.com'},{name:'Nepal Manager',username:'nepal_mgr',role:'manager',country:'NP',email:'nepal@lwangblack.com.np'},{name:'Australia Manager',username:'australia_mgr',role:'manager',country:'AU',email:'australia@lwangblack.com.au'},{name:'US Manager',username:'us_mgr',role:'manager',country:'US',email:'us@lwangblackus.com'},{name:'UK Manager',username:'uk_mgr',role:'manager',country:'GB',email:'uk@lwangblack.co.uk'},{name:'Canada Manager',username:'canada_mgr',role:'manager',country:'CA',email:'canada@lwangblack.ca'},{name:'NZ Manager',username:'nz_mgr',role:'manager',country:'NZ',email:'nz@lwangblack.co.nz'},{name:'Japan Manager',username:'japan_mgr',role:'manager',country:'JP',email:'japan@lwangblack.jp'},...s];
+  return[{name:'Store Owner',username:'owner',role:'owner',country:null,email:'owner@lwangblack.com'},{name:'Nepal Manager',username:'nepal_mgr',role:'manager',country:'NP',email:'nepal@lwangblack.com.np'},{name:'Australia Manager',username:'australia_mgr',role:'manager',country:'AU',email:'australia@lwangblack.co'},{name:'US Manager',username:'us_mgr',role:'manager',country:'US',email:'us@lwangblackus.com'},{name:'UK Manager',username:'uk_mgr',role:'manager',country:'GB',email:'uk@lwangblack.co.uk'},{name:'Canada Manager',username:'canada_mgr',role:'manager',country:'CA',email:'canada@lwangblack.ca'},{name:'NZ Manager',username:'nz_mgr',role:'manager',country:'NZ',email:'nz@lwangblack.co.nz'},{name:'Japan Manager',username:'japan_mgr',role:'manager',country:'JP',email:'japan@lwangblack.jp'},...s];
 }
 function renderUsers(){
   document.getElementById('usersList').innerHTML=getUsers().map((u,i)=>`
@@ -351,3 +351,4 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
   document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open'));});
 });
+

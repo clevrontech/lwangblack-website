@@ -237,7 +237,7 @@ function updateHomeProducts(code) {
     const btnAddText = window.LBi18n ? window.LBi18n.t('btn.add', 'ADD') : 'ADD';
 
     html += `
-      <div class="product-card" onclick="window.location='catalogue.html#product-${id}'" style="cursor:pointer;">
+      <div class="product-card" onclick="window.location='product.html?id=${id}'" style="cursor:pointer;">
         <img src="${prod.image}" alt="${pName}" class="product-img" loading="lazy" />
         <span class="label-micro">${prod.category.toUpperCase()} / ${badgeText}</span>
         <h3 style="font-size:1.8rem; margin-bottom:1rem;">${pName}</h3>
@@ -272,3 +272,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Backward compat alias
 window.LB_REGION = GeoRouter;
+

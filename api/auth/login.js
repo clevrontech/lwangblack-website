@@ -35,7 +35,7 @@ const USERS = [
     role: 'manager',
     country: 'AU',
     name: 'Australia Manager',
-    email: 'australia@lwangblack.com.au'
+    email: 'australia@lwangblack.co'
   },
   {
     id: 'mgr_us',
@@ -122,3 +122,4 @@ module.exports = async (req, res) => {
     }
   });
 };
+

@@ -186,3 +186,4 @@ window.LBi18n = {
 document.addEventListener('DOMContentLoaded', () => {
   window.LBi18n.init();
 });
+

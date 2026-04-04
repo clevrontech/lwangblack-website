@@ -33,3 +33,4 @@ module.exports = async (req, res) => {
 
 // Export helper for use in other API files
 module.exports.verifyToken = verifyToken;
+

@@ -272,3 +272,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.LB_CART = LB_CART;
+

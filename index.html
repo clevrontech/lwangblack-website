@@ -50,6 +50,7 @@
 
   <!-- Core scripts (in order) -->
   <script src="geo-router.js"></script>
+  <script src="i18n.js"></script>
   <script src="pricing.js"></script>
   <script src="au-currency-converter.js"></script>
   <script src="region.js"></script>
@@ -109,9 +110,9 @@
   <nav class="site-nav" id="siteNav">
     <!-- Left links -->
     <div class="nav-links nav-left">
-      <a href="index.html" id="nav-home">HOME</a>
-      <a href="catalogue.html" id="nav-catalogue">CATALOGUE</a>
-      <a href="reviews.html" id="nav-reviews">REVIEWS</a>
+      <a href="index.html" id="nav-home" data-i18n="nav.home">HOME</a>
+      <a href="catalogue.html" id="nav-catalogue" data-i18n="nav.shop">CATALOGUE</a>
+      <a href="reviews.html" id="nav-reviews" data-i18n="nav.reviews">REVIEWS</a>
     </div>
 
     <!-- Center: logo + flag bar below it -->
@@ -125,10 +126,10 @@
 
     <!-- Right links + region switcher -->
     <div class="nav-links nav-right">
-      <a href="health-benefits.html" id="nav-benefits">BENEFITS</a>
-      <a href="contact.html" id="nav-contact">CONTACT</a>
+      <a href="health-benefits.html" id="nav-benefits" data-i18n="nav.benefits">BENEFITS</a>
+      <a href="contact.html" id="nav-contact" data-i18n="nav.contact">CONTACT</a>
       <!-- Region Switcher injected here by region.js -->
-      <a href="shop.html" class="btn-solid" style="padding:0.5rem 1.5rem;" id="nav-shop">SHOP NOW</a>
+      <a href="shop.html" class="btn-solid" style="padding:0.5rem 1.5rem;" id="nav-shop" data-i18n="nav.shop">SHOP NOW</a>
     </div>
   </nav>
 
@@ -138,10 +139,10 @@
   <section class="fullscreen-section centered hero" id="heroSection" style="padding-top:5rem; position:relative;">
 
     <div class="hero-reveal" style="text-align:center;">
-      <h1 class="title-massive">ZERO<br/>EXCUSES.</h1>
+      <h1 class="title-massive" data-i18n="hero.title1">ZERO<br/>EXCUSES.</h1>
       <div class="vertical-line" style="margin:2rem auto; height:60px;"></div>
-      <span class="label-micro">CLOVE + COFFEE FUSION · NEPAL'S FINEST</span>
-      <p class="subtitle" style="margin:1rem auto 2rem;">
+      <span class="label-micro" data-i18n="hero.label">CLOVE + COFFEE FUSION · NEPAL'S FINEST</span>
+      <p class="subtitle" style="margin:1rem auto 2rem;" data-i18n="hero.subtitle">
         Din को सुरुवात एक कप Motivation बाट।<br/>
         Premium clove coffee for bold flavor and real benefits.
       </p>
@@ -167,8 +168,8 @@
   <section class="flags-section" id="flagsSection">
     <div class="flags-section-inner">
       <div class="flags-header gsap-reveal-up">
-        <span class="label-micro">OUR GLOBAL PRESENCE</span>
-        <h2 class="title-large" style="margin-bottom:0.5rem;">WHERE WE<br/>DELIVER</h2>
+        <span class="label-micro" data-i18n="global.label">OUR GLOBAL PRESENCE</span>
+        <h2 class="title-large" style="margin-bottom:0.5rem;" data-i18n="global.title">WHERE WE<br/>DELIVER</h2>
         <p class="subtitle" style="max-width:480px; margin:0 auto 3rem;">
           Our premium clove coffee is delivered globally. Below are our core operational regions.
         </p>
@@ -249,8 +250,8 @@
   <section id="discover" class="fullscreen-section">
     <div class="split-section">
       <div class="content-panel gsap-reveal-up">
-        <span class="label-micro">THE ESSENCE</span>
-        <h2 class="title-large" style="margin-bottom:2rem;">BREW THE<br/>DIFFERENCE</h2>
+        <span class="label-micro" data-i18n="discover.label">THE ESSENCE</span>
+        <h2 class="title-large" style="margin-bottom:2rem;" data-i18n="discover.title">BREW THE<br/>DIFFERENCE</h2>
         <p class="subtitle">
           Lwang Black is crafted from specialty-grade beans &amp; hand-selected cloves. No fillers, no additives. Just the pure, functional power of nature.
         </p>
@@ -268,8 +269,8 @@
         <video src="videomaking.mp4" autoplay loop muted playsinline style="width:100%; max-width:500px; border-radius:12px; object-fit:cover;"></video>
       </div>
       <div class="content-panel gsap-reveal-up">
-        <span class="label-micro">PURE INGREDIENTS</span>
-        <h2 class="title-large" style="margin-bottom:4rem;">NOTHING<br/>ARTIFICIAL</h2>
+        <span class="label-micro" data-i18n="ingredients.label">PURE INGREDIENTS</span>
+        <h2 class="title-large" style="margin-bottom:4rem;" data-i18n="ingredients.title">NOTHING<br/>ARTIFICIAL</h2>
         <div class="elegant-list">
           <div class="elegant-list-item gsap-reveal-fade">
             <h3>01. Specialty-Grade Arabica</h3>
@@ -294,8 +295,8 @@
   <section class="fullscreen-section centered contact-section" id="contactSection" style="padding:8rem 5vw;">
     <div class="contact-block gsap-reveal-up">
       <div class="contact-header">
-        <span class="label-micro">GET IN TOUCH</span>
-        <h2 class="title-large" style="margin-bottom:0.5rem;">YOUR LOCAL<br/>TEAM</h2>
+        <span class="label-micro" data-i18n="contact.label">GET IN TOUCH</span>
+        <h2 class="title-large" style="margin-bottom:0.5rem;" data-i18n="contact.title">YOUR LOCAL<br/>TEAM</h2>
         <p class="subtitle" style="margin:0 auto 3rem;">
           We're present in 6 countries. Your regional contact details are shown below — switch region anytime.
         </p>
@@ -351,8 +352,8 @@
   ══════════════════════════════════════════ -->
   <section class="fullscreen-section centered">
     <div class="glass-panel gsap-reveal-up" style="text-align:center;">
-      <span class="label-micro">TRADITION &amp; CRAFT</span>
-      <h2 class="title-large" style="margin-bottom:2rem;">ROOTED IN NEPAL</h2>
+      <span class="label-micro" data-i18n="tradition.label">TRADITION &amp; CRAFT</span>
+      <h2 class="title-large" style="margin-bottom:2rem;" data-i18n="tradition.title">ROOTED IN NEPAL</h2>
       <p class="subtitle" style="margin:0 auto 3rem;">
         From the hills of Nepal to your cup — globally sourced specialty beans fused locally with hand-picked cloves. The power of authentic tradition in a modern brew.
       </p>
@@ -365,8 +366,8 @@
   ══════════════════════════════════════════ -->
   <section class="fullscreen-section centered" style="padding-top:8rem; padding-bottom:8rem;">
     <div style="width:100%; max-width:1400px;" class="gsap-reveal-up">
-      <span class="label-micro">SHOP THE RANGE</span>
-      <h2 class="title-large">OUR COLLECTION</h2>
+      <span class="label-micro" data-i18n="products.label">SHOP THE RANGE</span>
+      <h2 class="title-large" data-i18n="products.title">OUR COLLECTION</h2>
 
       <div class="product-grid">
       </div>
@@ -380,8 +381,8 @@
     <div class="glass-panel gsap-reveal-up">
       <div class="split-section" style="gap:6rem;">
         <div style="padding-right:2rem;">
-          <span class="label-micro">STAY CONNECTED</span>
-          <h2 class="title-large" style="margin-bottom:1rem;">JOIN THE<br/>CLUB</h2>
+          <span class="label-micro" data-i18n="newsletter.label">STAY CONNECTED</span>
+          <h2 class="title-large" style="margin-bottom:1rem;" data-i18n="newsletter.title">JOIN THE<br/>CLUB</h2>
           <p class="subtitle" style="margin-bottom:3rem;">
             Get updates + 10% off your first order. By subscribing you agree to our <a href="privacy-policy.html" style="text-decoration:underline;">Privacy Policy</a>.
           </p>
@@ -439,21 +440,21 @@
         </div>
       </div>
       <div class="footer-col">
-        <span class="label-micro" style="margin-bottom:1.5rem; color:#fff;">EXPLORE</span>
+        <span class="label-micro" style="margin-bottom:1.5rem; color:#fff;" data-i18n="footer.explore">EXPLORE</span>
         <a href="index.html">HOME</a>
         <a href="catalogue.html">CATALOGUE</a>
         <a href="health-benefits.html">HEALTH BENEFITS</a>
         <a href="reviews.html">REVIEWS</a>
       </div>
       <div class="footer-col">
-        <span class="label-micro" style="margin-bottom:1.5rem; color:#fff;">LEGAL</span>
+        <span class="label-micro" style="margin-bottom:1.5rem; color:#fff;" data-i18n="footer.legal">LEGAL</span>
         <a href="shipping-policy.html">SHIPPING POLICY</a>
         <a href="refund-policy.html">REFUND POLICY</a>
         <a href="privacy-policy.html">PRIVACY POLICY</a>
         <a href="terms.html">TERMS OF SERVICE</a>
       </div>
       <div class="footer-col">
-        <span class="label-micro" style="margin-bottom:1.5rem; color:#fff;">CONTACT</span>
+        <span class="label-micro" style="margin-bottom:1.5rem; color:#fff;" data-i18n="footer.connect">CONTACT</span>
         <a id="footerAddress" href="#">135 King St, Sydney NSW 2000</a>
         <a id="footerPhone" href="#">+61 2 8005 7000</a>
         <a href="mailto:brewed@lwangblack.com.au">brewed@lwangblack.com.au</a>

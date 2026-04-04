@@ -202,15 +202,23 @@ function updateHomeProducts(code) {
 
     const priceDisplay = priceData ? priceData.display : '';
 
+    const pName = window.LBi18n ? window.LBi18n.t(`prod.${id}.name`, prod.name) : prod.name;
+    const pDesc = window.LBi18n ? window.LBi18n.t(`prod.${id}.desc`, prod.description) : prod.description;
+    let badgeText = prod.badge || 'PREMIUM';
+    if (badgeText === prod.badge) {
+      badgeText = window.LBi18n ? window.LBi18n.t(`prod.${id}.badge`, badgeText) : badgeText;
+    }
+    const btnAddText = window.LBi18n ? window.LBi18n.t('btn.add', 'ADD') : 'ADD';
+
     html += `
       <div class="product-card" onclick="window.location='catalogue.html#product-${id}'" style="cursor:pointer;">
-        <img src="${prod.image}" alt="${prod.name}" class="product-img" loading="lazy" />
-        <span class="label-micro">${prod.category.toUpperCase()} / ${prod.badge || 'PREMIUM'}</span>
-        <h3 style="font-size:1.8rem; margin-bottom:1rem;">${prod.name}</h3>
-        <p style="margin-bottom:2rem; flex-grow:1; color:var(--text-muted); font-size:0.9rem;">${prod.description}</p>
+        <img src="${prod.image}" alt="${pName}" class="product-img" loading="lazy" />
+        <span class="label-micro">${prod.category.toUpperCase()} / ${badgeText}</span>
+        <h3 style="font-size:1.8rem; margin-bottom:1rem;">${pName}</h3>
+        <p style="margin-bottom:2rem; flex-grow:1; color:var(--text-muted); font-size:0.9rem;">${pDesc}</p>
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="font-family:var(--font-heading); font-size:1.5rem;">${priceDisplay}</span>
-          <button class="btn-solid" style="padding:0.8rem 1.5rem;" onclick="event.stopPropagation(); if (window.LB_CART) LB_CART.add('${id}')">ADD</button>
+          <button class="btn-solid" style="padding:0.8rem 1.5rem;" onclick="event.stopPropagation(); if (window.LB_CART) LB_CART.add('${id}')">${btnAddText}</button>
         </div>
       </div>
     `;

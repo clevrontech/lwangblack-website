@@ -40,6 +40,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <script src="i18n.js"></script>
   <script src="pricing.js"></script>
   <script src="au-currency-converter.js"></script>
   <script src="geo-router.js"></script>
@@ -111,9 +112,9 @@
   <nav class="site-nav" id="siteNav">
     <!-- Left links -->
     <div class="nav-links nav-left">
-      <a href="index.html" id="nav-home">HOME</a>
-      <a href="shop.html" id="nav-shop" style="color: var(--accent);">SHOP</a>
-      <a href="reviews.html" id="nav-reviews">REVIEWS</a>
+      <a href="index.html" id="nav-home" data-i18n="nav.home">HOME</a>
+      <a href="shop.html" id="nav-shop" data-i18n="nav.shop" style="color: var(--accent);">SHOP</a>
+      <a href="reviews.html" id="nav-reviews" data-i18n="nav.reviews">REVIEWS</a>
     </div>
 
     <!-- Center: logo + flag bar below it -->
@@ -127,10 +128,10 @@
 
     <!-- Right links + region switcher -->
     <div class="nav-links nav-right">
-      <a href="health-benefits.html" id="nav-benefits">BENEFITS</a>
-      <a href="contact.html" id="nav-contact">CONTACT</a>
+      <a href="health-benefits.html" id="nav-benefits" data-i18n="nav.benefits">BENEFITS</a>
+      <a href="contact.html" id="nav-contact" data-i18n="nav.contact">CONTACT</a>
       <!-- Region Switcher injected here by region.js -->
-      <a href="checkout.html" class="btn-solid" style="padding:0.5rem 1.5rem;" id="nav-checkout">CART</a>
+      <a href="checkout.html" class="btn-solid" style="padding:0.5rem 1.5rem;" id="nav-checkout" data-i18n="nav.cart">CART</a>
     </div>
   </nav>
 
@@ -138,7 +139,7 @@
   <section class="fullscreen-section centered hero" style="min-height: 70vh; padding-top: 10rem;">
       <div class="hero-reveal" style="text-align: center;">
           <span class="label-micro">CLOVE + COFFEE · NEPAL'S FINEST</span>
-          <h1 class="title-massive" style="font-size: clamp(3rem, 8vw, 6rem);">THE SHOP</h1>
+          <h1 class="title-massive" style="font-size: clamp(3rem, 8vw, 6rem);" data-i18n="shop.hero.title">THE SHOP</h1>
           <div class="vertical-line" style="margin: 2rem auto; height: 60px;"></div>
           <p class="subtitle" style="margin: 0 auto 2rem; max-width: 600px;">Clove coffee, accessories, bundles &amp; apparel — all crafted with intention.</p>
           <div class="shop-hero-tagline">
@@ -163,11 +164,11 @@
       <div style="width: 100%; max-width: 1400px; margin: 0 auto;" class="gsap-reveal-up">
 
           <div class="filters-container">
-              <button class="filter-btn active" data-filter="all">ALL</button>
-              <button class="filter-btn" data-filter="coffee">COFFEE</button>
-              <button class="filter-btn" data-filter="accessories">ACCESSORIES</button>
-              <button class="filter-btn" data-filter="bundles">BUNDLES</button>
-              <button class="filter-btn" data-filter="apparel">APPAREL</button>
+              <button class="filter-btn active" data-filter="all" data-i18n="shop.filter.all">ALL</button>
+              <button class="filter-btn" data-filter="coffee" data-i18n="shop.filter.coffee">COFFEE</button>
+              <button class="filter-btn" data-filter="accessories" data-i18n="shop.filter.accessories">ACCESSORIES</button>
+              <button class="filter-btn" data-filter="bundles" data-i18n="shop.filter.bundles">BUNDLES</button>
+              <button class="filter-btn" data-filter="apparel" data-i18n="shop.filter.apparel">APPAREL</button>
           </div>
 
           <!-- REGIONAL PRICING GRID — rendered by JS -->
@@ -206,21 +207,21 @@
               <p style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-micro); text-transform: uppercase;">Din को सुरुवात एक कप Motivation बाट।</p>
           </div>
           <div class="footer-col">
-              <span class="label-micro" style="margin-bottom: 1.5rem; color: #fff;">EXPLORE</span>
+              <span class="label-micro" style="margin-bottom: 1.5rem; color: #fff;" data-i18n="footer.explore">EXPLORE</span>
               <a href="index.html">HOME</a>
               <a href="shop.html">SHOP</a>
               <a href="health-benefits.html">HEALTH BENEFITS</a>
               <a href="reviews.html">REVIEWS</a>
           </div>
           <div class="footer-col">
-              <span class="label-micro" style="margin-bottom: 1.5rem; color: #fff;">CONNECT</span>
+              <span class="label-micro" style="margin-bottom: 1.5rem; color: #fff;" data-i18n="footer.connect">CONNECT</span>
               <a href="social-media.html">SOCIAL MEDIA</a>
               <a href="contact.html">CONTACT</a>
               <a href="https://www.instagram.com/lwangblack/" target="_blank" rel="noopener">INSTAGRAM</a>
               <a href="https://www.facebook.com/profile.php?id=61573596402127" target="_blank" rel="noopener">FACEBOOK</a>
           </div>
           <div class="footer-col">
-              <span class="label-micro" style="margin-bottom: 1.5rem; color: #fff;">LEGAL</span>
+              <span class="label-micro" style="margin-bottom: 1.5rem; color: #fff;" data-i18n="footer.legal">LEGAL</span>
               <a href="shipping-policy.html">SHIPPING POLICY</a>
               <a href="return-policy.html">RETURN POLICY</a>
               <a href="privacy-policy.html">PRIVACY POLICY</a>
@@ -254,8 +255,13 @@
   // ── Build product card HTML ───────────────
   function buildProductCard(p, priceObj, country) {
     const available = !!priceObj;
-    const badgeHtml = p.badge ? `<div class="product-badge">${p.badge}</div>` : '';
+    let badgeText = p.badge || '';
+    if (badgeText) badgeText = window.LBi18n ? window.LBi18n.t(`prod.${p.id}.badge`, p.badge) : p.badge;
+    const badgeHtml = badgeText ? `<div class="product-badge">${badgeText}</div>` : '';
     const labelColor = p.category === 'bundles' ? 'color: var(--accent);' : '';
+    const pName = window.LBi18n ? window.LBi18n.t(`prod.${p.id}.name`, p.name) : p.name;
+    const pDesc = window.LBi18n ? window.LBi18n.t(`prod.${p.id}.desc`, p.description) : p.description;
+    const addText = window.LBi18n ? window.LBi18n.t('btn.add_to_cart', 'ADD TO CART') : 'ADD TO CART';
 
     let variantHtml = '';
     if (p.variants) {
@@ -271,7 +277,7 @@
           <span style="font-family:var(--font-heading); font-size:1.5rem;">${priceObj.display}</span>
           <button class="btn-solid" style="padding:0.8rem 1.5rem;"
             onclick="addToCartFromShop('${p.id}', this)">
-            ADD TO CART
+            ${addText}
           </button>
         </div>`;
     } else {
@@ -286,13 +292,13 @@
       <div class="product-card" data-category="${p.category}" data-product-id="${p.id}" id="product-${p.id}">
         ${badgeHtml}
         <a href="product.html?id=${p.id}" style="display:block; overflow:hidden; border-radius:8px;">
-          <img src="${p.image}" alt="${p.name}" class="product-img" style="cursor:pointer;" onerror="this.src='images/product-hero-500g.jpg'" />
+          <img src="${p.image}" alt="${pName}" class="product-img" style="cursor:pointer;" onerror="this.src='images/product-hero-500g.jpg'" />
         </a>
-        <span class="label-micro" style="margin-bottom:0.5rem;${labelColor}">${p.category.toUpperCase()}${p.badge && p.category==='bundles' ? ' — BEST VALUE' : ''}</span>
+        <span class="label-micro" style="margin-bottom:0.5rem;${labelColor}">${p.category.toUpperCase()}${badgeText && p.category==='bundles' ? ' — BEST VALUE' : ''}</span>
         <h2 style="font-family:var(--font-heading); font-size:1.8rem; margin-bottom:1rem; font-weight:400;">
-          <a href="product.html?id=${p.id}" style="color:inherit; text-decoration:none;">${p.name}</a>
+          <a href="product.html?id=${p.id}" style="color:inherit; text-decoration:none;">${pName}</a>
         </h2>
-        <p style="margin-bottom:1.5rem; flex-grow:1; color:var(--text-muted); font-size:0.9rem; line-height:1.7;">${p.description}</p>
+        <p style="margin-bottom:1.5rem; flex-grow:1; color:var(--text-muted); font-size:0.9rem; line-height:1.7;">${pDesc}</p>
         ${variantHtml}
         ${bottomHtml}
       </div>`;

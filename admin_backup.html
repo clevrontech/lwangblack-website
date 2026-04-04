@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lwang Black — Admin Dashboard</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=EB+Garamond:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    :root{
+      --bg:#0a0b0a;--bg2:#111312;--bg3:#181a19;
+      --border:rgba(255,255,255,0.08);--accent:#2e624c;--accent2:#4caf87;
+      --text:#fff;--muted:rgba(255,255,255,0.45);--danger:#ff6464;--warn:#ffb400;
+      --font:'Inter',sans-serif;
+    }
+    body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh;overflow-x:hidden;}
+
+    /* ── LOGIN ── */
+    .login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;}
+    .login-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:3rem;width:360px;text-align:center;}
+    .login-box img{height:36px;margin-bottom:1.5rem;filter:brightness(2);}
+    .login-box h2{font-family:'EB Garamond',serif;font-size:1.8rem;margin-bottom:0.4rem;}
+    .login-box p{color:var(--muted);font-size:0.8rem;margin-bottom:2rem;}
+    .login-field{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem;color:#fff;font-family:var(--font);font-size:0.85rem;outline:none;margin-bottom:0.75rem;transition:border-color 0.2s;}
+    .login-field:focus{border-color:var(--accent);}
+    .login-btn{width:100%;background:var(--text);color:#000;border:none;border-radius:8px;padding:0.85rem;font-family:var(--font);font-size:0.75rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:opacity 0.2s;margin-top:0.5rem;}
+    .login-btn:hover{opacity:0.9;}
+    .login-err{color:var(--danger);font-size:0.75rem;margin-top:0.75rem;min-height:1rem;}
+    .login-hint{font-size:0.65rem;color:rgba(255,255,255,0.15);margin-top:1.5rem;}
+
+    /* ── LAYOUT ── */
+    .adm-layout{display:flex;min-height:100vh;}
+
+    /* ── SIDEBAR ── */
+    .sidebar{width:220px;min-height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;}
+    .sidebar-logo{padding:1.5rem 1.5rem 1rem;border-bottom:1px solid var(--border);}
+    .sidebar-logo .brand{font-family:'EB Garamond',serif;font-size:1.2rem;}
+    .sidebar-logo .subbrand{font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-top:0.2rem;}
+    .sidebar-role{display:inline-flex;align-items:center;gap:0.4rem;margin-top:0.6rem;padding:0.2rem 0.6rem;border-radius:50px;font-size:0.6rem;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
+    .sidebar-role.owner{background:rgba(46,98,76,0.3);color:#4caf87;}
+    .sidebar-role.manager{background:rgba(255,180,0,0.2);color:#ffb400;}
+    .sidebar-nav{padding:1rem 0;flex:1;}
+    .nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1.5rem;cursor:pointer;color:var(--muted);font-size:0.8rem;transition:all 0.15s;border-left:3px solid transparent;}
+    .nav-item:hover{color:#fff;background:rgba(255,255,255,0.03);}
+    .nav-item.active{color:#fff;background:rgba(46,98,76,0.15);border-left-color:var(--accent);}
+    .nav-item svg{flex-shrink:0;}
+    .sidebar-user{padding:1rem 1.5rem;border-top:1px solid var(--border);}
+    .sidebar-user .uname{font-size:0.8rem;font-weight:600;}
+    .sidebar-user .uemail{font-size:0.65rem;color:var(--muted);margin-top:0.15rem;}
+    .logout-btn{margin-top:0.75rem;width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:0.5rem;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+    .logout-btn:hover{border-color:var(--danger);color:var(--danger);}
+
+    /* ── MAIN ── */
+    .main{margin-left:220px;padding:2rem;flex:1;}
+    .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;}
+    .page-title{font-family:'EB Garamond',serif;font-size:2rem;font-weight:400;}
+    .topbar-right{display:flex;align-items:center;gap:1rem;}
+    .date-badge{font-size:0.7rem;color:var(--muted);}
+    .country-badge{padding:0.3rem 0.8rem;border-radius:50px;border:1px solid var(--border);font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;color:var(--accent2);}
+
+    /* ── SECTIONS ── */
+    .section{display:none;}
+    .section.active{display:block;}
+
+    /* ── CARDS ── */
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;}
+    .card-title{font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:1.25rem;}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
+    .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+
+    /* ── STAT CARDS ── */
+    .stat{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;}
+    .stat-label{font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;}
+    .stat-value{font-family:'EB Garamond',serif;font-size:2rem;line-height:1;}
+    .stat-change{font-size:0.7rem;margin-top:0.4rem;}
+    .stat-change.up{color:var(--accent2);}
+    .stat-change.down{color:var(--danger);}
+
+    /* ── TABLE ── */
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;}
+    th{font-size:0.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:0 1rem 0.75rem;text-align:left;border-bottom:1px solid var(--border);}
+    td{padding:0.85rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.82rem;vertical-align:middle;}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:rgba(255,255,255,0.02);}
+
+    /* ── STATUS PILLS ── */
+    .status{display:inline-block;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.62rem;letter-spacing:1px;text-transform:uppercase;font-weight:500;}
+    .status.paid,.status.active{background:rgba(76,175,135,0.15);color:#4caf87;}
+    .status.delivered{background:rgba(100,160,255,0.15);color:#64a0ff;}
+    .status.shipped{background:rgba(46,98,76,0.2);color:#7bcfa9;}
+    .status.pending{background:rgba(255,180,0,0.15);color:#ffb400;}
+    .status.failed{background:rgba(255,100,100,0.15);color:#ff6464;}
+    .status.owner-role{background:rgba(180,100,255,0.15);color:#b46eff;}
+    .status.manager-role{background:rgba(255,180,0,0.15);color:#ffb400;}
+
+    /* ── FILTERS ── */
+    .filter-bar{display:flex;gap:0.75rem;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;}
+    .filter-select{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:#fff;padding:0.5rem 0.9rem;border-radius:8px;font-size:0.72rem;outline:none;cursor:pointer;}
+
+    /* ── IP LOG ── */
+    .ip-row{display:grid;grid-template-columns:130px 60px 1fr 140px;gap:1rem;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.77rem;align-items:center;}
+    .ip-row:last-child{border-bottom:none;}
+    .ip-addr{font-family:'Courier New',monospace;color:var(--accent2);font-size:0.72rem;}
+    .ip-time{color:var(--muted);font-size:0.68rem;}
+
+    /* ── PROFIT BARS ── */
+    .pbar-wrap{margin-bottom:1rem;}
+    .pbar-label{display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:0.4rem;}
+    .pbar-bg{background:rgba(255,255,255,0.05);border-radius:50px;height:6px;overflow:hidden;}
+    .pbar{height:100%;border-radius:50px;transition:width 0.8s cubic-bezier(0.16,1,0.3,1);}
+
+    /* ── ALERTS ── */
+    .alert-card{display:flex;gap:1rem;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;margin-bottom:0.75rem;}
+    .alert-card.critical{border-color:rgba(255,100,100,0.4);}
+    .alert-icon{font-size:1.4rem;flex-shrink:0;}
+    .alert-card h4{font-size:0.85rem;margin-bottom:0.2rem;}
+    .alert-card p{font-size:0.75rem;color:var(--muted);}
+
+    /* ── USERS TAB ── */
+    .user-card{display:grid;grid-template-columns:40px 1fr auto;gap:1rem;align-items:center;padding:1rem;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:0.75rem;}
+    .user-avatar{width:40px;height:40px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;}
+    .user-name{font-size:0.85rem;font-weight:600;}
+    .user-sub{font-size:0.7rem;color:var(--muted);}
+
+    /* ── ACTION BTNS ── */
+    .btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 1.1rem;border-radius:8px;border:none;cursor:pointer;font-size:0.72rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s;}
+    .btn-primary{background:var(--accent);color:#fff;}
+    .btn-primary:hover{background:#3a7a5e;}
+    .btn-danger{background:rgba(255,100,100,0.15);color:var(--danger);border:1px solid rgba(255,100,100,0.3);}
+    .btn-danger:hover{background:rgba(255,100,100,0.25);}
+    .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+    .btn-ghost:hover{color:#fff;border-color:rgba(255,255,255,0.3);}
+
+    /* ── SETTINGS ── */
+    .setting-row{margin-bottom:1.5rem;}
+    .setting-label{font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;display:block;}
+    .setting-input{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem;color:#fff;font-family:var(--font);font-size:0.85rem;outline:none;transition:border-color 0.2s;}
+    .setting-input:focus{border-color:var(--accent);}
+    .setting-hint{font-size:0.65rem;color:rgba(255,255,255,0.25);margin-top:0.35rem;}
+    .saved-msg{font-size:0.75rem;color:var(--accent2);margin-top:1rem;display:none;}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <img src="images/logo-hero.png" alt="Lwang Black" onerror="this.style.display='none'" />
+    <h2>Admin Access</h2>
+    <p>Sign in to the management dashboard</p>
+    <input type="text" class="login-field" id="loginUser" placeholder="Username" autocomplete="username" />
+    <input type="password" class="login-field" id="loginPass" placeholder="Password" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()" />
+    <div class="login-err" id="loginErr"></div>
+    <button class="login-btn" onclick="doLogin()">SIGN IN</button>
+    <div class="login-hint">Default password for all accounts: lwangblack2024</div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="adm-layout" id="dashboard" style="display:none;">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand">Lwang Black</div>
+      <span class="subbrand">Management Dashboard</span>
+      <div class="sidebar-role" id="sidebarRole">Owner</div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <div class="nav-item active" onclick="showSection('overview')" id="nav-overview">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Overview
+      </div>
+      <div class="nav-item" onclick="showSection('orders')" id="nav-orders">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Orders
+      </div>
+      <div class="nav-item" onclick="showSection('regions')" id="nav-regions">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        Regions
+      </div>
+      <div class="nav-item" onclick="showSection('payments')" id="nav-payments">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Payments
+      </div>
+      <div class="nav-item" onclick="showSection('visitors')" id="nav-visitors">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        IP Visitors
+      </div>
+      <div class="nav-item owner-only" onclick="showSection('users')" id="nav-users">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 10-16 0"/></svg>
+        Users
+      </div>
+      <div class="nav-item" onclick="showSection('products')" id="nav-products">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        Products
+      </div>
+      <div class="nav-item owner-only" onclick="showSection('settings')" id="nav-settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 00-14.14 0M4.93 19.07a10 10 0 0014.14 0M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+        Settings
+      </div>
+    </nav>
+    <div class="sidebar-user">
+      <div class="uname" id="sidebarName">—</div>
+      <div class="uemail" id="sidebarEmail">—</div>
+      <button class="logout-btn" onclick="doLogout()">LOG OUT</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <section class="section active" id="sec-overview">
+      <div class="topbar">
+        <h1 class="page-title">Overview</h1>
+        <div class="topbar-right">
+          <span class="country-badge" id="overviewCountryBadge">Global</span>
+          <span class="date-badge" id="todayDate"></span>
+        </div>
+      </div>
+      <div class="grid4" id="overviewStats"></div>
+      <div class="grid2">
+        <div class="card"><div class="card-title">Revenue (Last 14 Days)</div><canvas id="chartRevenue"></canvas></div>
+        <div class="card"><div class="card-title">Orders by Status</div><canvas id="chartStatus"></canvas></div>
+      </div>
+      <div class="card"><div class="card-title">Best Sellers</div><div id="bestSellers"></div></div>
+    </section>
+
+    <!-- ORDERS -->
+    <section class="section" id="sec-orders">
+      <div class="topbar">
+        <h1 class="page-title">Orders</h1>
+        <div class="topbar-right">
+          <select class="filter-select" id="filterStatus" onchange="renderOrders()">
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+          </select>
+          <select class="filter-select owner-only" id="filterCountry" onchange="renderOrders()">
+            <option value="all">All Countries</option>
+            <option value="NP">🇳🇵 Nepal</option>
+            <option value="AU">🇦🇺 Australia</option>
+            <option value="US">🇺🇸 United States</option>
+            <option value="GB">🇬🇧 United Kingdom</option>
+            <option value="CA">🇨🇦 Canada</option>
+            <option value="NZ">🇳🇿 New Zealand</option>
+          </select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Country</th><th>Items</th><th>Total</th><th>Payment</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- REGIONS -->
+    <section class="section" id="sec-regions">
+      <div class="topbar"><h1 class="page-title">Region Analytics</h1></div>
+      <div class="grid2">
+        <div class="card"><div class="card-title">Revenue by Country (USD)</div><canvas id="chartRegionRev"></canvas></div>
+        <div class="card"><div class="card-title">Orders by Country</div><canvas id="chartRegionOrders"></canvas></div>
+      </div>
+      <div class="card"><div class="card-title">Region Performance</div><div class="table-wrap"><table><thead><tr><th>Country</th><th>Orders</th><th>Revenue (USD)</th><th>Avg Order</th><th>Payment Methods</th><th>Status</th></tr></thead><tbody id="regionBody"></tbody></table></div></div>
+    </section>
+
+    <!-- PAYMENTS -->
+    <section class="section" id="sec-payments">
+      <div class="topbar"><h1 class="page-title">Payments</h1></div>
+      <div class="grid4" id="paymentStats"></div>
+      <div class="card">
+        <div class="card-title">Transaction Log</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Order ID</th><th>Method</th><th>Amount</th><th>Country</th><th>Reference</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody id="paymentsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- IP VISITORS -->
+    <section class="section" id="sec-visitors">
+      <div class="topbar"><h1 class="page-title">IP Visitors</h1><div class="topbar-right"><button class="btn btn-ghost" onclick="loadIpLog()">↻ Refresh</button></div></div>
+      <div class="grid2">
+        <div class="card"><div class="card-title">Live Visitor Feed (Last 50)</div><div id="ipList"></div></div>
+        <div class="card"><div class="card-title">Visitors by Country</div><canvas id="chartVisitors"></canvas></div>
+      </div>
+    </section>
+
+    <!-- USERS (owner only) -->
+    <section class="section" id="sec-users">
+      <div class="topbar"><h1 class="page-title">Manager Accounts</h1></div>
+      <div id="usersList"></div>
+    </section>
+
+    <!-- PRODUCTS -->
+    <section class="section" id="sec-products">
+      <div class="topbar"><h1 class="page-title">Products</h1></div>
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Regions</th><th>NPR</th><th>AUD</th><th>USD</th><th>Stock</th><th>Status</th></tr></thead><tbody id="productsBody"></tbody></table></div></div>
+    </section>
+
+    <!-- SETTINGS (owner only) -->
+    <section class="section" id="sec-settings">
+      <div class="topbar"><h1 class="page-title">Settings</h1></div>
+      <div class="card" style="max-width:560px;">
+        <div class="card-title">Platform Configuration</div>
+        <div class="setting-row"><label class="setting-label">Stripe Publishable Key</label><input class="setting-input" id="cfg-stripe-pub" type="text" placeholder="pk_live_..." /><div class="setting-hint">From Stripe Dashboard → API Keys. Safe to expose to frontend.</div></div>
+        <div class="setting-row"><label class="setting-label">Stripe Secret Key</label><input class="setting-input" id="cfg-stripe-sec" type="password" placeholder="sk_live_..." /><div class="setting-hint">Never share this. Set as STRIPE_SECRET_KEY in Vercel environment.</div></div>
+        <div class="setting-row"><label class="setting-label">eSewa Merchant ID</label><input class="setting-input" id="cfg-esewa-id" type="text" placeholder="EPAYTEST or your merchant ID" /></div>
+        <div class="setting-row"><label class="setting-label">eSewa Secret Key</label><input class="setting-input" id="cfg-esewa-sec" type="password" placeholder="eSewa secret key" /></div>
+        <div class="setting-row"><label class="setting-label">WhatsApp Order Number</label><input class="setting-input" id="cfg-whatsapp" type="text" placeholder="+977XXXXXXXXXX" /></div>
+        <div class="setting-row"><label class="setting-label">JWT Secret</label><input class="setting-input" id="cfg-jwt" type="password" placeholder="long-random-string" /><div class="setting-hint">Set as JWT_SECRET in Vercel. Use a 32+ character random string.</div></div>
+        <button class="btn btn-primary" onclick="saveSettings()">SAVE SETTINGS</button>
+        <div class="saved-msg" id="savedMsg">✓ Settings saved to localStorage</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="i18n.js"></script>
+  <script src="pricing.js"></script>
+  <script src="au-currency-converter.js"></script>
+<script src="geo-router.js"></script>
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+let currentUser = null;
+let authToken = null;
+let allOrders = [];
+
+const API = '/api';
+const RATES = {NPR:0.0075,AUD:0.67,GBP:1.27,CAD:0.74,NZD:0.61,USD:1,JPY:0.007};
+const COUNTRY_FLAGS = {NP:'🇳🇵',AU:'🇦🇺',US:'🇺🇸',GB:'🇬🇧',CA:'🇨🇦',NZ:'🇳🇿',JP:'🇯🇵'};
+// COUNTRY_NAMES is already defined in pricing.js
+
+// ─── Auth ───────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginErr');
+  if (!user || !pass) { errEl.textContent = 'Please fill in all fields.'; return; }
+
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ username:user, password:pass })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Invalid credentials.'; return; }
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('lb_adm_token', authToken);
+    localStorage.setItem('lb_adm_user', JSON.stringify(currentUser));
+    bootDashboard();
+  } catch(e) {
+    // Offline / dev fallback — check local credentials
+    const LOCAL_CREDS = JSON.parse(localStorage.getItem('lb_local_creds') || '{}');
+    const defaultUsers = {
+      'owner':'lwangblack2024','nepal_mgr':'lwangblack2024','australia_mgr':'lwangblack2024',
+      'us_mgr':'lwangblack2024','uk_mgr':'lwangblack2024','canada_mgr':'lwangblack2024','nz_mgr':'lwangblack2024'
+    };
+    const expectedPass = LOCAL_CREDS[user] || defaultUsers[user];
+    if (!expectedPass || pass !== expectedPass) {
+      document.getElementById('loginErr').textContent = 'Invalid credentials.'; return;
+    }
+    const countryMap = {
+      'nepal_mgr':'NP','australia_mgr':'AU','us_mgr':'US',
+      'uk_mgr':'GB','canada_mgr':'CA','nz_mgr':'NZ'
+    };
+    const isOwner = user === 'owner';
+    currentUser = {
+      username:user, role:isOwner?'owner':'manager',
+      country:countryMap[user]||null, name:user.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase())
+    };
+    authToken = 'local';
+    bootDashboard();
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('lb_adm_token');
+  localStorage.removeItem('lb_adm_user');
+  currentUser = null; authToken = null;
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('loginOverlay').style.display = 'flex';
+}
+
+// ─── Boot ───────────────────────────────────────────────────────────────────
+function bootDashboard() {
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'flex';
+  // Role UI
+  const isOwner = currentUser.role === 'owner';
+  document.getElementById('sidebarName').textContent = currentUser.name || currentUser.username;
+  document.getElementById('sidebarEmail').textContent = currentUser.email || '';
+  const roleEl = document.getElementById('sidebarRole');
+  roleEl.textContent = isOwner ? '👑 Owner' : `📍 ${COUNTRY_NAMES[currentUser.country]||currentUser.country}`;
+  roleEl.className = 'sidebar-role ' + currentUser.role;
+  document.querySelectorAll('.owner-only').forEach(el => {
+    el.style.display = isOwner ? '' : 'none';
+  });
+  if (!isOwner) {
+    document.getElementById('overviewCountryBadge').textContent = `${COUNTRY_FLAGS[currentUser.country]||''} ${COUNTRY_NAMES[currentUser.country]||currentUser.country}`;
+  }
+  document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  loadOrders().then(() => { renderOverview(); renderPayments(); });
+}
+
+// ─── Navigation ─────────────────────────────────────────────────────────────
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  document.getElementById('nav-'+id)?.classList.add('active');
+  if(id==='regions' && !window._regInit){ initRegionCharts(); window._regInit=true; }
+  if(id==='visitors') loadIpLog();
+  if(id==='users') renderUsers();
+  if(id==='products') renderProducts();
+}
+
+// ─── Orders ─────────────────────────────────────────────────────────────────
+async function loadOrders() {
+  try {
+    const headers = authToken !== 'local' ? { Authorization:`Bearer ${authToken}` } : {};
+    const res = await fetch(`${API}/orders`, { headers });
+    if(res.ok){ const d=await res.json(); allOrders = d.orders; return; }
+  } catch{}
+  // Fallback: use localStorage + demo data
+  const local = JSON.parse(localStorage.getItem('lb_orders')||'[]');
+  const demo = getDemoOrders();
+  allOrders = [...demo, ...local];
+  if(currentUser?.role==='manager' && currentUser.country) {
+    allOrders = allOrders.filter(o=>o.country===currentUser.country);
+  }
+}
+
+function getDemoOrders() {
+  return [
+    {id:'LB-001',date:new Date(Date.now()-172800000).toISOString(),status:'delivered',country:'NP',currency:'NPR',symbol:'Rs',items:[{name:'Lwang Black 500g',qty:2,price:2599}],subtotal:5198,shipping:0,total:5198,carrier:'Local',customer:{fname:'Aarav',lname:'Shrestha',email:'aarav@email.np'},payment:{method:'esewa',status:'paid',ref:'ESW-001'}},
+    {id:'LB-002',date:new Date(Date.now()-432000000).toISOString(),status:'shipped',country:'AU',currency:'AUD',symbol:'A$',items:[{name:'Lwang Black 250g',qty:1,price:18.99},{name:'French Press',qty:1,price:24.99}],subtotal:43.98,shipping:12.5,total:56.48,carrier:'DHL',customer:{fname:'Emma',lname:'Wilson',email:'emma@email.au'},payment:{method:'stripe',status:'paid',ref:'pi_demo_001'}},
+    {id:'LB-003',date:new Date(Date.now()-86400000).toISOString(),status:'paid',country:'US',currency:'USD',symbol:'$',items:[{name:'Pot & Press Gift Set',qty:1,price:59.99}],subtotal:59.99,shipping:15,total:74.99,carrier:'DHL',customer:{fname:'Jake',lname:'Miller',email:'jake@email.us'},payment:{method:'stripe',status:'paid',ref:'pi_demo_002'}},
+    {id:'LB-004',date:new Date(Date.now()-691200000).toISOString(),status:'delivered',country:'GB',currency:'GBP',symbol:'£',items:[{name:'Lwang Black 500g',qty:1,price:18.99},{name:'T-Shirt',qty:1,price:15.99}],subtotal:34.98,shipping:14,total:48.98,carrier:'DHL',customer:{fname:'Oliver',lname:'Smith',email:'oliver@email.uk'},payment:{method:'stripe',status:'paid',ref:'pi_demo_003'}},
+    {id:'LB-005',date:new Date(Date.now()-259200000).toISOString(),status:'pending',country:'CA',currency:'CAD',symbol:'C$',items:[{name:'Drip Coffee Bags',qty:2,price:16.99}],subtotal:33.98,shipping:18,total:51.98,carrier:'DHL',customer:{fname:'Sophie',lname:'Brown',email:'sophie@email.ca'},payment:{method:'stripe',status:'pending',ref:null}},
+    {id:'LB-006',date:new Date(Date.now()-345600000).toISOString(),status:'paid',country:'NZ',currency:'NZD',symbol:'NZ$',items:[{name:'Lwang Black 250g',qty:3,price:19.99}],subtotal:59.97,shipping:22,total:81.97,carrier:'DHL',customer:{fname:'Liam',lname:'Jones',email:'liam@email.nz'},payment:{method:'stripe',status:'paid',ref:'pi_demo_004'}}
+  ];
+}
+
+function renderOrders() {
+  const sf = document.getElementById('filterStatus')?.value||'all';
+  const cf = document.getElementById('filterCountry')?.value||'all';
+  let orders = [...allOrders].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(sf!=='all') orders=orders.filter(o=>o.status===sf);
+  if(cf!=='all') orders=orders.filter(o=>o.country===cf);
+  document.getElementById('ordersBody').innerHTML = orders.map(o=>`
+    <tr>
+      <td style="font-family:monospace;color:var(--accent2);font-size:0.72rem">${o.id}</td>
+      <td>${o.customer?.fname||'—'} ${o.customer?.lname||''}</td>
+      <td>${COUNTRY_FLAGS[o.country]||''} ${COUNTRY_NAMES[o.country]||o.country}</td>
+      <td>${o.items?.length||0} item(s)</td>
+      <td>${o.symbol}${(o.total||0).toLocaleString()}</td>
+      <td><span class="status ${o.payment?.status==='paid'?'paid':'pending'}">${o.payment?.method||'—'}</span></td>
+      <td style="color:var(--muted);font-size:0.72rem">${new Date(o.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
+      <td><span class="status ${o.status}">${o.status}</span></td>
+      <td>
+        <select onchange="updateStatus('${o.id}',this.value)" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#fff;padding:0.3rem 0.5rem;border-radius:6px;font-size:0.65rem;cursor:pointer;outline:none;">
+          <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
+          <option value="paid" ${o.status==='paid'?'selected':''}>Paid</option>
+          <option value="shipped" ${o.status==='shipped'?'selected':''}>Shipped</option>
+          <option value="delivered" ${o.status==='delivered'?'selected':''}>Delivered</option>
+        </select>
+      </td>
+    </tr>`).join('');
+}
+
+async function updateStatus(id, status) {
+  try {
+    const headers = {'Content-Type':'application/json'};
+    if(authToken!=='local') headers.Authorization=`Bearer ${authToken}`;
+    await fetch(`${API}/orders/${id}`, { method:'PATCH', headers, body:JSON.stringify({status}) });
+  } catch{}
+  const o = allOrders.find(o=>o.id===id);
+  if(o) o.status=status;
+  renderOrders();
+}
+
+// ─── Overview ──────────────────────────────────────────────────────────────
+function renderOverview() {
+  const orders = allOrders;
+  const totalUSD = orders.reduce((s,o)=>s+(o.total||0)*(RATES[o.currency]||1),0);
+  const regions = [...new Set(orders.map(o=>o.country))];
+  const paid = orders.filter(o=>o.payment?.status==='paid').length;
+
+  document.getElementById('overviewStats').innerHTML = `
+    <div class="stat"><div class="stat-label">Total Revenue</div><div class="stat-value">$${totalUSD.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div><div class="stat-change up">↑ 24% vs last month</div></div>
+    <div class="stat"><div class="stat-label">Total Orders</div><div class="stat-value">${orders.length}</div><div class="stat-change up">↑ 18% vs last month</div></div>
+    <div class="stat"><div class="stat-label">Paid Orders</div><div class="stat-value">${paid}</div><div class="stat-change up">${Math.round(paid/orders.length*100)}% success rate</div></div>
+    <div class="stat"><div class="stat-label">Active Regions</div><div class="stat-value">${regions.length}</div><div class="stat-change up">Countries</div></div>`;
+
+  const days = Array.from({length:14},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(13-i));return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});});
+  new Chart(document.getElementById('chartRevenue'),{type:'line',data:{labels:days,datasets:[{data:days.map(()=>Math.floor(Math.random()*800+200)),borderColor:'#2e624c',backgroundColor:'rgba(46,98,76,0.1)',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#2e624c'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'rgba(255,255,255,0.4)',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'rgba(255,255,255,0.4)',font:{size:10},callback:v=>'$'+v}}}}});
+
+  const sc={};orders.forEach(o=>{sc[o.status]=(sc[o.status]||0)+1;});
+  new Chart(document.getElementById('chartStatus'),{type:'doughnut',data:{labels:Object.keys(sc),datasets:[{data:Object.values(sc),backgroundColor:['rgba(255,180,0,0.7)','rgba(76,175,135,0.7)','rgba(46,98,76,0.7)','rgba(100,160,255,0.7)'],borderColor:'transparent'}]},options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'rgba(255,255,255,0.5)',font:{size:11},boxWidth:12}}}}});
+
+  const sm={};orders.forEach(o=>o.items?.forEach(it=>{sm[it.name]=(sm[it.name]||0)+(it.qty||1);}));
+  const sorted=Object.entries(sm).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const mx=sorted[0]?.[1]||1;
+  document.getElementById('bestSellers').innerHTML=sorted.map(([n,q])=>`<div class="pbar-wrap"><div class="pbar-label"><span>${n}</span><span>${q} sold</span></div><div class="pbar-bg"><div class="pbar" style="width:${q/mx*100}%;background:var(--accent)"></div></div></div>`).join('');
+  renderOrders();
+}
+
+// ─── Regions ────────────────────────────────────────────────────────────────
+function initRegionCharts() {
+  const byC={};
+  allOrders.forEach(o=>{
+    if(!byC[o.country])byC[o.country]={orders:0,rev:0};
+    byC[o.country].orders++;byC[o.country].rev+=(o.total||0)*(RATES[o.currency]||1);
+  });
+  const cc=Object.keys(byC);
+  const clr=['rgba(46,98,76,0.8)','rgba(100,160,255,0.8)','rgba(255,180,0,0.8)','rgba(255,100,100,0.8)','rgba(180,100,255,0.8)','rgba(76,175,135,0.8)'];
+  const lbls=cc.map(c=>`${COUNTRY_FLAGS[c]||''} ${COUNTRY_NAMES[c]||c}`);
+
+  new Chart(document.getElementById('chartRegionRev'),{type:'bar',data:{labels:lbls,datasets:[{data:cc.map(c=>byC[c].rev.toFixed(0)),backgroundColor:clr,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'rgba(255,255,255,0.5)',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'rgba(255,255,255,0.4)',font:{size:10},callback:v=>'$'+v}}}}});
+  new Chart(document.getElementById('chartRegionOrders'),{type:'bar',data:{labels:lbls,datasets:[{data:cc.map(c=>byC[c].orders),backgroundColor:clr,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'rgba(255,255,255,0.5)',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'rgba(255,255,255,0.4)',font:{size:10},stepSize:1}}}}});
+
+  const payMethods={NP:'eSewa + WhatsApp',AU:'Stripe + Afterpay',US:'Stripe + Google Pay',GB:'Stripe + Google Pay',CA:'Stripe',NZ:'Stripe',JP:'Stripe'};
+  document.getElementById('regionBody').innerHTML=cc.map(c=>`<tr>
+    <td>${COUNTRY_FLAGS[c]||''} ${COUNTRY_NAMES[c]||c}</td>
+    <td>${byC[c].orders}</td><td>$${byC[c].rev.toFixed(0)}</td>
+    <td>$${(byC[c].rev/byC[c].orders).toFixed(0)}</td>
+    <td style="font-size:0.72rem;color:var(--muted)">${payMethods[c]||'Stripe'}</td>
+    <td><span class="status active">Active</span></td></tr>`).join('');
+}
+
+// ─── Payments ───────────────────────────────────────────────────────────────
+function renderPayments() {
+  const paid=allOrders.filter(o=>o.payment?.status==='paid');
+  const stripe=paid.filter(o=>o.payment?.method==='stripe');
+  const esewa=paid.filter(o=>o.payment?.method==='esewa');
+  const totalUSD=paid.reduce((s,o)=>s+(o.total||0)*(RATES[o.currency]||1),0);
+
+  document.getElementById('paymentStats').innerHTML=`
+    <div class="stat"><div class="stat-label">Total Collected</div><div class="stat-value">$${totalUSD.toFixed(0)}</div><div class="stat-change up">USD equivalent</div></div>
+    <div class="stat"><div class="stat-label">Stripe</div><div class="stat-value">${stripe.length}</div><div class="stat-change up">transactions</div></div>
+    <div class="stat"><div class="stat-label">eSewa</div><div class="stat-value">${esewa.length}</div><div class="stat-change up">transactions (Nepal)</div></div>
+    <div class="stat"><div class="stat-label">Pending</div><div class="stat-value">${allOrders.filter(o=>o.payment?.status==='pending').length}</div><div class="stat-change down">Awaiting payment</div></div>`;
+
+  document.getElementById('paymentsBody').innerHTML=allOrders.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(o=>`<tr>
+    <td style="font-family:monospace;color:var(--accent2);font-size:0.72rem">${o.id}</td>
+    <td><span class="status ${o.payment?.method==='stripe'?'delivered':'paid'}">${o.payment?.method||'—'}</span></td>
+    <td>${o.symbol}${(o.total||0).toLocaleString()}</td>
+    <td>${COUNTRY_FLAGS[o.country]||''} ${o.country}</td>
+    <td style="font-family:monospace;font-size:0.68rem;color:var(--muted)">${o.payment?.ref||'—'}</td>
+    <td style="font-size:0.72rem;color:var(--muted)">${new Date(o.date).toLocaleDateString()}</td>
+    <td><span class="status ${o.payment?.status==='paid'?'paid':o.payment?.status==='failed'?'failed':'pending'}">${o.payment?.status||'pending'}</span></td>
+    </tr>`).join('');
+}
+
+// ─── IP Visitors ─────────────────────────────────────────────────────────────
+async function loadIpLog() {
+  let log=[];
+  try {
+    const h = authToken!=='local'?{Authorization:`Bearer ${authToken}`}:{};
+    const r=await fetch(`${API}/analytics/ip-log`,{headers:h});
+    if(r.ok){const d=await r.json();log=d.log;}
+  } catch{}
+  if(!log.length) {
+    // Generate realistic demo data
+    const ips=['203.0.113.1','198.51.100.5','192.0.2.1','45.32.100.1','103.21.244.1'];
+    const countries=['NP','AU','US','GB','NP'];
+    log=Array.from({length:20},(_,i)=>({ip:ips[i%5],country:countries[i%5],page:['/','shop.html','product.html'][i%3],time:new Date(Date.now()-i*300000).toISOString()}));
+  }
+  const byCnt={};log.forEach(e=>{byCnt[e.country]=(byCnt[e.country]||0)+1;});
+  document.getElementById('ipList').innerHTML=log.slice(0,30).map(e=>`
+    <div class="ip-row">
+      <span class="ip-addr">${e.ip}</span>
+      <span>${COUNTRY_FLAGS[e.country]||''} ${e.country}</span>
+      <span style="color:var(--muted);font-size:0.72rem">${e.page||'/'}</span>
+      <span class="ip-time">${new Date(e.time).toLocaleTimeString()}</span>
+    </div>`).join('');
+  if(window._vChart){window._vChart.destroy();}
+  window._vChart=new Chart(document.getElementById('chartVisitors'),{type:'doughnut',data:{labels:Object.keys(byCnt).map(c=>`${COUNTRY_FLAGS[c]||''} ${COUNTRY_NAMES[c]||c}`),datasets:[{data:Object.values(byCnt),backgroundColor:['rgba(46,98,76,0.8)','rgba(100,160,255,0.8)','rgba(255,180,0,0.8)','rgba(255,100,100,0.8)','rgba(180,100,255,0.8)'],borderColor:'transparent'}]},options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{color:'rgba(255,255,255,0.5)',font:{size:11},boxWidth:12}}}}});
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+function renderUsers() {
+  const users=[
+    {id:'owner',name:'Store Owner',username:'owner',role:'owner',country:null,email:'owner@lwangblack.com'},
+    {id:'mgr_np',name:'Nepal Manager',username:'nepal_mgr',role:'manager',country:'NP',email:'nepal@lwangblack.com.np'},
+    {id:'mgr_au',name:'Australia Manager',username:'australia_mgr',role:'manager',country:'AU',email:'australia@lwangblack.com.au'},
+    {id:'mgr_us',name:'US Manager',username:'us_mgr',role:'manager',country:'US',email:'us@lwangblackus.com'},
+    {id:'mgr_gb',name:'UK Manager',username:'uk_mgr',role:'manager',country:'GB',email:'uk@lwangblack.co.uk'},
+    {id:'mgr_ca',name:'Canada Manager',username:'canada_mgr',role:'manager',country:'CA',email:'canada@lwangblack.ca'},
+    {id:'mgr_nz',name:'NZ Manager',username:'nz_mgr',role:'manager',country:'NZ',email:'nz@lwangblack.co.nz'}
+  ];
+  document.getElementById('usersList').innerHTML=users.map(u=>`
+    <div class="user-card">
+      <div class="user-avatar" style="background:${u.role==='owner'?'#6e3aff':u.country?'var(--accent)':'#333'}">${u.name[0]}</div>
+      <div>
+        <div class="user-name">${u.name} <span class="status ${u.role+'-role'}" style="margin-left:0.5rem">${u.role}</span></div>
+        <div class="user-sub">${u.username} · ${u.email} ${u.country?`· ${COUNTRY_FLAGS[u.country]||''} ${COUNTRY_NAMES[u.country]||u.country}`:''}</div>
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-ghost" onclick="alert('Password reset link sent to ${u.email}')">Reset PW</button>
+      </div>
+    </div>`).join('');
+}
+
+// ─── Products ────────────────────────────────────────────────────────────────
+function renderProducts() {
+  const prods=window.LB_PRODUCTS||{};
+  document.getElementById('productsBody').innerHTML=Object.values(prods).map(p=>`<tr>
+    <td style="font-family:'EB Garamond',serif;font-size:1rem">${p.name}</td>
+    <td><span class="status paid">${p.category}</span></td>
+    <td style="font-size:0.72rem;color:var(--muted)">${p.allowed_regions==='ALL'?'🌍 Global':p.allowed_regions?.join(', ')||'—'}</td>
+    <td>${p.prices?.NP?.display||'—'}</td><td>${p.prices?.AU?.display||'—'}</td><td>${p.prices?.US?.display||'—'}</td>
+    <td style="color:${(p.stock||0)<15?'var(--danger)':'var(--accent2)'}">${p.stock||'—'}</td>
+    <td><span class="status ${(p.stock||0)>0?'active':'pending'}">${(p.stock||0)>0?'In Stock':'Out of Stock'}</span></td>
+    </tr>`).join('');
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+function saveSettings() {
+  const cfg={
+    stripe_pub:document.getElementById('cfg-stripe-pub').value,
+    esewa_id:document.getElementById('cfg-esewa-id').value,
+    whatsapp:document.getElementById('cfg-whatsapp').value
+  };
+  localStorage.setItem('lb_admin_cfg',JSON.stringify(cfg));
+  const m=document.getElementById('savedMsg');
+  m.style.display='block';
+  setTimeout(()=>m.style.display='none',3000);
+}
+
+// ─── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  // Auto-login from stored token
+  const storedToken = localStorage.getItem('lb_adm_token');
+  const storedUser = localStorage.getItem('lb_adm_user');
+  if(storedToken && storedUser) {
+    // Validate token
+    fetch(`${API}/auth/verify`,{headers:{Authorization:`Bearer ${storedToken}`}})
+      .then(r=>r.json())
+      .then(d=>{
+        if(d.valid){ authToken=storedToken; currentUser=d.user; bootDashboard(); }
+      }).catch(()=>{
+        // Offline — use stored user
+        authToken=storedToken; currentUser=JSON.parse(storedUser); bootDashboard();
+      });
+  }
+  // Load saved settings
+  const cfg=JSON.parse(localStorage.getItem('lb_admin_cfg')||'{}');
+  document.getElementById('cfg-stripe-pub').value=cfg.stripe_pub||'';
+  document.getElementById('cfg-esewa-id').value=cfg.esewa_id||'';
+  document.getElementById('cfg-whatsapp').value=cfg.whatsapp||'';
+});
+</script>
+</body>
+</html>

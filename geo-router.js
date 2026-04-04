@@ -253,7 +253,7 @@ const GeoRouter = {
       const data = await res.json();
       if (data.country) {
         const code = (data.country === 'UK' ? 'GB' : data.country).toUpperCase();
-        const supported = SUPPORTED_CODES.includes(code) ? code : 'NP';
+        const supported = SUPPORTED_CODES.includes(code) ? code : 'AU';
         // Log visitor in background
         fetch('/api/analytics/ip-log', {
           method: 'POST',
@@ -267,11 +267,11 @@ const GeoRouter = {
     try {
       const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
       const data = await res.json();
-      const raw = (data.country_code || 'NP').toUpperCase();
+      const raw = (data.country_code || 'AU').toUpperCase();
       const code = raw === 'UK' ? 'GB' : raw;
-      return SUPPORTED_CODES.includes(code) ? code : 'NP';
+      return SUPPORTED_CODES.includes(code) ? code : 'AU';
     } catch(e) {
-      console.warn('[GeoRouter] IP detection failed, defaulting to NP');
+      console.warn('[GeoRouter] IP detection failed, defaulting to AU');
       return 'AU';
     }
   },

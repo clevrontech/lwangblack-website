@@ -8,18 +8,51 @@
 // REGION SWITCHER — Nav Component
 // ─────────────────────────────────────────────
 function buildRegionSwitcher() {
-  const regionOrder = ['AU', 'NP', 'US', 'GB', 'CA', 'JP', 'NZ', 'CN'];
+  const regionOrder = ['AU', 'NP', 'US', 'GB', 'CA', 'JP', 'NZ'];
 
   const wrapper = document.createElement('div');
   wrapper.className = 'region-switcher';
   wrapper.id = 'regionSwitcher';
 
   wrapper.innerHTML = `
-    <div class="region-switcher-btn" id="regionSwitcherBtn" aria-label="Current Region" style="pointer-events: none; cursor: default; border: none; padding-right: 0;">
+    <div class="region-switcher-btn" id="regionSwitcherBtn" aria-label="Choose Region">
       <img class="rs-flag" id="rsFlagDisplay" src="https://flagcdn.com/au.svg" alt="AU" width="18" height="13" />
-      <span class="rs-name" id="rsNameDisplay" style="color: rgba(255,255,255,0.7);">Australia</span>
+      <span class="rs-name" id="rsNameDisplay">Australia</span>
+      <svg class="rs-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="region-dropdown" id="regionDropdown">
+      <div class="rd-header">Select Region</div>
+      ${regionOrder.map(code => {
+        const r = REGION_DATA[code];
+        if (!r) return '';
+        const slug = r.slug === 'uk' ? 'gb' : r.slug.toLowerCase();
+        return `
+          <button class="region-option" data-code="${code}" onclick="window.GeoRouter.set('${code}'); document.getElementById('regionDropdown').classList.remove('active');">
+            <img src="https://flagcdn.com/${slug}.svg" alt="${r.name}" width="18" height="13" />
+            <span>${r.name}</span>
+          </button>
+        `;
+      }).join('')}
     </div>
   `;
+
+  setTimeout(() => {
+    const btn = document.getElementById('regionSwitcherBtn');
+    const drop = document.getElementById('regionDropdown');
+    if (btn && drop) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        drop.classList.toggle('active');
+        btn.classList.toggle('active');
+      });
+      document.addEventListener('click', (e) => {
+        if (!wrapper.contains(e.target)) {
+          drop.classList.remove('active');
+          btn.classList.remove('active');
+        }
+      });
+    }
+  }, 100);
 
   return wrapper;
 }

@@ -1,0 +1,792 @@
+/**
+ * LWANG BLACK — MULTI-REGION PRICING ENGINE
+ * Real products from lwangblack.co with exact names, images & prices
+ */
+
+// Base CDN URL for Lwang Black product images
+const CDN = 'https://www.lwangblack.co/cdn/shop/files/';
+
+const LB_PRODUCTS = {
+  "2-0-combo-set": {
+    "id": "2-0-combo-set",
+    "name": "2.0 Combo Set (Choose your French Press)",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/product_image-chatgpt-image-oct-11-2025-04_50_16-pm-8048.webp?v=1769347132",
+    "description": "Experience bold, rich flavour with our Limited Edition Coffee Set, featuring premium ground coffee infused with aroma...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 96.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$96.99"
+      },
+      "US": {
+        "amount": 63.04,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$63.04"
+      },
+      "GB": {
+        "amount": 48.49,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a348.49"
+      },
+      "CA": {
+        "amount": 87.29,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$87.29"
+      },
+      "NZ": {
+        "amount": 106.69,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$106.69"
+      },
+      "NP": {
+        "amount": 7274.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 7274.0"
+      },
+      "DEFAULT": {
+        "amount": 63.04,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$63.04"
+      }
+    }
+  },
+  "2-0-filter": {
+    "id": "2-0-filter",
+    "name": "2.0 Filter",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/2.0_Filter.png?v=1753708044",
+    "description": "Experience Better, Smoother, Stronger & Cleaner CoffeeOur triple-layered filter system is designed to deliver a bolde...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 2.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$2.99"
+      },
+      "US": {
+        "amount": 1.94,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$1.94"
+      },
+      "GB": {
+        "amount": 1.5,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a31.5"
+      },
+      "CA": {
+        "amount": 2.69,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$2.69"
+      },
+      "NZ": {
+        "amount": 3.29,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$3.29"
+      },
+      "NP": {
+        "amount": 224.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 224.0"
+      },
+      "DEFAULT": {
+        "amount": 1.94,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$1.94"
+      }
+    }
+  },
+  "250g-lwang-black-mix": {
+    "id": "250g-lwang-black-mix",
+    "name": "250g Lwang Black",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC07401.jpg?v=1753318956",
+    "description": "This 250g package provides an introduction to the unique Lwang Black Mix blend \u2014 premium ground coffee infused with a...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 24.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$24.99"
+      },
+      "US": {
+        "amount": 16.24,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$16.24"
+      },
+      "GB": {
+        "amount": 12.49,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a312.49"
+      },
+      "CA": {
+        "amount": 22.49,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$22.49"
+      },
+      "NZ": {
+        "amount": 27.49,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$27.49"
+      },
+      "NP": {
+        "amount": 1874.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 1874.0"
+      },
+      "DEFAULT": {
+        "amount": 16.24,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$16.24"
+      }
+    }
+  },
+  "250g-500g-lwang-black-mix": {
+    "id": "250g-500g-lwang-black-mix",
+    "name": "250g Lwang Black + 500g Lwang Black",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC07286.jpg?v=1753318831",
+    "description": "Crafted from premium ground coffee beans infused with aromatic cloves, Lwang Black delivers a rich, smooth body with ...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 44.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$44.99"
+      },
+      "US": {
+        "amount": 29.24,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$29.24"
+      },
+      "GB": {
+        "amount": 22.5,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a322.5"
+      },
+      "CA": {
+        "amount": 40.49,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$40.49"
+      },
+      "NZ": {
+        "amount": 49.49,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$49.49"
+      },
+      "NP": {
+        "amount": 3374.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 3374.0"
+      },
+      "DEFAULT": {
+        "amount": 29.24,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$29.24"
+      }
+    }
+  },
+  "250g-lwang-black-white-french-press-1": {
+    "id": "250g-lwang-black-white-french-press-1",
+    "name": "250g Lwang Black Coffee + French Press (Choose Your Colour)",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00367.jpg?v=1769326597",
+    "description": "This package includes a 250g pack of Lwang Black Mix \u2014 premium ground coffee infused with aromatic cloves \u2014 paired wi...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 49.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$49.99"
+      },
+      "US": {
+        "amount": 32.49,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$32.49"
+      },
+      "GB": {
+        "amount": 25.0,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a325.0"
+      },
+      "CA": {
+        "amount": 44.99,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$44.99"
+      },
+      "NZ": {
+        "amount": 54.99,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$54.99"
+      },
+      "NP": {
+        "amount": 3749.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 3749.0"
+      },
+      "DEFAULT": {
+        "amount": 32.49,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$32.49"
+      }
+    }
+  },
+  "500g-lwang-black-pink-french-press-copy": {
+    "id": "500g-lwang-black-pink-french-press-copy",
+    "name": "500g Lwang Black Coffee + French Press (Choose Your Colour)",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00364_9dc3a32f-1021-42c6-b756-caed2cb5f171.jpg?v=1769262874",
+    "description": "This package includes a 500g pack of Lwang Black Mix \u2014 premium ground coffee infused with aromatic cloves \u2014 along wit...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 58.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$58.99"
+      },
+      "US": {
+        "amount": 38.34,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$38.34"
+      },
+      "GB": {
+        "amount": 29.5,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a329.5"
+      },
+      "CA": {
+        "amount": 53.09,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$53.09"
+      },
+      "NZ": {
+        "amount": 64.89,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$64.89"
+      },
+      "NP": {
+        "amount": 4424.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 4424.0"
+      },
+      "DEFAULT": {
+        "amount": 38.34,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$38.34"
+      }
+    }
+  },
+  "5oog-lwang-black-mix": {
+    "id": "5oog-lwang-black-mix",
+    "name": "5OOG Lwang Black",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC07374.jpg?v=1753707276",
+    "description": "For consumers, the 500g package offers a cost-effective way to enjoy Lwang Black Mix \u2014 premium ground coffee infused ...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 34.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$34.99"
+      },
+      "US": {
+        "amount": 22.74,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$22.74"
+      },
+      "GB": {
+        "amount": 17.5,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a317.5"
+      },
+      "CA": {
+        "amount": 31.49,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$31.49"
+      },
+      "NZ": {
+        "amount": 38.49,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$38.49"
+      },
+      "NP": {
+        "amount": 2624.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 2624.0"
+      },
+      "DEFAULT": {
+        "amount": 22.74,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$22.74"
+      }
+    }
+  },
+  "plunger-french-press": {
+    "id": "plunger-french-press",
+    "name": "French Press/Plunger",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC07397.jpg?v=1768363098",
+    "description": "An insulated coffee plunger, elegantly designed to brew the perfect cup of Lwang Black Mix coffee. Its insulation ens...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 39.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$39.99"
+      },
+      "US": {
+        "amount": 25.99,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$25.99"
+      },
+      "GB": {
+        "amount": 20.0,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a320.0"
+      },
+      "CA": {
+        "amount": 35.99,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$35.99"
+      },
+      "NZ": {
+        "amount": 43.99,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$43.99"
+      },
+      "NP": {
+        "amount": 2999.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 2999.0"
+      },
+      "DEFAULT": {
+        "amount": 25.99,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$25.99"
+      }
+    }
+  },
+  "lwang-black-drip-set": {
+    "id": "lwang-black-drip-set",
+    "name": "LB Drip & Sip Set",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00248.jpg?v=1768362482",
+    "description": "Lwang Black Drip & Sip includes 14 premium drip coffee sachets and 1 insulated pot, designed to keep your coffee warm...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 39.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$39.99"
+      },
+      "US": {
+        "amount": 25.99,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$25.99"
+      },
+      "GB": {
+        "amount": 20.0,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a320.0"
+      },
+      "CA": {
+        "amount": 35.99,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$35.99"
+      },
+      "NZ": {
+        "amount": 43.99,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$43.99"
+      },
+      "NP": {
+        "amount": 2999.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 2999.0"
+      },
+      "DEFAULT": {
+        "amount": 25.99,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$25.99"
+      }
+    }
+  },
+  "lb-pot-and-press-gift-set": {
+    "id": "lb-pot-and-press-gift-set",
+    "name": "LB Pot & Press gift set",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/CF2AB6CD-E6A1-419E-869B-B8275262687D.jpg?v=1768362305",
+    "description": "LB Pot & Press Gift Set \u2013 the perfect gift for coffee lovers! This all-in-one set includes: 1 Insulated Leakproof Pot...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 82.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$82.99"
+      },
+      "US": {
+        "amount": 53.94,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$53.94"
+      },
+      "GB": {
+        "amount": 41.49,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a341.49"
+      },
+      "CA": {
+        "amount": 74.69,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$74.69"
+      },
+      "NZ": {
+        "amount": 91.29,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$91.29"
+      },
+      "NP": {
+        "amount": 6224.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 6224.0"
+      },
+      "DEFAULT": {
+        "amount": 53.94,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$53.94"
+      }
+    }
+  },
+  "untitled-dec25_22-48": {
+    "id": "untitled-dec25_22-48",
+    "name": "Lwang Black Brewing Pot",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00214.jpg?v=1768362755",
+    "description": "Premium insulated keep cup designed for life on the go, 100% leakproof and keeps your drink warm for up to 5\u20136 hours....",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 19.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$19.99"
+      },
+      "US": {
+        "amount": 12.99,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$12.99"
+      },
+      "GB": {
+        "amount": 9.99,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a39.99"
+      },
+      "CA": {
+        "amount": 17.99,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$17.99"
+      },
+      "NZ": {
+        "amount": 21.99,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$21.99"
+      },
+      "NP": {
+        "amount": 1499.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 1499.0"
+      },
+      "DEFAULT": {
+        "amount": 12.99,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$12.99"
+      }
+    }
+  },
+  "lwang-black-drip-coffee-bags": {
+    "id": "lwang-black-drip-coffee-bags",
+    "name": "Lwang Black Drip Coffee Bags",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00258.jpg?v=1768362689",
+    "description": "Lwang Black Drip Coffee Bags \u2013 includes 14 easy-to-use sachets, each delivering a fresh, smooth, and aromatic cup of ...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 19.99,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$19.99"
+      },
+      "US": {
+        "amount": 12.99,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$12.99"
+      },
+      "GB": {
+        "amount": 9.99,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a39.99"
+      },
+      "CA": {
+        "amount": 17.99,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$17.99"
+      },
+      "NZ": {
+        "amount": 21.99,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$21.99"
+      },
+      "NP": {
+        "amount": 1499.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 1499.0"
+      },
+      "DEFAULT": {
+        "amount": 12.99,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$12.99"
+      }
+    }
+  },
+  "qr-based-surprise-message-send-love-in-a-unique-way": {
+    "id": "qr-based-surprise-message-send-love-in-a-unique-way",
+    "name": "QR-Based Surprise Message \u2013 Send Love in a Unique Way",
+    "category": "coffee",
+    "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/jjjjj.jpg?v=1764157383",
+    "description": "Click here to fill the form Form Link \ud83d\udc48 Make your gift unforgettable with a personalized QR message card.You share yo...",
+    "stock": 100,
+    "allowed_regions": "ALL",
+    "prices": {
+      "AU": {
+        "amount": 10.0,
+        "currency": "AUD",
+        "symbol": "A$",
+        "display": "A$10.0"
+      },
+      "US": {
+        "amount": 6.5,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$6.5"
+      },
+      "GB": {
+        "amount": 5.0,
+        "currency": "GBP",
+        "symbol": "\u00a3",
+        "display": "\u00a35.0"
+      },
+      "CA": {
+        "amount": 9.0,
+        "currency": "CAD",
+        "symbol": "C$",
+        "display": "C$9.0"
+      },
+      "NZ": {
+        "amount": 11.0,
+        "currency": "NZD",
+        "symbol": "NZ$",
+        "display": "NZ$11.0"
+      },
+      "NP": {
+        "amount": 750.0,
+        "currency": "NPR",
+        "symbol": "Rs",
+        "display": "Rs 750.0"
+      },
+      "DEFAULT": {
+        "amount": 6.5,
+        "currency": "USD",
+        "symbol": "$",
+        "display": "$6.5"
+      }
+    }
+  }
+};
+// DHL estimated shipping rates (per country)
+const DHL_SHIPPING_RATES = {
+  NP: {
+    standard: { price: 0, label: 'Standard Delivery (1–3 days)', carrier: 'Local Courier' },
+    express:  { price: 0, label: 'Express Delivery (Same day KTM)', carrier: 'Local Express' }
+  },
+  AU: {
+    standard: { price: 14.99, label: 'DHL Standard (5–8 days)', carrier: 'DHL' },
+    express:  { price: 29.99, label: 'DHL Express (2–3 days)', carrier: 'DHL Express' }
+  },
+  US: {
+    standard: { price: 12.99, label: 'DHL Standard (7–10 days)', carrier: 'DHL' },
+    express:  { price: 34.99, label: 'DHL Express (3–5 days)', carrier: 'DHL Express' }
+  },
+  GB: {
+    standard: { price: 11.99, label: 'DHL Standard (6–9 days)', carrier: 'DHL' },
+    express:  { price: 26.99, label: 'DHL Express (2–4 days)', carrier: 'DHL Express' }
+  },
+  CA: {
+    standard: { price: 15.99, label: 'DHL Standard (7–10 days)', carrier: 'DHL' },
+    express:  { price: 36.99, label: 'DHL Express (3–5 days)', carrier: 'DHL Express' }
+  },
+  NZ: {
+    standard: { price: 12.99, label: 'DHL Standard (5–7 days)', carrier: 'DHL' },
+    express:  { price: 27.99, label: 'DHL Express (2–3 days)', carrier: 'DHL Express' }
+  },
+  DEFAULT: {
+    standard: { price: 19.99, label: 'DHL Standard (8–14 days)', carrier: 'DHL' },
+    express:  { price: 44.99, label: 'DHL Express (4–7 days)', carrier: 'DHL Express' }
+  }
+};
+
+// Country code → display name map
+const COUNTRY_NAMES = {
+  NP: 'Nepal 🇳🇵', AU: 'Australia 🇦🇺', US: 'United States 🇺🇸',
+  GB: 'United Kingdom 🇬🇧', CA: 'Canada 🇨🇦', DE: 'Germany 🇩🇪',
+  FR: 'France 🇫🇷', NZ: 'New Zealand 🇳🇿', SG: 'Singapore 🇸🇬',
+  AE: 'UAE 🇦🇪', IN: 'India 🇮🇳', JP: 'Japan 🇯🇵',
+  CN: 'China 🇨🇳', KR: 'South Korea 🇰🇷', BR: 'Brazil 🇧🇷',
+  OTHER: 'Other Region 🌍'
+};
+
+function getProductPrice(productId, countryCode) {
+  const product = LB_PRODUCTS[productId];
+  if (!product) return null;
+  if (product.allowed_regions !== 'ALL') {
+    if (!product.allowed_regions.includes(countryCode)) return null;
+  }
+  const prices = product.prices;
+  let basePrice = prices[countryCode] || prices.DEFAULT || null;
+
+  if (countryCode === 'AU' && window.AUCurrencyState && window.AUCurrencyState.active && basePrice) {
+    const convertedAmount = basePrice.amount * window.AUCurrencyState.rate;
+    const sym = window.AUCurrencyState.symbol;
+    const cFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(convertedAmount);
+    return {
+      amount: convertedAmount,
+      currency: window.AUCurrencyState.currencyCode,
+      symbol: sym,
+      display: sym + cFormat
+    };
+  }
+
+  return basePrice;
+}
+
+function isProductAvailable(productId, countryCode) {
+  const product = LB_PRODUCTS[productId];
+  if (!product) return false;
+  if (product.allowed_regions === 'ALL') return true;
+  return product.allowed_regions.includes(countryCode);
+}
+
+function getShippingRates(countryCode) {
+  return DHL_SHIPPING_RATES[countryCode] || DHL_SHIPPING_RATES.DEFAULT;
+}
+
+function formatPrice(price) {
+  if (!price) return null;
+  return price.display;
+}
+
+window.LB_PRODUCTS = LB_PRODUCTS;
+window.DHL_SHIPPING_RATES = DHL_SHIPPING_RATES;
+window.COUNTRY_NAMES = COUNTRY_NAMES;
+window.getProductPrice = getProductPrice;
+window.isProductAvailable = isProductAvailable;
+window.getShippingRates = getShippingRates;
+window.formatPrice = formatPrice;
+
+// Variant image preloading removed for performance
+// Images load on-demand when variants are selected
+

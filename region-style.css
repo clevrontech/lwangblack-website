@@ -1,0 +1,579 @@
+/* ═══════════════════════════════════════════════════════════════
+   LWANG BLACK — REGION STYLES v2.0
+   Region Switcher · Flag Bar · Flags Grid · Contact · Practice Areas
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────
+   CSS Variables — Gold accent overlay for regional elements
+───────────────────────────────────────────────────────────── */
+:root {
+  --gold: #C9A84C;
+  --gold-dim: rgba(201, 168, 76, 0.15);
+  --gold-border: rgba(201, 168, 76, 0.3);
+  --whatsapp: #25D366;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   NAV CENTER LAYOUT
+───────────────────────────────────────────────────────────── */
+.site-nav {
+  display: flex;
+  align-items: center;
+  /* Override to 3-col layout */
+}
+
+.nav-left  { flex: 1; justify-content: flex-start; }
+.nav-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 140px;
+}
+.nav-right { flex: 1; justify-content: flex-end; }
+
+/* ─────────────────────────────────────────────────────────────
+   NAV BRAND — already in style.css, make sure column flex
+───────────────────────────────────────────────────────────── */
+.nav-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FLAG BAR — Below Logo in Nav
+───────────────────────────────────────────────────────────── */
+.nav-region-flag-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  animation: fadeInDown 0.5s ease forwards;
+}
+
+.nrfb-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 3px 5px;
+}
+
+/* Flag bar image */
+.nrfb-flag {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   REGION SWITCHER — In Nav Right
+───────────────────────────────────────────────────────────── */
+.region-switcher {
+  position: relative;
+  display: inline-flex;
+}
+
+.region-switcher-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--gold-border);
+  border-radius: 50px;
+  padding: 5px 12px 5px 8px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: var(--font-micro);
+  font-size: 0.62rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: background 0.3s, border-color 0.3s;
+  white-space: nowrap;
+}
+
+.region-switcher-btn:hover,
+.region-switcher-btn.active {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+}
+
+/* Region switcher flag image */
+.rs-flag {
+  width: 18px;
+  height: 13px;
+  object-fit: cover;
+  border-radius: 2px;
+  display: block;
+  flex-shrink: 0;
+}
+.rs-chevron {
+  opacity: 0.6;
+  transition: transform 0.3s;
+}
+.region-switcher-btn.active .rs-chevron { transform: rotate(180deg); }
+
+/* Dropdown */
+.region-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: rgba(10, 11, 10, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--gold-border);
+  border-radius: 12px;
+  min-width: 200px;
+  padding: 8px;
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+.region-dropdown.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.region-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-family: var(--font-micro);
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: left;
+  transition: background 0.2s, color 0.2s;
+}
+
+.region-option:hover { background: var(--gold-dim); color: var(--text-primary); }
+.region-option.active { color: var(--gold); background: var(--gold-dim); }
+
+/* Dropdown flag image */
+.ro-flag {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.ro-name { flex: 1; }
+
+/* ─────────────────────────────────────────────────────────────
+   HERO — Region Badge
+───────────────────────────────────────────────────────────── */
+.hero-region-badge {
+  position: absolute;
+  top: 7rem;
+  left: 5vw;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gold-dim);
+  border: 1px solid var(--gold-border);
+  border-radius: 50px;
+  padding: 6px 14px 6px 10px;
+  animation: fadeInLeft 0.6s ease 1.5s both;
+}
+
+/* Hero badge flag image */
+.hero-region-flag-img {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+  display: block;
+  flex-shrink: 0;
+}
+.hero-region-name {
+  font-family: var(--font-micro);
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FLAGS SECTION — Global Presence Grid
+───────────────────────────────────────────────────────────── */
+.flags-section {
+  padding: 8rem 5vw;
+  position: relative;
+  z-index: 20;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(201, 168, 76, 0.03) 40%,
+    transparent 100%
+  );
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.flags-section-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.flags-header {
+  margin-bottom: 4rem;
+}
+
+/* 6-column grid for 6 flags */
+.flags-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1100px) {
+  .flags-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .flags-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FLAG CARD
+───────────────────────────────────────────────────────────── */
+.flag-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 2rem 1rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.flag-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gold-dim);
+  opacity: 0;
+  transition: opacity 0.35s;
+  border-radius: 16px;
+}
+
+.flag-card:hover {
+  border-color: var(--gold-border);
+  transform: translateY(-6px);
+  color: var(--text-primary);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px var(--gold-border);
+}
+
+.flag-card:hover::before { opacity: 1; }
+
+.flag-card--active {
+  border-color: var(--gold) !important;
+  color: var(--text-primary) !important;
+  background: var(--gold-dim) !important;
+  box-shadow: 0 0 0 2px var(--gold), 0 20px 40px rgba(201,168,76,0.15) !important;
+}
+
+.flag-card--active::before { opacity: 1; }
+
+/* Flag image wrapper and image */
+.flag-img-wrap {
+  width: 72px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: border-color 0.3s, box-shadow 0.3s;
+  position: relative;
+  z-index: 1;
+}
+
+.flag-card:hover .flag-img-wrap {
+  border-color: rgba(201,168,76,0.3);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.flag-card--active .flag-img-wrap {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201,168,76,0.3);
+}
+
+.flag-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.flag-card:hover .flag-img {
+  transform: scale(1.06);
+}
+
+.flag-country-name {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 500;
+  color: inherit;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.flag-label {
+  font-family: var(--font-micro);
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.7;
+}
+
+.flag-card--active .flag-label { opacity: 1; }
+
+/* ─────────────────────────────────────────────────────────────
+   CONTACT SECTION
+───────────────────────────────────────────────────────────── */
+.contact-section { position: relative; z-index: 10; }
+
+.contact-block {
+  background: rgba(10, 11, 10, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 4rem;
+  width: 100%;
+  max-width: 1100px;
+  position: relative;
+  overflow: hidden;
+}
+
+.contact-block::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.contact-header { text-align: center; margin-bottom: 2rem; }
+
+.contact-region-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto 2.5rem;
+  width: fit-content;
+  background: var(--gold-dim);
+  border: 1px solid var(--gold-border);
+  border-radius: 50px;
+  padding: 8px 20px 8px 14px;
+  transition: all 0.4s ease;
+}
+
+.contact-region-flag { font-size: 1.5rem; }
+.contact-region-name {
+  font-family: var(--font-micro);
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.contact-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .contact-cards-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 500px) {
+  .contact-cards-grid { grid-template-columns: 1fr; }
+  .contact-block { padding: 2rem 1.5rem; }
+}
+
+.contact-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color 0.3s, transform 0.3s;
+}
+
+.contact-card:hover {
+  border-color: var(--gold-border);
+  transform: translateY(-3px);
+}
+
+.contact-card--whatsapp:hover .whatsapp-link { color: var(--whatsapp); }
+
+.contact-card-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.25rem;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.contact-card-icon svg {
+  stroke: var(--gold);
+  width: 20px;
+  height: 20px;
+}
+.contact-card-label {
+  font-family: var(--font-micro);
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.contact-card-value {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.contact-card-value:hover { color: var(--gold); }
+.whatsapp-link:hover { color: var(--whatsapp) !important; }
+
+/* ─────────────────────────────────────────────────────────────
+   FOOTER FLAGS
+───────────────────────────────────────────────────────────── */
+.footer-flags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.footer-flag-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: border-color 0.3s, transform 0.3s, background 0.3s;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-flag-btn img {
+  width: 28px;
+  height: 19px;
+  object-fit: cover;
+  border-radius: 2px;
+  display: block;
+}
+
+.footer-flag-btn:hover {
+  border-color: var(--gold-border);
+  background: var(--gold-dim);
+  transform: scale(1.12) translateY(-2px);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ANIMATIONS
+───────────────────────────────────────────────────────────── */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(201,168,76,0); }
+}
+
+.flag-card--active {
+  animation: pulseGold 2.5s ease infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   RESPONSIVE — MOBILE NAV
+───────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .flags-section { padding: 5rem 5vw; }
+
+  .hero-region-badge {
+    top: 8rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .region-switcher-btn .rs-name { display: none; }
+
+  /* Stack nav on mobile */
+  .site-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    background: rgba(10,11,10,0.95) !important;
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-left, .nav-right {
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .nav-center { order: -1; width: 100%; margin-bottom: 0.25rem; }
+
+  .region-dropdown { right: auto; left: 0; }
+}
+
+@media (max-width: 600px) {
+  .flags-section { padding: 4rem 1.2rem; }
+  .contact-block { padding: 2rem 1.2rem; }
+}
+

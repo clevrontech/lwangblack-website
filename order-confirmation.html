@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Confirmed — Lwang Black</title>
+  <meta name="description" content="Your Lwang Black order has been placed successfully." />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="ecommerce.css" />
+  <style>
+    body { background: #0d0d0d; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
+
+    .conf-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 1.5rem;
+      text-align: center;
+    }
+
+    .conf-icon {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem;
+      font-size: 2rem;
+    }
+    .conf-icon.success  { background: rgba(46,98,76,0.3); border: 1px solid rgba(46,98,76,0.5); }
+    .conf-icon.pending  { background: rgba(232,160,0,0.15); border: 1px solid rgba(232,160,0,0.4); }
+    .conf-icon.cod      { background: rgba(255,193,7,0.12); border: 1px solid rgba(255,193,7,0.35); }
+
+    .conf-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      font-weight: 800;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .conf-subtitle {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.45);
+      margin: 0 0 2rem;
+      max-width: 480px;
+      line-height: 1.6;
+    }
+
+    .conf-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 1.5rem 2rem;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto 2rem;
+      text-align: left;
+    }
+
+    .conf-card-title {
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .conf-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.78rem;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .conf-row:last-child { border-bottom: none; }
+    .conf-row span:first-child { color: rgba(255,255,255,0.45); }
+    .conf-row span:last-child  { color: #fff; font-weight: 600; }
+
+    /* Nabil Bank specific */
+    .nabil-steps {
+      background: rgba(232,160,0,0.06);
+      border: 1px solid rgba(232,160,0,0.2);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto 2rem;
+      text-align: left;
+    }
+    .nabil-steps-title {
+      font-size: 0.62rem;
+      color: #e8a000;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 0.9rem;
+    }
+    .nabil-step-item {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      margin-bottom: 0.65rem;
+      font-size: 0.73rem;
+      color: rgba(255,255,255,0.65);
+      line-height: 1.5;
+    }
+    .nabil-step-item .step-num {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: rgba(232,160,0,0.2);
+      border: 1px solid rgba(232,160,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: #e8a000;
+    }
+
+    /* Bank account highlight */
+    .bank-highlight {
+      background: rgba(232,160,0,0.08);
+      border: 1px solid rgba(232,160,0,0.25);
+      border-radius: 10px;
+      padding: 0.9rem 1.2rem;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto 2rem;
+    }
+    .bank-acc-num {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #e8a000;
+      font-family: 'Syne', sans-serif;
+      cursor: pointer;
+      display: inline-block;
+    }
+    .bank-acc-num:hover { opacity: 0.8; }
+
+    .conf-btns {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+
+    .conf-btn-primary {
+      background: #fff;
+      color: #0d0d0d;
+      border: none;
+      padding: 0.85rem 2.2rem;
+      border-radius: 50px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: opacity 0.2s;
+    }
+    .conf-btn-primary:hover { opacity: 0.85; }
+
+    .conf-btn-ghost {
+      background: transparent;
+      color: rgba(255,255,255,0.6);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 0.85rem 2rem;
+      border-radius: 50px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.2s;
+    }
+    .conf-btn-ghost:hover { border-color: rgba(255,255,255,0.35); color: #fff; }
+
+    .conf-order-id {
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 1px;
+      margin-top: 2rem;
+    }
+  </style>
+
+    <link rel="icon" type="image/png" href="/images/logo-hero.png" />
+</head>
+<body>
+
+  <!-- PRELOADER -->
+  <div id="preloader">
+    <div class="spinner"></div>
+    <img src="images/Image 1.png" alt="Lwang Black" style="height:60px;object-fit:contain;" onerror="this.style.display='none'" />
+  </div>
+
+  <div class="conf-wrap" id="conf-wrap">
+    <!-- content injected by JS -->
+  </div>
+
+  <script src="cart.js"></script>
+  <script>
+    // Hide preloader
+    setTimeout(() => {
+      const pl = document.getElementById('preloader');
+      if (pl) { pl.style.opacity = '0'; setTimeout(() => pl.remove(), 400); }
+    }, 500);
+
+    // Parse URL params
+    const params    = new URLSearchParams(window.location.search);
+    const orderId   = params.get('order_id') || '';
+    const method    = params.get('method')   || '';
+    const sessionId = params.get('session_id') || '';
+    const status    = params.get('status')   || '';
+    const demo      = params.get('demo')     || '';
+
+    const wrap = document.getElementById('conf-wrap');
+
+    // ── Verify Stripe Session ──────────────────────────────────────────────
+    async function verifyStripeSession(sid) {
+      wrap.innerHTML = `<div class="spinner" style="margin: 0 auto 1.5rem;"></div><p class="conf-subtitle">Verifying your payment...</p>`;
+      
+      try {
+        const res = await fetch('/api/payments/verify-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sid })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          renderSuccess(data.order);
+          // Clear cart on success
+          if (typeof clearCart === 'function') clearCart();
+        } else {
+          renderError(data.message || 'Payment verification failed.');
+        }
+      } catch (err) {
+        renderError('Connection error. Please contact support.');
+      }
+    }
+
+    function renderError(msg) {
+      wrap.innerHTML = `
+        <div class="conf-icon" style="background:rgba(220,53,69,0.1);border:1px solid rgba(220,53,69,0.3);color:#ff4d4d;">✕</div>
+        <h1 class="conf-title">Payment Error</h1>
+        <p class="conf-subtitle">${msg}</p>
+        <div class="conf-btns">
+          <a href="checkout.html" class="conf-btn-primary">RETRY CHECKOUT</a>
+          <a href="contact.html" class="conf-btn-ghost">SUPPORT</a>
+        </div>
+      `;
+    }
+
+    function renderSuccess(orderData) {
+      const cur = orderData.currency.toUpperCase();
+      const amt = orderData.amount.toLocaleString(undefined, { minimumFractionDigits: orderData.currency === 'jpy' ? 0 : 2 });
+      
+      wrap.innerHTML = `
+        <div class="conf-icon success">✓</div>
+        <h1 class="conf-title">Order Confirmed!</h1>
+        <p class="conf-subtitle">
+          Thank you for your purchase. Your payment of <strong>${cur} ${amt}</strong> has been processed.<br>
+          A confirmation has been sent to ${orderData.customer_email}.
+        </p>
+        <div class="conf-card">
+          <div class="conf-card-title">Order Summary</div>
+          <div class="conf-row"><span>Order ID</span><span>${orderData.id}</span></div>
+          <div class="conf-row"><span>Customer</span><span>${orderData.customer_email}</span></div>
+          <div class="conf-row"><span>Total Paid</span><span style="color:#2e9e6c;">${cur} ${amt}</span></div>
+          <div class="conf-row"><span>Payment</span><span>Stripe Checkout</span></div>
+          <div class="conf-row"><span>Status</span><span style="color:#2e9e6c;">✓ Paid</span></div>
+        </div>
+        <div class="conf-btns">
+          <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
+          <a href="index.html" class="conf-btn-ghost">HOME</a>
+        </div>
+        <div class="conf-order-id">ORDER ID · ${orderData.id}</div>
+      `;
+    }
+
+    // ── Main Logic ──────────────────────────────────────────────────────────
+    if (sessionId) {
+      verifyStripeSession(sessionId);
+    } else {
+      // Original logic for Nabil/COD/Manual Stripe (fallback)
+      // Retrieve order from localStorage
+      const orders = JSON.parse(localStorage.getItem('lb_orders') || '[]');
+      const order  = orders.find(o => o.id === orderId) || null;
+
+      // Determine display mode
+      const isNabil = method === 'nabil_bank';
+      const isCOD   = method === 'cod';
+
+      // Format currency
+      const sym     = order?.symbol || 'NPR ';
+      const total   = order?.total  ? `${sym}${Number(order.total).toLocaleString()}` : '—';
+
+      if (isNabil) {
+        wrap.innerHTML = `
+          <div class="conf-icon pending">🏦</div>
+          <h1 class="conf-title" style="color:#e8a000;">Payment Under Review</h1>
+          <p class="conf-subtitle">
+            We've received your order and your Nabil Bank payment slip.<br>
+            Our team will verify your transfer and confirm the order within <strong style="color:#fff;">1–2 business hours</strong>.
+          </p>
+
+          <div class="bank-highlight" style="text-align:center;">
+            <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-bottom:0.4rem;">PAYMENT TO — NABIL BANK LTD.</div>
+            <div style="font-size:0.7rem;color:rgba(255,255,255,0.55);margin-bottom:0.3rem;">LWANG BLACK PRODUCTS PVT.LTD</div>
+            <span class="bank-acc-num" onclick="copyNum()" title="Click to copy">15301017500402</span>
+            <div style="font-size:0.58rem;color:rgba(255,255,255,0.3);margin-top:0.3rem;" id="copy-msg">Click to copy</div>
+          </div>
+
+          <div class="nabil-steps">
+            <div class="nabil-steps-title">What happens next?</div>
+            <div class="nabil-step-item"><div class="step-num">1</div><div>Your payment slip has been received. Keep a screenshot for your records.</div></div>
+            <div class="nabil-step-item"><div class="step-num">2</div><div>Our team verifies the transfer in the Nabil Bank account <span style="color:#e8a000;">15301017500402</span>.</div></div>
+            <div class="nabil-step-item"><div class="step-num">3</div><div>Once confirmed, you'll receive an order confirmation via phone/WhatsApp.</div></div>
+            <div class="nabil-step-item"><div class="step-num">4</div><div>Your order is dispatched. Expect delivery within 2–5 business days within Nepal.</div></div>
+          </div>
+
+          <div class="conf-card">
+            <div class="conf-card-title">Order Summary</div>
+            ${order ? `
+              <div class="conf-row"><span>Order ID</span><span>${order.id}</span></div>
+              <div class="conf-row"><span>Customer</span><span>${order.customer?.fname || ''} ${order.customer?.lname || ''}</span></div>
+              <div class="conf-row"><span>Phone</span><span>${order.customer?.phone || '—'}</span></div>
+              <div class="conf-row"><span>Total</span><span style="color:#e8a000;">${total}</span></div>
+              <div class="conf-row"><span>Payment</span><span>Nabil Bank Transfer</span></div>
+              <div class="conf-row"><span>Status</span><span style="color:#e8a000;">⏳ Pending Verification</span></div>
+            ` : `<div style="font-size:0.75rem;color:rgba(255,255,255,0.35);">Order: ${orderId}</div>`}
+          </div>
+
+          <div class="conf-btns">
+            <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
+            <a href="contact.html" class="conf-btn-ghost">CONTACT US</a>
+          </div>
+
+          <div class="conf-order-id">ORDER ID · ${orderId || '—'}</div>
+        `;
+      } else if (isCOD) {
+        wrap.innerHTML = `
+          <div class="conf-icon cod">💵</div>
+          <h1 class="conf-title">Order Placed!</h1>
+          <p class="conf-subtitle">
+            Your Cash on Delivery order is confirmed.<br>
+            Please have cash ready when your package arrives.
+          </p>
+          <div class="conf-card">
+            <div class="conf-card-title">Order Summary</div>
+            ${order ? `
+              <div class="conf-row"><span>Order ID</span><span>${order.id}</span></div>
+              <div class="conf-row"><span>Customer</span><span>${order.customer?.fname || ''} ${order.customer?.lname || ''}</span></div>
+              <div class="conf-row"><span>Delivery</span><span>${order.customer?.street || ''}, ${order.customer?.city || ''}</span></div>
+              <div class="conf-row"><span>Total (COD)</span><span>${total}</span></div>
+              <div class="conf-row"><span>Status</span><span style="color:#ffc107;">📦 Processing</span></div>
+            ` : `<div style="font-size:0.75rem;">Order: ${orderId}</div>`}
+          </div>
+          <div class="conf-btns">
+            <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
+          </div>
+          <div class="conf-order-id">ORDER ID · ${orderId || '—'}</div>
+        `;
+      } else {
+        // Fallback or Generic success
+        wrap.innerHTML = `
+          <div class="conf-icon success">✓</div>
+          <h1 class="conf-title">Order Confirmed!</h1>
+          <p class="conf-subtitle">
+            Thank you for your purchase. Your order is being processed.<br>
+            You'll receive a confirmation email shortly.
+          </p>
+          <div class="conf-card">
+            <div class="conf-card-title">Order Summary</div>
+            ${order ? `
+              <div class="conf-row"><span>Order ID</span><span>${order.id}</span></div>
+              <div class="conf-row"><span>Customer</span><span>${order.customer?.fname || ''} ${order.customer?.lname || ''}</span></div>
+              <div class="conf-row"><span>Total</span><span style="color:#2e9e6c;">${total}</span></div>
+              <div class="conf-row"><span>Payment</span><span>${(order.paymentMethod || method).replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span></div>
+              <div class="conf-row"><span>Status</span><span style="color:#2e9e6c;">✓ Paid</span></div>
+            ` : `<div style="font-size:0.75rem;">Order: ${orderId}</div>`}
+          </div>
+          <div class="conf-btns">
+            <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
+          </div>
+          <div class="conf-order-id">ORDER ID · ${orderId || '—'}</div>
+        `;
+      }
+    }
+
+    // Copy account number
+    function copyNum() {
+      navigator.clipboard.writeText('15301017500402').then(() => {
+        const msg = document.getElementById('copy-msg');
+        if (msg) { msg.textContent = '✓ Copied!'; msg.style.color = '#2e9e6c'; }
+        setTimeout(() => { if (msg) { msg.textContent = 'Click to copy'; msg.style.color = ''; } }, 2000);
+      }).catch(() => { prompt('Copy:', '15301017500402'); });
+    }
+  </script>
+
+</body>
+</html>
+

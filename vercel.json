@@ -15,6 +15,6 @@
     { "source": "/api/(.*)", "destination": "/api/" }
   ],
   "env": {
-    "BACKEND_URL": "@backend_url"
+    "BACKEND_URL": "https://api.lwangblack.co"
   }
 }

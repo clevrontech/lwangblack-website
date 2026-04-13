@@ -7,11 +7,107 @@ const config = require('../config');
 const { requireAuth, auditLog } = require('../middleware/auth');
 const { broadcast } = require('../ws');
 
+const { sendRefundNotice, sendOrderConfirmation } = require('../services/notifications');
+const { generateInvoice } = require('../services/invoices');
+const dynConfig = require('../services/dynamic-config');
+
 const router = express.Router();
+
+const fetch = require('node-fetch');
 
 const CURRENCY_MAP = {
   AU: 'aud', US: 'usd', GB: 'gbp', CA: 'cad', NZ: 'nzd', JP: 'jpy', NP: 'npr',
 };
+
+// ── Helper: Create order in DB or memory ─────────────────────────────────────
+async function createOrder({ orderId, customer, items, country, currency, symbol, subtotal, shipping, total, carrier, paymentMethod, discountCode, discountAmount }) {
+  if (db.isUsingMemory()) {
+    const mem = db.getMemStore();
+    let customerId = null;
+    if (customer?.email) {
+      let existing = mem.customers.find(c => c.email === customer.email);
+      if (existing) {
+        customerId = existing.id;
+        Object.assign(existing, { fname: customer.fname, lname: customer.lname, phone: customer.phone, country });
+      } else {
+        customerId = db.uuid();
+        mem.customers.push({
+          id: customerId, fname: customer.fname, lname: customer.lname,
+          email: customer.email, phone: customer.phone,
+          address: `${customer.street || ''}, ${customer.city || ''} ${customer.postal || ''}`.trim(),
+          country, created_at: new Date(), updated_at: new Date(),
+        });
+      }
+    }
+    mem.orders.push({
+      id: orderId, customer_id: customerId, status: 'pending',
+      country: country || 'NP', currency: currency || 'NPR', symbol: symbol || 'Rs',
+      items: items || [], subtotal: subtotal || 0, shipping: shipping || 0, total: total || 0,
+      carrier: carrier || (country === 'NP' ? 'Local Courier' : 'DHL'),
+      tracking: '', notes: '', payment_method: paymentMethod || 'pending',
+      discount_code: discountCode || null, discount_amount: discountAmount || 0,
+      created_at: new Date(), updated_at: new Date(),
+    });
+    mem.transactions.push({
+      id: db.uuid(), order_id: orderId, method: paymentMethod || 'pending',
+      status: 'pending', amount: total || 0, currency: currency || 'NPR',
+      reference: null, created_at: new Date(),
+    });
+    if (discountCode) {
+      const disc = mem.discounts.find(d => d.code === discountCode.toUpperCase());
+      if (disc) disc.usage_count = (disc.usage_count || 0) + 1;
+    }
+  } else {
+    let customerId = null;
+    if (customer?.email) {
+      const existing = await db.queryOne('SELECT id FROM customers WHERE email = $1', [customer.email]);
+      if (existing) {
+        customerId = existing.id;
+        await db.query(
+          'UPDATE customers SET fname=$1, lname=$2, phone=$3, country=$4, updated_at=NOW() WHERE id=$5',
+          [customer.fname, customer.lname, customer.phone, country, customerId]
+        );
+      } else {
+        const newCust = await db.queryOne(
+          'INSERT INTO customers (fname, lname, email, phone, address, country) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+          [customer.fname, customer.lname, customer.email, customer.phone,
+           `${customer.street || ''}, ${customer.city || ''} ${customer.postal || ''}`.trim(), country]
+        );
+        customerId = newCust.id;
+      }
+    }
+    await db.query(
+      `INSERT INTO orders (id, customer_id, status, country, currency, symbol, items, subtotal, shipping, total, carrier, payment_method, discount_code, discount_amount)
+       VALUES ($1,$2,'pending',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [orderId, customerId, country || 'NP', currency || 'NPR', symbol || 'Rs',
+       JSON.stringify(items || []), subtotal || 0, shipping || 0, total || 0,
+       carrier || 'DHL', paymentMethod || 'pending', discountCode || null, discountAmount || 0]
+    );
+    await db.query(
+      'INSERT INTO transactions (order_id, method, status, amount, currency) VALUES ($1,$2,$3,$4,$5)',
+      [orderId, paymentMethod || 'pending', 'pending', total || 0, currency || 'NPR']
+    );
+    if (discountCode) {
+      await db.query(
+        'UPDATE discounts SET usage_count = COALESCE(usage_count,0) + 1 WHERE code = $1',
+        [discountCode.toUpperCase()]
+      ).catch(() => {});
+    }
+  }
+}
+
+// ── Helper: Cancel order (on payment initiation failure) ─────────────────────
+async function cancelOrder(orderId) {
+  try {
+    if (db.isUsingMemory()) {
+      const mem = db.getMemStore();
+      const o = mem.orders.find(x => x.id === orderId);
+      if (o) { o.status = 'cancelled'; o.updated_at = new Date(); }
+    } else {
+      await db.query("UPDATE orders SET status = 'cancelled', updated_at = NOW() WHERE id = $1", [orderId]);
+    }
+  } catch (e) { /* best effort */ }
+}
 
 // ── Helper: update order + transaction in memory ────────────────────────────
 function memUpdateOrderPaid(orderId, method, reference) {
@@ -30,16 +126,23 @@ function memUpdateOrderPaid(orderId, method, reference) {
 }
 
 // ── Helper: update order status in DB or memory ─────────────────────────────
+// When status becomes 'paid', triggers confirmation email + invoice generation.
 async function updateOrderStatus(orderId, status, method, reference) {
+  let order = null;
+  let customer = null;
+
   if (db.isUsingMemory()) {
     const mem = db.getMemStore();
-    const order = mem.orders.find(o => o.id === orderId);
+    order = mem.orders.find(o => o.id === orderId);
     if (order) { order.status = status; order.updated_at = new Date(); }
     const txn = mem.transactions.find(t => t.order_id === orderId && t.status === 'pending');
     if (txn) {
       txn.status = status === 'paid' ? 'paid' : 'pending';
       if (method) txn.method = method;
       if (reference) txn.reference = reference;
+    }
+    if (order?.customer_id) {
+      customer = mem.customers.find(c => c.id === order.customer_id) || null;
     }
   } else {
     await db.query(`UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`, [status, orderId]);
@@ -50,6 +153,26 @@ async function updateOrderStatus(orderId, status, method, reference) {
         [status === 'paid' ? 'paid' : 'pending', reference, method, orderId]
       );
     }
+    const row = await db.queryOne(
+      `SELECT o.*, c.fname, c.lname, c.email AS customer_email, c.phone AS customer_phone
+       FROM orders o LEFT JOIN customers c ON o.customer_id = c.id WHERE o.id = $1`, [orderId]
+    );
+    if (row) {
+      order = row;
+      customer = { fname: row.fname, lname: row.lname, email: row.customer_email, phone: row.customer_phone };
+    }
+  }
+
+  // Payment confirmed → send confirmation email + generate invoice
+  if (status === 'paid' && order) {
+    (async () => {
+      try {
+        if (customer) await sendOrderConfirmation(order, customer);
+      } catch (e) { console.error('[Payments] Confirmation email error:', e.message); }
+      try {
+        await generateInvoice(order, customer, []);
+      } catch (e) { console.error('[Payments] Invoice generation error:', e.message); }
+    })();
   }
 }
 
@@ -59,6 +182,7 @@ router.get('/methods', (req, res) => {
 
   const METHOD_META = {
     nabil:      { id: 'nabil',      label: 'Nabil Bank',              icon: '🏦', description: "Pay directly via Nabil Bank" },
+    khalti:     { id: 'khalti',     label: 'Khalti',                  icon: '🟣', description: 'Pay with Khalti digital wallet' },
     cod:        { id: 'cod',        label: 'Cash on Delivery',        icon: '💵', description: 'Pay Rs when your order arrives' },
     paypal:     { id: 'paypal',     label: 'PayPal',                  icon: '🅿️', description: 'Pay securely with your PayPal account' },
     stripe:     { id: 'stripe',     label: 'Credit / Debit Card',     icon: '💳', description: 'Visa, Mastercard, AMEX — encrypted by Stripe' },
@@ -74,16 +198,346 @@ router.get('/methods', (req, res) => {
   res.json({ country, methods });
 });
 
+// ── POST /api/payments/checkout ──────────────────────────────────────────────
+// Unified checkout: creates order in DB then initiates real payment gateway.
+// This is the primary endpoint called by the storefront checkout page.
+// Returns a redirect URL for the payment gateway (or success for COD).
+// Returns 503 if the requested gateway is not configured — never falls back to demo.
+router.post('/checkout', async (req, res) => {
+  const {
+    gateway, customer, items, country, currency, symbol,
+    subtotal, shipping, total, carrier, discountCode, discountAmount,
+  } = req.body;
+
+  if (!gateway) return res.status(400).json({ error: 'gateway is required' });
+  if (!items?.length) return res.status(400).json({ error: 'Cart items are required' });
+  if (!total || parseFloat(total) <= 0) return res.status(400).json({ error: 'Order total is required' });
+  if (!customer?.email) return res.status(400).json({ error: 'Customer email is required' });
+
+  const orderId = 'LB-' + Date.now().toString(36).toUpperCase();
+  const origin = req.headers.origin || config.siteUrl;
+
+  try {
+    // 1. Create order as pending in DB before initiating payment
+    await createOrder({
+      orderId, customer, items, country, currency, symbol, subtotal, shipping, total,
+      carrier, paymentMethod: gateway, discountCode, discountAmount,
+    });
+
+    // 2. Initiate the appropriate payment gateway
+    // ── Stripe (card, Apple Pay, Google Pay, Afterpay) ──
+    if (['stripe', 'card', 'apple_pay', 'google_pay', 'afterpay'].includes(gateway)) {
+      const stripeCfg = await dynConfig.getGatewayConfig('stripe');
+      if (!stripeCfg.secretKey || stripeCfg.secretKey === 'sk_test_placeholder') {
+        await cancelOrder(orderId);
+        return res.status(503).json({
+          error: 'Stripe payment gateway is not configured. Add your Stripe Secret Key in Admin → Settings → Payments.',
+          gateway, setup: 'https://dashboard.stripe.com/apikeys',
+        });
+      }
+      const stripe = Stripe(stripeCfg.secretKey);
+      const stripeCurrency = CURRENCY_MAP[country] || 'usd';
+      const paymentMethods = gateway === 'afterpay' ? ['afterpay_clearpay'] : ['card'];
+
+      const lineItems = items.map(item => ({
+        price_data: {
+          currency: stripeCurrency,
+          product_data: { name: item.name, description: item.variant ? `Variant: ${item.variant}` : undefined },
+          unit_amount: Math.round(parseFloat(item.price) * 100),
+        },
+        quantity: item.qty || 1,
+      }));
+      if (parseFloat(shipping) > 0) {
+        lineItems.push({
+          price_data: {
+            currency: stripeCurrency,
+            product_data: { name: 'Shipping (DHL Express)' },
+            unit_amount: Math.round(parseFloat(shipping) * 100),
+          },
+          quantity: 1,
+        });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        payment_method_types: paymentMethods,
+        line_items: lineItems,
+        customer_email: customer.email,
+        metadata: { orderId, country, source: 'lwang-black', paymentType: gateway },
+        success_url: `${origin}/order-confirmation.html?order_id=${orderId}&method=${gateway}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/checkout.html?cancelled=true&order_id=${orderId}`,
+      });
+
+      broadcast({ type: 'order:new', data: { orderId, country, total, status: 'pending', method: gateway } });
+      return res.json({ orderId, url: session.url, sessionId: session.id });
+    }
+
+    // ── PayPal ──
+    if (gateway === 'paypal') {
+      const ppCfg = await dynConfig.getGatewayConfig('paypal');
+      if (!ppCfg.clientId || ppCfg.clientId === 'paypal_client_placeholder') {
+        await cancelOrder(orderId);
+        return res.status(503).json({
+          error: 'PayPal is not configured. Add your PayPal Client ID and Secret in Admin → Settings → Payments.',
+          gateway, setup: 'https://developer.paypal.com/api/rest/',
+        });
+      }
+      const baseUrl = ppCfg.isLive ? ppCfg.liveUrl : ppCfg.sandboxUrl;
+      const authRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`${ppCfg.clientId}:${ppCfg.clientSecret}`).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'grant_type=client_credentials',
+      });
+      const authData = await authRes.json();
+      if (!authData.access_token) {
+        await cancelOrder(orderId);
+        return res.status(502).json({ error: 'PayPal authentication failed. Check PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET.' });
+      }
+
+      const cur = (currency || 'USD').toUpperCase();
+      const orderRes = await fetch(`${baseUrl}/v2/checkout/orders`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authData.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intent: 'CAPTURE',
+          purchase_units: [{
+            reference_id: orderId,
+            amount: { currency_code: cur, value: parseFloat(total).toFixed(2) },
+            description: `Lwang Black Order ${orderId}`,
+          }],
+          application_context: {
+            brand_name: 'Lwang Black',
+            return_url: `${origin}/api/payments/paypal-capture?orderId=${orderId}`,
+            cancel_url: `${origin}/checkout.html?cancelled=true&order_id=${orderId}`,
+            user_action: 'PAY_NOW',
+          },
+        }),
+      });
+      const orderData = await orderRes.json();
+      const approvalLink = orderData.links?.find(l => l.rel === 'approve');
+      if (!approvalLink) {
+        await cancelOrder(orderId);
+        return res.status(502).json({ error: 'PayPal did not return an approval URL. Check your PayPal credentials.' });
+      }
+
+      broadcast({ type: 'order:new', data: { orderId, country, total, status: 'pending', method: 'paypal' } });
+      return res.json({ orderId, approvalUrl: approvalLink.href, paypalOrderId: orderData.id });
+    }
+
+    // ── Khalti ──
+    if (gateway === 'khalti') {
+      const khaltiCfg = await dynConfig.getGatewayConfig('khalti');
+      if (!khaltiCfg.secretKey) {
+        await cancelOrder(orderId);
+        return res.status(503).json({
+          error: 'Khalti is not configured. Add your Khalti Secret Key in Admin → Settings → Payments.',
+          gateway, setup: 'https://khalti.com/api/v2/',
+        });
+      }
+      const baseUrl = khaltiCfg.isLive ? khaltiCfg.liveUrl : khaltiCfg.testUrl;
+      const khaltiRes = await fetch(`${baseUrl}/epayment/initiate/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${khaltiCfg.secretKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          return_url: `${origin}/api/payments/khalti-verify?orderId=${orderId}`,
+          website_url: origin,
+          amount: Math.round(parseFloat(total) * 100),
+          purchase_order_id: orderId,
+          purchase_order_name: `Lwang Black Order ${orderId}`,
+          customer_info: {
+            name: `${customer.fname} ${customer.lname}`.trim(),
+            email: customer.email,
+            phone: customer.phone || '',
+          },
+        }),
+      });
+      const khaltiData = await khaltiRes.json();
+      if (!khaltiData.payment_url) {
+        await cancelOrder(orderId);
+        return res.status(502).json({ error: khaltiData.detail || 'Khalti initiation failed. Check KHALTI_SECRET_KEY.' });
+      }
+
+      broadcast({ type: 'order:new', data: { orderId, country, total, status: 'pending', method: 'khalti' } });
+      return res.json({ orderId, paymentUrl: khaltiData.payment_url, pidx: khaltiData.pidx });
+    }
+
+    // ── eSewa ──
+    if (gateway === 'esewa') {
+      if (!config.esewa.merchantId || !config.esewa.secretKey) {
+        await cancelOrder(orderId);
+        return res.status(503).json({
+          error: 'eSewa payment gateway is not configured. Add ESEWA_MERCHANT_ID and ESEWA_SECRET_KEY to your server environment.',
+          gateway, setup: 'https://developer.esewa.com.np/',
+        });
+      }
+      const transactionUuid = `${orderId}-${Date.now()}`;
+      const totalAmount = parseFloat(total).toFixed(2);
+      const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${config.esewa.merchantId}`;
+      const signature = crypto.createHmac('sha256', config.esewa.secretKey).update(message).digest('base64');
+      const esewaCfg = await dynConfig.getGatewayConfig('esewa');
+      const formData = {
+        amount: totalAmount, tax_amount: '0', total_amount: totalAmount,
+        transaction_uuid: transactionUuid, product_code: esewaCfg.merchantId,
+        product_service_charge: '0', product_delivery_charge: '0',
+        success_url: `${origin}/api/payments/esewa-verify?orderId=${orderId}`,
+        failure_url: `${origin}/checkout.html?failed=true&order_id=${orderId}`,
+        signed_field_names: 'total_amount,transaction_uuid,product_code',
+        signature,
+      };
+      broadcast({ type: 'order:new', data: { orderId, country, total, status: 'pending', method: 'esewa' } });
+      return res.json({
+        orderId,
+        gatewayUrl: esewaCfg.isLive ? esewaCfg.liveUrl : esewaCfg.testUrl,
+        formData, transactionUuid,
+      });
+    }
+
+    // ── Nabil Bank ──
+    if (gateway === 'nabil' || gateway === 'nabil_bank') {
+      const nabilCfg = await dynConfig.getGatewayConfig('nabil');
+      const merchantId = nabilCfg.merchantId;
+      const secretKey  = nabilCfg.secretKey;
+      if (!merchantId || merchantId === 'NB_MERCHANT_PLACEHOLDER') {
+        await cancelOrder(orderId);
+        return res.status(503).json({
+          error: 'Nabil Bank is not configured. Add your Nabil Merchant ID and Secret Key in Admin → Settings → Payments.',
+          gateway, setup: 'Contact Nabil Bank (Nepal) for merchant integration credentials.',
+        });
+      }
+      const transactionUuid = `${orderId}-${Date.now()}`;
+      const totalAmount = parseFloat(total).toFixed(2);
+      const message = `merchant_id=${merchantId},transaction_uuid=${transactionUuid},amount=${totalAmount}`;
+      const signature = crypto.createHmac('sha256', secretKey).update(message).digest('base64');
+      const gatewayUrl = nabilCfg.isLive
+        ? 'https://payment.nabilbank.com/checkout'
+        : 'https://payment-sandbox.nabilbank.com/checkout';
+      const formData = {
+        merchant_id: merchantId,
+        transaction_uuid: transactionUuid,
+        amount: totalAmount,
+        currency: 'NPR',
+        product_name: 'Lwang Black Coffee',
+        customer_name: `${customer.fname} ${customer.lname}`.trim(),
+        customer_phone: customer.phone || '',
+        success_url: `${origin}/api/payments/nabil-callback?orderId=${orderId}&status=success`,
+        failure_url: `${origin}/checkout.html?failed=true&order_id=${orderId}`,
+        signature,
+        signed_field_names: 'merchant_id,transaction_uuid,amount',
+      };
+      broadcast({ type: 'order:new', data: { orderId, country, total, status: 'pending', method: gateway } });
+      return res.json({ orderId, gatewayUrl, formData, transactionUuid, isTest: !nabilCfg.isLive });
+    }
+
+    // ── Cash on Delivery ──
+    if (gateway === 'cod') {
+      if (country !== 'NP') {
+        await cancelOrder(orderId);
+        return res.status(400).json({ error: 'Cash on Delivery is only available within Nepal.' });
+      }
+      // COD stays pending until admin confirms delivery; no payment initiation needed
+      broadcast({ type: 'order:new', data: { orderId, country: 'NP', total, status: 'pending', method: 'cod' } });
+      return res.json({
+        orderId,
+        success: true,
+        method: 'cod',
+        message: `COD order placed. Pay NPR ${parseFloat(total).toLocaleString()} upon delivery.`,
+        estimatedDelivery: '2–5 business days within Kathmandu Valley',
+      });
+    }
+
+    // Unknown gateway
+    await cancelOrder(orderId);
+    return res.status(400).json({ error: `Unknown payment gateway: "${gateway}"` });
+
+  } catch (err) {
+    await cancelOrder(orderId).catch(() => {});
+    console.error('[Payments] Checkout error:', err);
+    res.status(500).json({ error: 'Checkout failed: ' + err.message });
+  }
+});
+
+// ── POST /api/payments/stripe-intent ─────────────────────────────────────────
+// Creates an order (pending) and a Stripe PaymentIntent for the embedded card form.
+// The frontend uses Stripe.js to confirm payment directly without a redirect.
+router.post('/stripe-intent', async (req, res) => {
+  try {
+    const { customer, items, country, currency, symbol, subtotal, shipping, total, carrier, tip = 0 } = req.body;
+    if (!customer?.email || !items?.length || !total) {
+      return res.status(400).json({ error: 'customer.email, items, and total are required' });
+    }
+
+    const stripeCfg = await dynConfig.getGatewayConfig('stripe');
+    if (!stripeCfg.secretKey) {
+      return res.status(503).json({ error: 'Stripe is not configured. Add your Stripe Secret Key in Admin → Settings → Payments.' });
+    }
+
+    const stripe = Stripe(stripeCfg.secretKey);
+    const orderId = 'LB-' + Date.now().toString(36).toUpperCase();
+    const totalWithTip = parseFloat(total) + parseFloat(tip || 0);
+
+    await createOrder({ orderId, customer, items, country, currency, symbol, subtotal, shipping: parseFloat(shipping) + parseFloat(tip || 0), total: totalWithTip, carrier, paymentMethod: 'card', discountCode: req.body.discountCode, discountAmount: req.body.discountAmount });
+
+    const intent = await stripe.paymentIntents.create({
+      amount: Math.round(totalWithTip * 100),
+      currency: (currency || 'usd').toLowerCase(),
+      metadata: { orderId, customerEmail: customer.email },
+      receipt_email: customer.email,
+      description: `Lwang Black order ${orderId}`,
+    });
+
+    broadcast({ type: 'order:new', data: { orderId, country, total: totalWithTip, status: 'pending', method: 'card' } });
+    res.json({ clientSecret: intent.client_secret, orderId });
+  } catch (err) {
+    console.error('[Payments] Stripe intent error:', err);
+    res.status(500).json({ error: 'Failed to create payment intent: ' + err.message });
+  }
+});
+
+// ── GET /api/payments/stripe-session-verify ───────────────────────────────────
+// Called by order-confirmation page to verify Stripe session and mark order paid.
+// Stripe redirects the customer before the webhook fires, so we verify synchronously.
+router.get('/stripe-session-verify', async (req, res) => {
+  try {
+    const { session_id, order_id } = req.query;
+    if (!session_id || !order_id) return res.status(400).json({ error: 'session_id and order_id required' });
+
+    if (!config.stripe.secretKey || config.stripe.secretKey === 'sk_test_placeholder') {
+      return res.status(503).json({ error: 'Stripe not configured' });
+    }
+
+    const stripe = Stripe(config.stripe.secretKey);
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+
+    if (session.payment_status === 'paid' && session.metadata?.orderId === order_id) {
+      await updateOrderStatus(order_id, 'paid', session.metadata?.paymentType || 'stripe', session.payment_intent);
+      broadcast({ type: 'order:updated', data: { orderId: order_id, status: 'paid' } });
+    }
+
+    let currentStatus = 'pending';
+    if (db.isUsingMemory()) {
+      const o = db.getMemStore().orders.find(x => x.id === order_id);
+      if (o) currentStatus = o.status;
+    } else {
+      const row = await db.queryOne('SELECT status FROM orders WHERE id = $1', [order_id]);
+      if (row) currentStatus = row.status;
+    }
+
+    res.json({ orderId: order_id, status: currentStatus, stripePaymentStatus: session.payment_status });
+  } catch (err) {
+    console.error('[Payments] Stripe session verify error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── POST /api/payments/stripe-session ────────────────────────────────────────
+// Legacy endpoint — prefer POST /api/payments/checkout for new integrations.
 router.post('/stripe-session', async (req, res) => {
   try {
     if (!config.stripe.secretKey || config.stripe.secretKey === 'sk_test_placeholder') {
-      return res.json({
-        demo: true,
-        sessionId: 'cs_demo_' + Date.now(),
-        url: `/order-confirmation.html?order_id=${req.body?.orderId || 'DEMO'}&method=stripe&demo=true`,
-        message: 'Stripe keys not configured. Running in demo mode.',
-      });
+      return res.status(503).json({ error: 'Stripe payment gateway is not configured. Set STRIPE_SECRET_KEY in your environment.' });
     }
 
     const stripe = Stripe(config.stripe.secretKey);
@@ -194,12 +648,7 @@ router.post('/paypal-create', async (req, res) => {
     if (!orderId || !amount) return res.status(400).json({ error: 'orderId and amount required' });
 
     if (!config.paypal.clientId || config.paypal.clientId === 'paypal_client_placeholder') {
-      return res.json({
-        demo: true,
-        approvalUrl: `/order-confirmation.html?order_id=${orderId}&method=paypal&demo=true`,
-        paypalOrderId: 'PP_DEMO_' + Date.now(),
-        message: 'PayPal keys not configured. Running in demo mode.',
-      });
+      return res.status(503).json({ error: 'PayPal payment gateway is not configured. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in your environment.' });
     }
 
     const baseUrl = config.paypal.isLive ? config.paypal.liveUrl : config.paypal.sandboxUrl;
@@ -258,7 +707,7 @@ router.get('/paypal-capture', async (req, res) => {
     const { token: paypalOrderId, orderId } = req.query;
 
     if (!config.paypal.clientId || config.paypal.clientId === 'paypal_client_placeholder') {
-      return res.redirect(`${config.siteUrl}/order-confirmation.html?order_id=${orderId}&method=paypal&demo=true`);
+      return res.redirect(`${config.siteUrl}/checkout.html?paypal_failed=true`);
     }
 
     const baseUrl = config.paypal.isLive ? config.paypal.liveUrl : config.paypal.sandboxUrl;
@@ -272,14 +721,11 @@ router.get('/paypal-capture', async (req, res) => {
     });
     const authData = await authRes.json();
 
-    const captureRes = await fetch(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authData.access_token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    const captureData = await captureRes.json();
+      const captureRes = await fetch(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authData.access_token}`, 'Content-Type': 'application/json' },
+      });
+      const captureData = await captureRes.json();
 
     if (captureData.status === 'COMPLETED') {
       await updateOrderStatus(orderId, 'paid', 'paypal', paypalOrderId);
@@ -378,14 +824,8 @@ router.post('/nabil-initiate', async (req, res) => {
       signed_field_names: 'merchant_id,transaction_uuid,amount',
     };
 
-    // Demo mode if no real credentials
     if (merchantId === 'NB_MERCHANT_PLACEHOLDER') {
-      return res.json({
-        demo: true,
-        orderId,
-        gatewayUrl: `${origin}/order-confirmation.html?order_id=${orderId}&method=nabil&demo=true`,
-        message: 'Nabil Bank credentials not configured. Running in demo mode.',
-      });
+      return res.status(503).json({ error: 'Nabil Bank payment gateway is not configured. Set NABIL_MERCHANT_ID and NABIL_SECRET_KEY in your environment.' });
     }
 
     res.json({
@@ -467,6 +907,92 @@ router.get('/esewa-verify', async (req, res) => {
   } catch (err) {
     console.error('[Payments] eSewa verify error:', err);
     res.redirect(`${config.siteUrl}/checkout.html?esewa_failed=true`);
+  }
+});
+
+// ── POST /api/payments/khalti-initiate ────────────────────────────────────────
+router.post('/khalti-initiate', async (req, res) => {
+  try {
+    const { orderId, amount, customerName, customerEmail, customerPhone } = req.body;
+    if (!orderId || !amount) return res.status(400).json({ error: 'orderId and amount required' });
+
+    const khaltiKey = config.khalti.secretKey;
+    if (!khaltiKey) {
+      return res.status(503).json({ error: 'Khalti payment gateway is not configured. Set KHALTI_SECRET_KEY in your environment.' });
+    }
+
+    const baseUrl = config.khalti.isLive ? config.khalti.liveUrl : config.khalti.testUrl;
+    const origin = req.headers.origin || config.siteUrl;
+    const amountInPaisa = Math.round(parseFloat(amount) * 100);
+
+    const khaltiRes = await fetch(`${baseUrl}/epayment/initiate/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${khaltiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        return_url: `${origin}/api/payments/khalti-verify?orderId=${orderId}`,
+        website_url: origin,
+        amount: amountInPaisa,
+        purchase_order_id: orderId,
+        purchase_order_name: `Lwang Black Order ${orderId}`,
+        customer_info: {
+          name: customerName || '',
+          email: customerEmail || '',
+          phone: customerPhone || '',
+        },
+      }),
+    });
+    const khaltiData = await khaltiRes.json();
+
+    if (khaltiData.payment_url) {
+      res.json({
+        paymentUrl: khaltiData.payment_url,
+        pidx: khaltiData.pidx,
+        orderId,
+        isTest: !config.khalti.isLive,
+      });
+    } else {
+      res.status(400).json({ error: khaltiData.detail || 'Khalti initiation failed', details: khaltiData });
+    }
+  } catch (err) {
+    console.error('[Payments] Khalti initiate error:', err);
+    res.status(500).json({ error: 'Khalti payment initiation failed' });
+  }
+});
+
+// ── GET /api/payments/khalti-verify ──────────────────────────────────────────
+router.get('/khalti-verify', async (req, res) => {
+  try {
+    const { pidx, orderId, status: queryStatus } = req.query;
+    const khaltiKey = config.khalti.secretKey;
+
+    if (!khaltiKey) {
+      return res.redirect(`${config.siteUrl}/checkout.html?khalti_failed=true`);
+    }
+
+    const baseUrl = config.khalti.isLive ? config.khalti.liveUrl : config.khalti.testUrl;
+    const lookupRes = await fetch(`${baseUrl}/epayment/lookup/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${khaltiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ pidx }),
+    });
+    const lookupData = await lookupRes.json();
+
+    if (lookupData.status === 'Completed') {
+      await updateOrderStatus(orderId, 'paid', 'khalti', pidx);
+      broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'khalti' } });
+    }
+
+    const failed = lookupData.status !== 'Completed' ? '&failed=true' : '';
+    res.redirect(`${config.siteUrl}/order-confirmation.html?order_id=${orderId}&method=khalti${failed}`);
+  } catch (err) {
+    console.error('[Payments] Khalti verify error:', err);
+    res.redirect(`${config.siteUrl}/checkout.html?khalti_failed=true`);
   }
 });
 
@@ -560,6 +1086,22 @@ router.post('/:orderId/refund', requireAuth, async (req, res) => {
     }
 
     broadcast({ type: 'order:updated', data: { orderId, status: 'refunded' } });
+
+    // Async refund notification
+    (async () => {
+      try {
+        let custData;
+        if (db.isUsingMemory()) {
+          const mem = db.getMemStore();
+          custData = order.customer_id ? mem.customers.find(c => c.id === order.customer_id) : null;
+        } else {
+          custData = order.customer_id
+            ? await db.queryOne('SELECT fname, lname, email, phone FROM customers WHERE id = $1', [order.customer_id])
+            : null;
+        }
+        if (custData) await sendRefundNotice(order, custData, order.total, order.currency);
+      } catch (e) { console.error('[Payments] Refund notification error:', e.message); }
+    })();
 
     await auditLog(db, {
       userId: req.user.id, username: req.user.username,

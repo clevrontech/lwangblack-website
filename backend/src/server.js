@@ -11,6 +11,9 @@ const config = require('./config');
 const { getRedis } = require('./db/redis');
 const { initWebSocket, getClientCount } = require('./ws');
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerDoc = require('./swagger.json');
+
 const app = express();
 
 // ── Security Middleware ─────────────────────────────────────────────────────
@@ -47,6 +50,12 @@ app.use((req, res, next) => {
 });
 app.use(express.urlencoded({ extended: true }));
 
+// ── API Documentation ───────────────────────────────────────────────────────
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Lwang Black API Docs',
+}));
+
 // ── Health Check ────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
@@ -68,15 +77,48 @@ app.use('/api/discounts', apiLimiter, require('./routes/discounts'));
 app.use('/api/analytics', apiLimiter, require('./routes/analytics'));
 app.use('/api/finance', apiLimiter, require('./routes/finance'));
 app.use('/api/marketing', apiLimiter, require('./routes/marketing'));
-app.use('/api/settings', apiLimiter, require('./routes/settings'));
+const settingsRoutes = require('./routes/settings');
+app.use('/api/settings/public', settingsRoutes.publicRouter);
+app.use('/api/settings', apiLimiter, settingsRoutes);
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/subscription', apiLimiter, require('./routes/subscription'));
 app.use('/api/logistics', apiLimiter, require('./routes/logistics'));
 app.use('/api/social', apiLimiter, require('./routes/social'));
+app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
+app.use('/api/cart', apiLimiter, require('./routes/cart'));
+
+// ── Public checkout config (GDPR-compliant policy links) ────────────────────
+app.get('/api/checkout-config', (req, res) => {
+  res.json({
+    policies: {
+      terms: '/terms.html',
+      privacy: '/privacy-policy.html',
+      refund: '/refund-policy.html',
+      returns: '/return-policy.html',
+      shipping: '/shipping-policy.html',
+    },
+    gdpr: {
+      consentRequired: true,
+      message: 'By placing this order, you agree to our Terms of Service and Privacy Policy. Your data is processed securely and never shared with third parties without your consent.',
+    },
+    supportEmail: config.email.fromEmail,
+    siteUrl: config.siteUrl,
+  });
+});
 
 // ── 404 handler for API ─────────────────────────────────────────────────────
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'Endpoint not found', path: req.originalUrl });
+});
+
+// ── Serve Invoice PDFs ──────────────────────────────────────────────────────
+app.use('/invoices', express.static(path.join(__dirname, '..', 'invoices')));
+
+// ── Serve React Admin Dashboard ─────────────────────────────────────────────
+const adminPath = path.resolve(__dirname, '..', '..', 'admin-dashboard', 'dist');
+app.use('/admin', express.static(adminPath));
+app.get('/admin/*', (req, res) => {
+  res.sendFile(path.join(adminPath, 'index.html'));
 });
 
 // ── Serve Frontend Static Files ─────────────────────────────────────────────
@@ -110,16 +152,18 @@ initWebSocket(server);
 // Initialize Redis (non-blocking)
 getRedis();
 
-server.listen(config.port, () => {
-  console.log(`
+if (config.nodeEnv !== 'test') {
+  server.listen(config.port, () => {
+    console.log(`
   ╔═══════════════════════════════════════════════════════╗
   ║   Lwang Black Backend API Server                     ║
   ║   Running on port ${config.port}                            ║
   ║   Environment: ${config.nodeEnv.padEnd(12)}                   ║
   ║   WebSocket: ws://localhost:${config.port}/ws                ║
   ╚═══════════════════════════════════════════════════════╝
-  `);
-});
+    `);
+  });
+}
 
 // ── Graceful Shutdown ───────────────────────────────────────────────────────
 function shutdown(signal) {

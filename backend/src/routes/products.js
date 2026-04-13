@@ -50,16 +50,22 @@ router.get('/', async (req, res) => {
 // ── GET /api/products/:id ───────────────────────────────────────────────────
 router.get('/:id', async (req, res) => {
   try {
+    const productCacheKey = `products:item:${req.params.id}`;
+    const cached = await cacheGet(productCacheKey);
+    if (cached) return res.json({ product: cached });
+
     if (db.isUsingMemory()) {
       const mem = db.getMemStore();
       const product = mem.products.find(p => p.id === req.params.id || p.slug === req.params.id);
       if (!product) return res.status(404).json({ error: 'Product not found' });
+      await cacheSet(productCacheKey, product, 600);
       return res.json({ product });
     }
     const product = await db.queryOne(
       'SELECT * FROM products WHERE id = $1 OR slug = $1', [req.params.id]
     );
     if (!product) return res.status(404).json({ error: 'Product not found' });
+    await cacheSet(productCacheKey, product, 600);
     res.json({ product });
   } catch (err) {
     console.error('[Products] Get error:', err);

@@ -214,190 +214,272 @@
       if (pl) { pl.style.opacity = '0'; setTimeout(() => pl.remove(), 400); }
     }, 500);
 
-    // Parse URL params
-    const params    = new URLSearchParams(window.location.search);
-    const orderId   = params.get('order_id') || '';
-    const method    = params.get('method')   || '';
-    const sessionId = params.get('session_id') || '';
-    const status    = params.get('status')   || '';
-    const demo      = params.get('demo')     || '';
-
     const wrap = document.getElementById('conf-wrap');
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId   = urlParams.get('order_id') || '';
+    const method    = urlParams.get('method')   || '';
+    const sessionId = urlParams.get('session_id') || '';
+    const failed    = urlParams.get('failed') === 'true';
 
-    // ── Verify Stripe Session ──────────────────────────────────────────────
-    async function verifyStripeSession(sid) {
-      wrap.innerHTML = `<div class="spinner" style="margin: 0 auto 1.5rem;"></div><p class="conf-subtitle">Verifying your payment...</p>`;
-      
+    // Helper: get saved order from localStorage
+    function getLocalOrder(id) {
       try {
-        const res = await fetch('/api/payments/verify-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: sid })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-          renderSuccess(data.order);
-          // Clear cart on success
-          if (typeof clearCart === 'function') clearCart();
-        } else {
-          renderError(data.message || 'Payment verification failed.');
-        }
-      } catch (err) {
-        renderError('Connection error. Please contact support.');
-      }
+        const list = JSON.parse(localStorage.getItem('lb_orders') || '[]');
+        return list.find(o => o.id === id) || null;
+      } catch { return null; }
     }
 
-    function renderError(msg) {
+    // Helper: format currency amount
+    function fmtAmount(order, backendData) {
+      const sym   = order?.symbol || backendData?.currency || 'NPR';
+      const total = order?.total  || backendData?.total || 0;
+      if (!total) return '—';
+      return typeof sym === 'string' && sym.length <= 4
+        ? `${sym}${Number(total).toLocaleString()}`
+        : `${Number(total).toLocaleString()} ${sym}`;
+    }
+
+    // Helper: build order summary card rows
+    function orderCard(localOrder, backendData, statusHtml) {
+      const o = localOrder;
+      if (!o && !backendData) return `<div style="font-size:0.75rem;color:rgba(255,255,255,0.35);">Order ID: ${orderId || '—'}</div>`;
+      const name = o ? `${o.customer?.fname||''} ${o.customer?.lname||''}`.trim() : '';
+      const pm   = (o?.paymentMethod || method || backendData?.paymentMethod || '').replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
+      return `
+        ${name ? `<div class="conf-row"><span>Customer</span><span>${name}</span></div>` : ''}
+        ${o?.customer?.email ? `<div class="conf-row"><span>Email</span><span>${o.customer.email}</span></div>` : ''}
+        <div class="conf-row"><span>Order ID</span><span>${orderId}</span></div>
+        <div class="conf-row"><span>Total</span><span>${fmtAmount(o, backendData)}</span></div>
+        ${pm ? `<div class="conf-row"><span>Payment</span><span>${pm}</span></div>` : ''}
+        <div class="conf-row"><span>Status</span><span>${statusHtml}</span></div>`;
+    }
+
+    // ── Render functions ──────────────────────────────────────────────────────
+    function renderLoading(msg) {
       wrap.innerHTML = `
-        <div class="conf-icon" style="background:rgba(220,53,69,0.1);border:1px solid rgba(220,53,69,0.3);color:#ff4d4d;">✕</div>
-        <h1 class="conf-title">Payment Error</h1>
-        <p class="conf-subtitle">${msg}</p>
-        <div class="conf-btns">
-          <a href="checkout.html" class="conf-btn-primary">RETRY CHECKOUT</a>
-          <a href="contact.html" class="conf-btn-ghost">SUPPORT</a>
+        <div style="text-align:center;padding:4rem 1rem;">
+          <div id="conf-spinner" style="width:48px;height:48px;border:3px solid rgba(255,255,255,0.1);border-top-color:rgba(255,255,255,0.5);border-radius:50%;animation:spin 0.9s linear infinite;margin:0 auto 1.5rem;"></div>
+          <p id="conf-loading-msg" style="font-size:0.8rem;color:rgba(255,255,255,0.45);">${msg || 'Verifying your payment…'}</p>
         </div>
-      `;
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
     }
 
-    function renderSuccess(orderData) {
-      const cur = orderData.currency.toUpperCase();
-      const amt = orderData.amount.toLocaleString(undefined, { minimumFractionDigits: orderData.currency === 'jpy' ? 0 : 2 });
-      
+    function renderPaid(localOrder, backendData) {
       wrap.innerHTML = `
         <div class="conf-icon success">✓</div>
         <h1 class="conf-title">Order Confirmed!</h1>
         <p class="conf-subtitle">
-          Thank you for your purchase. Your payment of <strong>${cur} ${amt}</strong> has been processed.<br>
-          A confirmation has been sent to ${orderData.customer_email}.
+          Thank you for your purchase. Your payment has been received and your order is being prepared.<br>
+          A confirmation email will be sent to you shortly.
         </p>
         <div class="conf-card">
           <div class="conf-card-title">Order Summary</div>
-          <div class="conf-row"><span>Order ID</span><span>${orderData.id}</span></div>
-          <div class="conf-row"><span>Customer</span><span>${orderData.customer_email}</span></div>
-          <div class="conf-row"><span>Total Paid</span><span style="color:#2e9e6c;">${cur} ${amt}</span></div>
-          <div class="conf-row"><span>Payment</span><span>Stripe Checkout</span></div>
-          <div class="conf-row"><span>Status</span><span style="color:#2e9e6c;">✓ Paid</span></div>
+          ${orderCard(localOrder, backendData, '<span style="color:#2e9e6c;">✓ Payment Received</span>')}
         </div>
         <div class="conf-btns">
           <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
           <a href="index.html" class="conf-btn-ghost">HOME</a>
         </div>
-        <div class="conf-order-id">ORDER ID · ${orderData.id}</div>
-      `;
+        <div class="conf-order-id">ORDER ID · ${orderId}</div>`;
     }
 
-    // ── Main Logic ──────────────────────────────────────────────────────────
-    if (sessionId) {
-      verifyStripeSession(sessionId);
-    } else {
-      // Original logic for Nabil/COD/Manual Stripe (fallback)
-      // Retrieve order from localStorage
-      const orders = JSON.parse(localStorage.getItem('lb_orders') || '[]');
-      const order  = orders.find(o => o.id === orderId) || null;
+    function renderCOD(localOrder) {
+      wrap.innerHTML = `
+        <div class="conf-icon cod">💵</div>
+        <h1 class="conf-title">Order Placed!</h1>
+        <p class="conf-subtitle">
+          Your Cash on Delivery order has been placed successfully.<br>
+          Please have the exact cash amount ready when your package arrives.
+        </p>
+        <div class="conf-card">
+          <div class="conf-card-title">Order Summary</div>
+          ${orderCard(localOrder, null, '<span style="color:#ffc107;">📦 Awaiting Delivery</span>')}
+          ${localOrder?.customer?.street ? `<div class="conf-row"><span>Delivery To</span><span>${localOrder.customer.street}, ${localOrder.customer.city}</span></div>` : ''}
+        </div>
+        <div class="conf-btns">
+          <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
+          <a href="contact.html" class="conf-btn-ghost">CONTACT US</a>
+        </div>
+        <div class="conf-order-id">ORDER ID · ${orderId}</div>`;
+    }
 
-      // Determine display mode
-      const isNabil = method === 'nabil_bank';
-      const isCOD   = method === 'cod';
+    function renderNabilPending(localOrder) {
+      wrap.innerHTML = `
+        <div class="conf-icon pending">🏦</div>
+        <h1 class="conf-title" style="color:#e8a000;">Payment Processing</h1>
+        <p class="conf-subtitle">
+          We have received your order. Your Nabil Bank payment is being verified.<br>
+          This is usually confirmed within <strong style="color:#fff;">1–2 business hours</strong>.
+        </p>
+        <div class="bank-highlight" style="text-align:center;">
+          <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-bottom:0.4rem;">PAYMENT TO — NABIL BANK LTD.</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.55);margin-bottom:0.3rem;">LWANG BLACK PRODUCTS PVT.LTD</div>
+          <span class="bank-acc-num" onclick="copyNum()" title="Click to copy">15301017500402</span>
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.3);margin-top:0.3rem;" id="copy-msg">Click to copy</div>
+        </div>
+        <div class="nabil-steps">
+          <div class="nabil-steps-title">What happens next?</div>
+          <div class="nabil-step-item"><div class="step-num">1</div><div>Your payment is being verified against our Nabil Bank account <span style="color:#e8a000;">15301017500402</span>.</div></div>
+          <div class="nabil-step-item"><div class="step-num">2</div><div>Once confirmed, you'll receive an order confirmation via email or phone.</div></div>
+          <div class="nabil-step-item"><div class="step-num">3</div><div>Your order will be dispatched. Delivery within 2–5 business days within Nepal.</div></div>
+        </div>
+        <div class="conf-card">
+          <div class="conf-card-title">Order Summary</div>
+          ${orderCard(localOrder, null, '<span style="color:#e8a000;">⏳ Awaiting Payment Verification</span>')}
+        </div>
+        <div class="conf-btns">
+          <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
+          <a href="contact.html" class="conf-btn-ghost">CONTACT US</a>
+        </div>
+        <div class="conf-order-id">ORDER ID · ${orderId}</div>`;
+    }
 
-      // Format currency
-      const sym     = order?.symbol || 'NPR ';
-      const total   = order?.total  ? `${sym}${Number(order.total).toLocaleString()}` : '—';
+    function renderStripePending(localOrder) {
+      wrap.innerHTML = `
+        <div class="conf-icon pending">⏳</div>
+        <h1 class="conf-title" style="color:#e8a000;">Payment Processing</h1>
+        <p class="conf-subtitle">
+          Your payment is still being confirmed by the payment processor.<br>
+          Please do not close this page.
+        </p>
+        <div style="text-align:center;margin:2rem 0;">
+          <div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.1);border-top-color:#e8a000;border-radius:50%;animation:spin 0.9s linear infinite;margin:0 auto;"></div>
+          <p id="conf-loading-msg" style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:1rem;">Checking payment status…</p>
+        </div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+        <div class="conf-card">
+          <div class="conf-card-title">Order Summary</div>
+          ${orderCard(localOrder, null, '<span style="color:#e8a000;">⏳ Confirming</span>')}
+        </div>
+        <div class="conf-btns">
+          <a href="contact.html" class="conf-btn-ghost">CONTACT SUPPORT</a>
+        </div>
+        <div class="conf-order-id">ORDER ID · ${orderId}</div>`;
+    }
 
-      if (isNabil) {
-        wrap.innerHTML = `
-          <div class="conf-icon pending">🏦</div>
-          <h1 class="conf-title" style="color:#e8a000;">Payment Under Review</h1>
-          <p class="conf-subtitle">
-            We've received your order and your Nabil Bank payment slip.<br>
-            Our team will verify your transfer and confirm the order within <strong style="color:#fff;">1–2 business hours</strong>.
-          </p>
+    function renderFailed(localOrder) {
+      wrap.innerHTML = `
+        <div class="conf-icon pending" style="background:rgba(255,80,80,0.1);border-color:rgba(255,80,80,0.4);">✕</div>
+        <h1 class="conf-title" style="color:rgba(255,120,120,0.9);">Payment Failed</h1>
+        <p class="conf-subtitle">
+          Your payment was not completed. Your card has not been charged.<br>
+          Please try again or choose a different payment method.
+        </p>
+        <div class="conf-btns">
+          <a href="checkout.html" class="conf-btn-primary">TRY AGAIN</a>
+          <a href="contact.html" class="conf-btn-ghost">CONTACT SUPPORT</a>
+        </div>
+        ${orderId ? `<div class="conf-order-id">ORDER ID · ${orderId}</div>` : ''}`;
+    }
 
-          <div class="bank-highlight" style="text-align:center;">
-            <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-bottom:0.4rem;">PAYMENT TO — NABIL BANK LTD.</div>
-            <div style="font-size:0.7rem;color:rgba(255,255,255,0.55);margin-bottom:0.3rem;">LWANG BLACK PRODUCTS PVT.LTD</div>
-            <span class="bank-acc-num" onclick="copyNum()" title="Click to copy">15301017500402</span>
-            <div style="font-size:0.58rem;color:rgba(255,255,255,0.3);margin-top:0.3rem;" id="copy-msg">Click to copy</div>
-          </div>
+    function renderNotFound() {
+      wrap.innerHTML = `
+        <div class="conf-icon pending" style="background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.12);">?</div>
+        <h1 class="conf-title" style="color:rgba(255,255,255,0.6);">Order Not Found</h1>
+        <p class="conf-subtitle">
+          We couldn't find this order. If you just placed an order, it may still be processing.<br>
+          Contact us with your order ID for assistance.
+        </p>
+        <div class="conf-btns">
+          <a href="shop.html" class="conf-btn-primary">BACK TO SHOP</a>
+          <a href="contact.html" class="conf-btn-ghost">CONTACT SUPPORT</a>
+        </div>
+        ${orderId ? `<div class="conf-order-id">ORDER ID · ${orderId}</div>` : ''}`;
+    }
 
-          <div class="nabil-steps">
-            <div class="nabil-steps-title">What happens next?</div>
-            <div class="nabil-step-item"><div class="step-num">1</div><div>Your payment slip has been received. Keep a screenshot for your records.</div></div>
-            <div class="nabil-step-item"><div class="step-num">2</div><div>Our team verifies the transfer in the Nabil Bank account <span style="color:#e8a000;">15301017500402</span>.</div></div>
-            <div class="nabil-step-item"><div class="step-num">3</div><div>Once confirmed, you'll receive an order confirmation via phone/WhatsApp.</div></div>
-            <div class="nabil-step-item"><div class="step-num">4</div><div>Your order is dispatched. Expect delivery within 2–5 business days within Nepal.</div></div>
-          </div>
+    // ── Poll for payment confirmation (Stripe takes a moment) ─────────────────
+    async function pollForPayment(localOrder, maxAttempts) {
+      maxAttempts = maxAttempts || 15;
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const msgEl = document.getElementById('conf-loading-msg');
+        if (msgEl) msgEl.textContent = `Verifying payment… (${i + 1}/${maxAttempts})`;
+        try {
+          const res = await fetch(`/api/payments/status/${orderId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'paid') { renderPaid(localOrder, data); return; }
+            if (data.status === 'cancelled') { renderFailed(localOrder); return; }
+          }
+        } catch (e) { /* keep polling */ }
+      }
+      // Timed out — show pending state
+      renderStripePending(localOrder);
+    }
 
-          <div class="conf-card">
-            <div class="conf-card-title">Order Summary</div>
-            ${order ? `
-              <div class="conf-row"><span>Order ID</span><span>${order.id}</span></div>
-              <div class="conf-row"><span>Customer</span><span>${order.customer?.fname || ''} ${order.customer?.lname || ''}</span></div>
-              <div class="conf-row"><span>Phone</span><span>${order.customer?.phone || '—'}</span></div>
-              <div class="conf-row"><span>Total</span><span style="color:#e8a000;">${total}</span></div>
-              <div class="conf-row"><span>Payment</span><span>Nabil Bank Transfer</span></div>
-              <div class="conf-row"><span>Status</span><span style="color:#e8a000;">⏳ Pending Verification</span></div>
-            ` : `<div style="font-size:0.75rem;color:rgba(255,255,255,0.35);">Order: ${orderId}</div>`}
-          </div>
+    // ── Main: verify real payment status from backend ─────────────────────────
+    async function verifyAndRender() {
+      if (!orderId) { renderNotFound(); return; }
+      if (failed)   { renderFailed(getLocalOrder(orderId)); return; }
 
-          <div class="conf-btns">
-            <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
-            <a href="contact.html" class="conf-btn-ghost">CONTACT US</a>
-          </div>
+      const localOrder = getLocalOrder(orderId);
 
-          <div class="conf-order-id">ORDER ID · ${orderId || '—'}</div>
-        `;
-      } else if (isCOD) {
-        wrap.innerHTML = `
-          <div class="conf-icon cod">💵</div>
-          <h1 class="conf-title">Order Placed!</h1>
-          <p class="conf-subtitle">
-            Your Cash on Delivery order is confirmed.<br>
-            Please have cash ready when your package arrives.
-          </p>
-          <div class="conf-card">
-            <div class="conf-card-title">Order Summary</div>
-            ${order ? `
-              <div class="conf-row"><span>Order ID</span><span>${order.id}</span></div>
-              <div class="conf-row"><span>Customer</span><span>${order.customer?.fname || ''} ${order.customer?.lname || ''}</span></div>
-              <div class="conf-row"><span>Delivery</span><span>${order.customer?.street || ''}, ${order.customer?.city || ''}</span></div>
-              <div class="conf-row"><span>Total (COD)</span><span>${total}</span></div>
-              <div class="conf-row"><span>Status</span><span style="color:#ffc107;">📦 Processing</span></div>
-            ` : `<div style="font-size:0.75rem;">Order: ${orderId}</div>`}
-          </div>
-          <div class="conf-btns">
-            <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
-          </div>
-          <div class="conf-order-id">ORDER ID · ${orderId || '—'}</div>
-        `;
-      } else {
-        // Fallback or Generic success
-        wrap.innerHTML = `
-          <div class="conf-icon success">✓</div>
-          <h1 class="conf-title">Order Confirmed!</h1>
-          <p class="conf-subtitle">
-            Thank you for your purchase. Your order is being processed.<br>
-            You'll receive a confirmation email shortly.
-          </p>
-          <div class="conf-card">
-            <div class="conf-card-title">Order Summary</div>
-            ${order ? `
-              <div class="conf-row"><span>Order ID</span><span>${order.id}</span></div>
-              <div class="conf-row"><span>Customer</span><span>${order.customer?.fname || ''} ${order.customer?.lname || ''}</span></div>
-              <div class="conf-row"><span>Total</span><span style="color:#2e9e6c;">${total}</span></div>
-              <div class="conf-row"><span>Payment</span><span>${(order.paymentMethod || method).replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span></div>
-              <div class="conf-row"><span>Status</span><span style="color:#2e9e6c;">✓ Paid</span></div>
-            ` : `<div style="font-size:0.75rem;">Order: ${orderId}</div>`}
-          </div>
-          <div class="conf-btns">
-            <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
-          </div>
-          <div class="conf-order-id">ORDER ID · ${orderId || '—'}</div>
-        `;
+      // Show loading while we verify
+      renderLoading('Verifying your payment…');
+
+      // ── Stripe: use session verification endpoint (fires before webhook) ──
+      const isStripeMethod = ['stripe', 'card', 'apple_pay', 'google_pay', 'afterpay'].includes(method);
+      if (sessionId && isStripeMethod) {
+        try {
+          const vRes = await fetch(`/api/payments/stripe-session-verify?session_id=${sessionId}&order_id=${orderId}`);
+          if (vRes.ok) {
+            const vData = await vRes.json();
+            if (vData.status === 'paid') { renderPaid(localOrder, vData); return; }
+          }
+        } catch (e) { /* fall through to polling */ }
+        // Stripe returned paid in checkout but webhook not yet processed — poll
+        renderStripePending(localOrder);
+        await pollForPayment(localOrder);
+        return;
+      }
+
+      // ── All other methods: check actual order status from backend ──
+      try {
+        const sRes = await fetch(`/api/payments/status/${orderId}`);
+
+        if (sRes.status === 404) {
+          // Order not in backend — if we have local data, show based on method
+          if (localOrder) {
+            if (method === 'cod') { renderCOD(localOrder); return; }
+            if (method === 'nabil' || method === 'nabil_bank') { renderNabilPending(localOrder); return; }
+          }
+          renderNotFound();
+          return;
+        }
+
+        if (!sRes.ok) throw new Error('Status check failed');
+
+        const statusData = await sRes.json();
+        const pm = statusData.paymentMethod || method;
+
+        if (statusData.status === 'paid') {
+          renderPaid(localOrder, statusData);
+        } else if (pm === 'cod') {
+          renderCOD(localOrder);
+        } else if (pm === 'nabil' || pm === 'nabil_bank') {
+          renderNabilPending(localOrder);
+        } else if (statusData.status === 'cancelled') {
+          renderFailed(localOrder);
+        } else {
+          // Pending for an online gateway (khalti, esewa, paypal) — poll briefly
+          renderStripePending(localOrder);
+          await pollForPayment(localOrder, 8);
+        }
+
+      } catch (e) {
+        // Backend not reachable — fallback to localStorage
+        if (localOrder) {
+          if (method === 'cod') { renderCOD(localOrder); return; }
+          if (method === 'nabil' || method === 'nabil_bank') { renderNabilPending(localOrder); return; }
+          // For online payments with no backend: show pending, not confirmed
+          renderStripePending(localOrder);
+        } else {
+          renderNotFound();
+        }
       }
     }
 
-    // Copy account number
+    // Copy bank account number helper
     function copyNum() {
       navigator.clipboard.writeText('15301017500402').then(() => {
         const msg = document.getElementById('copy-msg');
@@ -405,6 +487,9 @@
         setTimeout(() => { if (msg) { msg.textContent = 'Click to copy'; msg.style.color = ''; } }, 2000);
       }).catch(() => { prompt('Copy:', '15301017500402'); });
     }
+
+    // Start verification on page load
+    verifyAndRender();
   </script>
 
 </body>

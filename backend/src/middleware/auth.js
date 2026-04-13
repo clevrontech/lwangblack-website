@@ -6,7 +6,7 @@ const { isSessionValid } = require('../db/redis');
 /**
  * Middleware: Require authentication
  */
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -18,12 +18,15 @@ function requireAuth(req, res, next) {
     req.user = decoded;
     req.tokenId = decoded.jti || 'default';
 
-    // Async session check (non-blocking for performance)
-    isSessionValid(decoded.id, req.tokenId).then(valid => {
+    // Enforce session revocation when Redis is available
+    try {
+      const valid = await isSessionValid(decoded.id, req.tokenId);
       if (!valid) {
-        // Session was revoked — but don't block if Redis is down
+        return res.status(401).json({ error: 'Session revoked', code: 'SESSION_REVOKED' });
       }
-    }).catch(() => {});
+    } catch {
+      // Redis unavailable — allow the request through
+    }
 
     next();
   } catch (err) {

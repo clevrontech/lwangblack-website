@@ -1,17 +1,19 @@
-FROM node:24-alpine
+FROM node:20-alpine AS backend
 
 WORKDIR /app
 
-# Install dependencies first (cache layer)
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy source
 COPY . .
+
+# Create invoice directory
+RUN mkdir -p /app/invoices
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S lwangblack -u 1001 -G nodejs
+    adduser -S lwangblack -u 1001 -G nodejs && \
+    chown -R lwangblack:nodejs /app/invoices
 USER lwangblack
 
 EXPOSE 3001

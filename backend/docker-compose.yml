@@ -14,6 +14,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./src/db/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql
       - ./src/db/migrations/002_seed.sql:/docker-entrypoint-initdb.d/002_seed.sql
+      - ./src/db/migrations/002_subscriptions_logistics_social.sql:/docker-entrypoint-initdb.d/003_subscriptions.sql
+      - ./src/db/migrations/004_payments_logistics_notifications.sql:/docker-entrypoint-initdb.d/004_payments.sql
     ports:
       - "5432:5432"
     healthcheck:
@@ -59,6 +61,22 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
       ESEWA_MERCHANT_ID: ${ESEWA_MERCHANT_ID:-EPAYTEST}
       ESEWA_SECRET_KEY: ${ESEWA_SECRET_KEY:-8gBm/:&EnhH.1/q}
+      KHALTI_SECRET_KEY: ${KHALTI_SECRET_KEY:-}
+      KHALTI_PUBLIC_KEY: ${KHALTI_PUBLIC_KEY:-}
+      KHALTI_LIVE: ${KHALTI_LIVE:-false}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-paypal_client_placeholder}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-paypal_secret_placeholder}
+      PAYPAL_LIVE: ${PAYPAL_LIVE:-false}
+      NABIL_MERCHANT_ID: ${NABIL_MERCHANT_ID:-NB_MERCHANT_PLACEHOLDER}
+      NABIL_SECRET_KEY: ${NABIL_SECRET_KEY:-}
+      NABIL_LIVE: ${NABIL_LIVE:-false}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-brewed@lwangblack.co}
+      SENDGRID_FROM_NAME: ${SENDGRID_FROM_NAME:-Lwang Black}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      SHIPPO_API_KEY: ${SHIPPO_API_KEY:-}
       SITE_URL: ${SITE_URL:-https://www.lwangblack.co}
       CORS_ORIGIN: ${CORS_ORIGIN:-https://www.lwangblack.co,http://localhost:3000}
     ports:

@@ -3,8 +3,36 @@ const express = require('express');
 const db = require('../db/pool');
 const { requireAuth, requireRole, auditLog } = require('../middleware/auth');
 const { revokeAllSessions, cacheFlush } = require('../db/redis');
+const dynConfig = require('../services/dynamic-config');
 
 const router = express.Router();
+// ── GET /api/settings/public ─────────────────────────────────────────────────
+// Non-authenticated endpoint — returns ONLY the data safe for the public frontend
+// (publishable key, enabled gateway list). Never returns secret keys.
+const publicRouter = express.Router();
+publicRouter.get('/', async (req, res) => {
+  try {
+    const s = await dynConfig.getSettings();
+    const env = process.env;
+    res.json({
+      stripePublishableKey: s.stripe_publishable_key || env.STRIPE_PUBLISHABLE_KEY || '',
+      gateways: {
+        stripe:   !!(s.stripe_secret_key   || env.STRIPE_SECRET_KEY),
+        paypal:   !!(s.paypal_client_id    || env.PAYPAL_CLIENT_ID),
+        khalti:   !!(s.khalti_secret_key   || env.KHALTI_SECRET_KEY),
+        esewa:    !!(s.esewa_merchant_id   || env.ESEWA_MERCHANT_ID),
+        nabil:    !!(s.nabil_merchant_id   || env.NABIL_MERCHANT_ID),
+      },
+      storeName:   s.store_name    || 'Lwang Black',
+      whatsapp:    s.whatsapp      || '',
+    });
+  } catch (err) {
+    console.error('[Settings] Public error:', err);
+    res.status(500).json({ error: 'Failed to fetch public settings' });
+  }
+});
+module.exports.publicRouter = publicRouter;
+
 router.use(requireAuth);
 
 // ── GET /api/settings ───────────────────────────────────────────────────────
@@ -59,10 +87,26 @@ router.put('/', requireRole('owner'), async (req, res) => {
       details: { keys: entries.map(e => e[0]) }, ip: req.ip,
     });
 
+    // Invalidate the dynamic config cache so payment routes pick up new credentials immediately
+    dynConfig.invalidateCache();
+
     res.json({ message: 'Settings saved', keys: entries.map(e => e[0]) });
   } catch (err) {
     console.error('[Settings] Put error:', err);
     res.status(500).json({ error: 'Failed to save settings' });
+  }
+});
+
+// ── GET /api/settings/gateway-status ────────────────────────────────────────
+// Returns masked payment/logistics gateway configuration for the admin dashboard.
+// Secret values are masked — only hints (last 4 chars) are returned.
+router.get('/gateway-status', async (req, res) => {
+  try {
+    const status = await dynConfig.getGatewayStatus();
+    res.json({ status });
+  } catch (err) {
+    console.error('[Settings] Gateway status error:', err);
+    res.status(500).json({ error: 'Failed to fetch gateway status' });
   }
 });
 
@@ -215,4 +259,5 @@ router.post('/danger/clear-customers', requireRole('owner'), async (req, res) =>
   }
 });
 
+router.publicRouter = publicRouter;
 module.exports = router;

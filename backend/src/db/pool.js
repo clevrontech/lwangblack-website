@@ -21,6 +21,10 @@ const mem = {
   subscriptions: [],
   logistics_config: [],
   social_connections: [],
+  delivery_zones: [],
+  invoices: [],
+  notification_log: [],
+  abandoned_carts: [],
   settings: [
     { key: 'store_name',     value: 'Lwang Black' },
     { key: 'support_email',  value: 'brewed@lwangblack.co' },
@@ -152,6 +156,18 @@ function seedMemory() {
     });
   });
 
+  // Delivery zones
+  mem.delivery_zones = [
+    { id: uuid(), name: 'Kathmandu Valley',       country: 'NP', region: 'Kathmandu',  shipping_cost: 0,     currency: 'NPR', free_above: null, estimated_days: '1-2 days', is_active: true },
+    { id: uuid(), name: 'Nepal - Outside Valley',  country: 'NP', region: 'Other',      shipping_cost: 200,   currency: 'NPR', free_above: 5000, estimated_days: '3-5 days', is_active: true },
+    { id: uuid(), name: 'Australia',                country: 'AU', region: null,          shipping_cost: 14.99, currency: 'AUD', free_above: 75,   estimated_days: '5-8 days', is_active: true },
+    { id: uuid(), name: 'United States',            country: 'US', region: null,          shipping_cost: 15.00, currency: 'USD', free_above: 60,   estimated_days: '5-8 days', is_active: true },
+    { id: uuid(), name: 'United Kingdom',           country: 'GB', region: null,          shipping_cost: 11.99, currency: 'GBP', free_above: 50,   estimated_days: '5-10 days', is_active: true },
+    { id: uuid(), name: 'Canada',                   country: 'CA', region: null,          shipping_cost: 15.99, currency: 'CAD', free_above: 60,   estimated_days: '5-10 days', is_active: true },
+    { id: uuid(), name: 'New Zealand',              country: 'NZ', region: null,          shipping_cost: 12.99, currency: 'NZD', free_above: 60,   estimated_days: '5-10 days', is_active: true },
+    { id: uuid(), name: 'Japan',                    country: 'JP', region: null,          shipping_cost: 18.00, currency: 'USD', free_above: 80,   estimated_days: '7-12 days', is_active: true },
+  ];
+
   // Demo discounts
   mem.discounts = [
     { id: uuid(), code: 'LWANG10', type: 'percent', value: 10, min_order: 0, usage_limit: null, usage_count: 3, expiry: null, active: true, created_at: new Date() },
@@ -162,28 +178,33 @@ function seedMemory() {
 }
 
 // ── Try connecting to PostgreSQL ────────────────────────────────────────────
-try {
-  const { Pool } = require('pg');
-  pool = new Pool(
-    config.db.connectionString
-      ? { connectionString: config.db.connectionString, max: config.db.max }
-      : config.db
-  );
-  // Test connection
-  pool.query('SELECT 1').then(() => {
-    console.log('[DB] PostgreSQL connected');
-    useMemory = false;
-  }).catch(err => {
-    console.warn('[DB] PostgreSQL not available:', err.message);
-    console.log('[DB] Using in-memory store (demo mode)');
-    useMemory = true;
-    pool = null;
-    seedMemory();
-  });
-} catch (err) {
-  console.warn('[DB] pg module issue, using in-memory store');
+if (config.nodeEnv === 'test' || (!config.db.connectionString && !config.db.host)) {
+  console.log('[DB] Using in-memory store (test/no-db mode)');
   useMemory = true;
   seedMemory();
+} else {
+  try {
+    const { Pool } = require('pg');
+    pool = new Pool(
+      config.db.connectionString
+        ? { connectionString: config.db.connectionString, max: config.db.max }
+        : config.db
+    );
+    pool.query('SELECT 1').then(() => {
+      console.log('[DB] PostgreSQL connected');
+      useMemory = false;
+    }).catch(err => {
+      console.warn('[DB] PostgreSQL not available:', err.message);
+      console.log('[DB] Using in-memory store (demo mode)');
+      useMemory = true;
+      pool = null;
+      seedMemory();
+    });
+  } catch (err) {
+    console.warn('[DB] pg module issue, using in-memory store');
+    useMemory = true;
+    seedMemory();
+  }
 }
 
 // ── Helper: extract WHERE tokens from SQL ───────────────────────────────────

@@ -5,7 +5,9 @@
   "main": "api/server.js",
   "scripts": {
     "dev": "vercel dev",
-    "deploy": "vercel --prod"
+    "deploy": "vercel --prod",
+    "backend:dev": "npm --prefix backend run dev",
+    "admin:dev": "npm --prefix admin-dashboard run dev -- --host --port 5173"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

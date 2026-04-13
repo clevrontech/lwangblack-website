@@ -3,6 +3,7 @@ const express = require('express');
 const db = require('../db/pool');
 const { requireAuth, applyCountryFilter, auditLog } = require('../middleware/auth');
 const { broadcast } = require('../ws');
+const { sendShippingUpdate, sendDeliveryConfirmation } = require('../services/notifications');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -242,14 +243,17 @@ router.post('/', async (req, res) => {
       }
     }
 
-    broadcast({ type: 'order:new', data: { orderId, country, total } });
+    broadcast({ type: 'order:new', data: { orderId, country, total, status: 'pending' } });
 
     await auditLog(db, {
       userId: req.user?.id, username: req.user?.username,
       action: 'order_created', entityType: 'order', entityId: orderId, ip: req.ip,
     });
 
-    res.status(201).json({ order: { id: orderId }, orderId });
+    // Order stays "pending" — confirmation email and invoice are sent
+    // only after payment is verified via the payment callbacks.
+
+    res.status(201).json({ order: { id: orderId, status: 'pending' }, orderId });
   } catch (err) {
     console.error('[Orders] Create error:', err);
     res.status(500).json({ error: 'Failed to create order' });
@@ -302,6 +306,35 @@ router.patch('/:id', async (req, res) => {
     }
 
     broadcast({ type: 'order:updated', data: { orderId: req.params.id, status } });
+
+    // Async notifications for status changes
+    if (status === 'shipped' || status === 'delivered') {
+      (async () => {
+        try {
+          let orderData, custData;
+          if (db.isUsingMemory()) {
+            const mem = db.getMemStore();
+            orderData = mem.orders.find(x => x.id === req.params.id);
+            custData = orderData ? mem.customers.find(c => c.id === orderData.customer_id) : null;
+          } else {
+            const row = await db.queryOne(
+              `SELECT o.*, c.fname, c.lname, c.email AS customer_email, c.phone AS customer_phone
+               FROM orders o LEFT JOIN customers c ON o.customer_id = c.id WHERE o.id = $1`, [req.params.id]);
+            if (row) {
+              orderData = row;
+              custData = { fname: row.fname, lname: row.lname, email: row.customer_email, phone: row.customer_phone };
+            }
+          }
+          if (orderData && custData) {
+            if (status === 'shipped') {
+              await sendShippingUpdate(orderData, custData, tracking || orderData.tracking, carrier || orderData.carrier);
+            } else if (status === 'delivered') {
+              await sendDeliveryConfirmation(orderData, custData);
+            }
+          }
+        } catch (e) { console.error('[Orders] Notification error:', e.message); }
+      })();
+    }
 
     await auditLog(db, {
       userId: req.user?.id, username: req.user?.username,

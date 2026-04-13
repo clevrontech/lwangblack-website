@@ -66,11 +66,32 @@ module.exports = {
     liveUrl: 'https://payment.nabilbank.com/checkout',
   },
 
+  // Khalti (Nepal)
+  khalti: {
+    secretKey: process.env.KHALTI_SECRET_KEY || '',
+    publicKey: process.env.KHALTI_PUBLIC_KEY || '',
+    isLive: process.env.KHALTI_LIVE === 'true',
+    testUrl: 'https://a.khalti.com/api/v2',
+    liveUrl: 'https://khalti.com/api/v2',
+  },
+
   // Email (SendGrid)
   email: {
     apiKey: process.env.SENDGRID_API_KEY || '',
     fromEmail: process.env.SENDGRID_FROM_EMAIL || 'brewed@lwangblack.co',
     fromName: process.env.SENDGRID_FROM_NAME || 'Lwang Black',
+  },
+
+  // SMS (Twilio)
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+    authToken: process.env.TWILIO_AUTH_TOKEN || '',
+    fromNumber: process.env.TWILIO_FROM_NUMBER || '',
+  },
+
+  // Shippo
+  shippo: {
+    apiKey: process.env.SHIPPO_API_KEY || '',
   },
 
   // Site
@@ -91,7 +112,7 @@ module.exports = {
   // Payment methods per country
   // FIXED: NP now uses Nabil Bank as primary + COD; esewa kept as fallback
   paymentMethods: {
-    NP: ['nabil', 'cod'],
+    NP: ['nabil', 'khalti', 'cod'],
     AU: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     US: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     GB: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],

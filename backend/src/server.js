@@ -14,6 +14,26 @@ const { initWebSocket, getClientCount } = require('./ws');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDoc = require('./swagger.json');
 
+// ── Startup Environment Validation ─────────────────────────────────────────
+(function validateEnv() {
+  const warnings = [];
+  if (config.jwt.secret === 'lwangblack-jwt-secret-change-in-production')
+    warnings.push('JWT_SECRET is using insecure default — set a strong random value in .env');
+  if (config.jwt.refreshSecret === 'lwangblack-refresh-secret')
+    warnings.push('JWT_REFRESH_SECRET is using insecure default — set a strong random value in .env');
+  if (!config.db.connectionString && config.db.host === 'localhost' && config.nodeEnv === 'production')
+    warnings.push('DATABASE_URL not set in production — app will run in in-memory demo mode (data will be lost on restart)');
+  if (config.stripe.secretKey === 'sk_test_placeholder' && config.nodeEnv === 'production')
+    warnings.push('STRIPE_SECRET_KEY not configured — payments will fail');
+  if (!config.email.apiKey && config.nodeEnv === 'production')
+    warnings.push('SENDGRID_API_KEY not set — email notifications disabled');
+  if (warnings.length) {
+    console.warn('\n[Config] ⚠️  Configuration warnings:');
+    warnings.forEach(w => console.warn('   •', w));
+    console.warn('');
+  }
+})();
+
 const app = express();
 
 // ── Security Middleware ─────────────────────────────────────────────────────

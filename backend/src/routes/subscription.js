@@ -10,12 +10,18 @@ const { broadcast } = require('../ws');
 
 const router = express.Router();
 
+// Price is read from env so the owner can configure it without code changes.
+// MANAGER_SUBSCRIPTION_PRICE is in USD (whole dollars). Defaults to $99.
+const _priceUSD  = Math.max(1, parseInt(process.env.MANAGER_SUBSCRIPTION_PRICE) || 99);
+const _trialDays = Math.max(0, parseInt(process.env.MANAGER_SUBSCRIPTION_TRIAL_DAYS) || 0);
 const PLAN = {
-  amount:      9900,           // $99.00 in cents
+  amount:      _priceUSD * 100,  // Stripe expects cents
+  priceUSD:    _priceUSD,
+  trialDays:   _trialDays,
   currency:    'usd',
   days:        30,
   name:        'Lwang Black — Manager Dashboard Access',
-  description: 'Full admin access: Orders, Products, Customers, Analytics, Logistics, Finance & more. Billed monthly.',
+  description: `Full admin access: Orders, Products, Customers, Analytics, Logistics, Finance & more. $${_priceUSD}/month.`,
 };
 
 // ── Helper: save subscription expiry to settings table ──────────────────────

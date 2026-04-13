@@ -177,6 +177,28 @@ function seedMemory() {
   console.log('[DB] In-memory store seeded with demo data');
 }
 
+// ── Auto-migration on real DB connect ───────────────────────────────────────
+async function runMigrations(pgPool) {
+  const fs   = require('fs');
+  const path = require('path');
+  const migrationsDir = path.join(__dirname, 'migrations');
+  if (!fs.existsSync(migrationsDir)) return;
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+  for (const file of files) {
+    try {
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+      await pgPool.query(sql);
+      console.log(`[DB] Migration applied: ${file}`);
+    } catch (err) {
+      if (err.message.includes('already exists') || err.message.includes('duplicate key')) {
+        // Idempotent — already applied, skip silently
+      } else {
+        console.warn(`[DB] Migration warning (${file}):`, err.message);
+      }
+    }
+  }
+}
+
 // ── Try connecting to PostgreSQL ────────────────────────────────────────────
 if (config.nodeEnv === 'test' || (!config.db.connectionString && !config.db.host)) {
   console.log('[DB] Using in-memory store (test/no-db mode)');
@@ -187,12 +209,14 @@ if (config.nodeEnv === 'test' || (!config.db.connectionString && !config.db.host
     const { Pool } = require('pg');
     pool = new Pool(
       config.db.connectionString
-        ? { connectionString: config.db.connectionString, max: config.db.max }
+        ? { connectionString: config.db.connectionString, ssl: { rejectUnauthorized: false }, max: config.db.max }
         : config.db
     );
-    pool.query('SELECT 1').then(() => {
-      console.log('[DB] PostgreSQL connected');
+    pool.query('SELECT 1').then(async () => {
+      console.log('[DB] PostgreSQL connected — running migrations…');
       useMemory = false;
+      await runMigrations(pool);
+      console.log('[DB] Schema ready');
     }).catch(err => {
       console.warn('[DB] PostgreSQL not available:', err.message);
       console.log('[DB] Using in-memory store (demo mode)');
@@ -201,7 +225,7 @@ if (config.nodeEnv === 'test' || (!config.db.connectionString && !config.db.host
       seedMemory();
     });
   } catch (err) {
-    console.warn('[DB] pg module issue, using in-memory store');
+    console.warn('[DB] pg module issue, using in-memory store:', err.message);
     useMemory = true;
     seedMemory();
   }

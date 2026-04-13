@@ -83,10 +83,18 @@ async function setSession(userId, tokenId, ttlSeconds = 43200) {
 
 async function isSessionValid(userId, tokenId) {
   try {
-    if (!redis || !isConnected) return true; // No Redis = allow all
+    if (!redis || !isConnected) {
+      // Redis unavailable — JWT signature still validates; session revocation not enforced.
+      // In production set REDIS_URL to enable server-side session revocation (logout across devices).
+      return true;
+    }
     const val = await redis.get(`session:${userId}:${tokenId}`);
+    // If session key is missing (expired or revoked) deny access so re-login is forced.
     return val === '1';
-  } catch { return true; }
+  } catch {
+    // Redis error mid-request — allow (JWT is still the primary auth mechanism).
+    return true;
+  }
 }
 
 async function revokeSession(userId, tokenId) {

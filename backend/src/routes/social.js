@@ -312,25 +312,98 @@ router.post('/publish-post', async (req, res) => {
   }
 });
 
-// ── GET /api/social/analytics ──────────────────────────────────────────────
-router.get('/analytics/:platform', async (req, res) => {
+// ── GET /api/social/analytics/:platform ──────────────────────────────────────
+router.get('/analytics/:platform', requireAuth, async (req, res) => {
   const { platform } = req.params;
 
-  // Demo analytics while real API keys are being configured
-  res.json({
-    platform,
-    platformName: PLATFORMS[platform]?.name || platform,
-    followers: Math.floor(Math.random() * 50000) + 5000,
-    likes: Math.floor(Math.random() * 200000) + 10000,
-    reach: Math.floor(Math.random() * 100000) + 20000,
-    impressions: Math.floor(Math.random() * 500000) + 50000,
-    clicks: Math.floor(Math.random() * 10000) + 500,
-    ordersFromSocial: Math.floor(Math.random() * 300) + 20,
-    revenueFromSocial: parseFloat((Math.random() * 50000 + 5000).toFixed(2)),
-    topPosts: [
-      { id: 1, caption: 'Lwang Black — The Finest Himalayan Coffee', likes: 2841, reach: 18500, date: new Date(Date.now() - 86400000 * 3).toISOString() },
-      { id: 2, caption: 'New 500g Pack now available! Link in bio', likes: 1923, reach: 12400, date: new Date(Date.now() - 86400000 * 7).toISOString() },
-    ],
+  if (!PLATFORMS[platform]) {
+    return res.status(400).json({ error: `Unknown platform: ${platform}` });
+  }
+
+  // Load saved connection for this user
+  let connection = null;
+  try {
+    connection = await db.queryOne(
+      `SELECT * FROM social_connections WHERE user_id = $1 AND platform_id = $2 AND is_active = true`,
+      [req.user.id, platform]
+    );
+  } catch (dbErr) {
+    connection = require('../db/memory-store').getSocialConnection(req.user.id, platform) || null;
+  }
+
+  if (!connection) {
+    return res.status(404).json({
+      error: `${PLATFORMS[platform].name} is not connected. Go to Settings → Social Media to connect it.`,
+    });
+  }
+
+  const decode = v => (v ? Buffer.from(v, 'base64').toString('utf8') : null);
+  const raw = JSON.parse(connection.keys_data || '{}');
+  const accessToken = decode(raw.access_token);
+  const pageId = connection.page_id;
+
+  // ── Facebook / Instagram real Graph API ────────────────────────────────────
+  if ((platform === 'facebook' || platform === 'instagram') && accessToken && pageId) {
+    try {
+      const base = 'https://graph.facebook.com/v18.0';
+
+      // Page summary (fans + posts)
+      const [summaryRes, postsRes] = await Promise.all([
+        fetch(`${base}/${pageId}?fields=fan_count,followers_count&access_token=${accessToken}`),
+        fetch(`${base}/${pageId}/posts?fields=message,created_time,likes.summary(true),reach&limit=5&access_token=${accessToken}`),
+      ]);
+
+      if (!summaryRes.ok) {
+        const errBody = await summaryRes.json().catch(() => ({}));
+        return res.status(502).json({ error: errBody?.error?.message || 'Facebook API error. Check your access token.' });
+      }
+
+      const summary = await summaryRes.json();
+      const postsData = postsRes.ok ? await postsRes.json() : { data: [] };
+
+      // Page insights — reach + impressions (last 28 days)
+      const insightRes = await fetch(
+        `${base}/${pageId}/insights?metric=page_impressions_unique,page_impressions,page_total_actions&period=days_28&access_token=${accessToken}`
+      ).catch(() => null);
+      const insights = insightRes?.ok ? await insightRes.json() : { data: [] };
+      const getMetric = name => insights.data?.find(m => m.name === name)?.values?.slice(-1)[0]?.value || 0;
+
+      const topPosts = (postsData.data || []).map(p => ({
+        id:      p.id,
+        caption: p.message?.substring(0, 120) || '(No caption)',
+        likes:   p.likes?.summary?.total_count || 0,
+        reach:   p.reach || 0,
+        date:    p.created_time,
+      }));
+
+      return res.json({
+        platform,
+        platformName: PLATFORMS[platform].name,
+        followers:         summary.fan_count || summary.followers_count || 0,
+        likes:             summary.fan_count || 0,
+        reach:             getMetric('page_impressions_unique'),
+        impressions:       getMetric('page_impressions'),
+        clicks:            getMetric('page_total_actions'),
+        ordersFromSocial:  0,
+        revenueFromSocial: 0,
+        topPosts,
+      });
+    } catch (err) {
+      console.error('[Social] Analytics API error:', err.message);
+      return res.status(502).json({ error: 'Could not fetch analytics from Facebook. Check your API credentials.' });
+    }
+  }
+
+  // ── TikTok — API requires server-side OAuth which needs a redirect flow ────
+  if (platform === 'tiktok') {
+    return res.status(503).json({
+      error: 'TikTok analytics require OAuth. Full OAuth flow coming soon — contact support.',
+    });
+  }
+
+  // ── Credentials missing but connection exists ──────────────────────────────
+  return res.status(503).json({
+    error: `Analytics unavailable. Reconnect ${PLATFORMS[platform].name} with a valid Page Access Token.`,
   });
 });
 

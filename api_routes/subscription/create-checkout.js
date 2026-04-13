@@ -95,8 +95,8 @@ module.exports = async (req, res) => {
       customer:   customerId,
       line_items: lineItems,
       metadata:   { userId: user.id, username: user.username },
-      success_url: successUrl || `${origin}/admin.html?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  cancelUrl  || `${origin}/admin.html?subscription=cancelled`,
+      success_url: successUrl || `${origin}/admin/?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  cancelUrl  || `${origin}/admin/?subscription=cancelled`,
     });
 
     return res.json({ url: session.url, sessionId: session.id });

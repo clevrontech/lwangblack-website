@@ -697,35 +697,39 @@ const LB_PRODUCTS = {
     }
   }
 };
-// DHL estimated shipping rates (per country)
-const DHL_SHIPPING_RATES = {
+// Country-specific logistics rates (carrier-mapped)
+const COUNTRY_SHIPPING_RATES = {
   NP: {
-    standard: { price: 0, label: 'Standard Delivery (1–3 days)', carrier: 'Local Courier' },
-    express:  { price: 0, label: 'Express Delivery (Same day KTM)', carrier: 'Local Express' }
+    standard: { price: 0, label: 'Pathao Standard (1–3 days)', carrier: 'Pathao' },
+    express:  { price: 0, label: 'Pathao Express (Same day KTM)', carrier: 'Pathao' }
   },
   AU: {
-    standard: { price: 14.99, label: 'DHL Standard (5–8 days)', carrier: 'DHL' },
-    express:  { price: 29.99, label: 'DHL Express (2–3 days)', carrier: 'DHL Express' }
+    standard: { price: 14.99, label: 'Australia Post Standard (5–8 days)', carrier: 'Australia Post' },
+    express:  { price: 29.99, label: 'Australia Post Express (2–3 days)', carrier: 'Australia Post' }
   },
   US: {
-    standard: { price: 12.99, label: 'DHL Standard (7–10 days)', carrier: 'DHL' },
-    express:  { price: 34.99, label: 'DHL Express (3–5 days)', carrier: 'DHL Express' }
+    standard: { price: 12.99, label: 'Australia Post International (7–10 days)', carrier: 'Australia Post' },
+    express:  { price: 34.99, label: 'Australia Post Priority International (3–5 days)', carrier: 'Australia Post' }
   },
   GB: {
-    standard: { price: 11.99, label: 'DHL Standard (6–9 days)', carrier: 'DHL' },
-    express:  { price: 26.99, label: 'DHL Express (2–4 days)', carrier: 'DHL Express' }
+    standard: { price: 11.99, label: 'Australia Post International (6–9 days)', carrier: 'Australia Post' },
+    express:  { price: 26.99, label: 'Australia Post Priority International (2–4 days)', carrier: 'Australia Post' }
   },
   CA: {
-    standard: { price: 15.99, label: 'DHL Standard (7–10 days)', carrier: 'DHL' },
-    express:  { price: 36.99, label: 'DHL Express (3–5 days)', carrier: 'DHL Express' }
+    standard: { price: 15.99, label: 'Chit Chats Standard (7–10 days)', carrier: 'Chit Chats' },
+    express:  { price: 36.99, label: 'Chit Chats Express (3–5 days)', carrier: 'Chit Chats' }
   },
   NZ: {
-    standard: { price: 12.99, label: 'DHL Standard (5–7 days)', carrier: 'DHL' },
-    express:  { price: 27.99, label: 'DHL Express (2–3 days)', carrier: 'DHL Express' }
+    standard: { price: 12.99, label: 'NZ Post Standard (5–7 days)', carrier: 'NZ Post' },
+    express:  { price: 27.99, label: 'NZ Post Express (2–3 days)', carrier: 'NZ Post' }
+  },
+  JP: {
+    standard: { price: 18.00, label: 'Japan Post Standard (7–12 days)', carrier: 'Japan Post' },
+    express:  { price: 38.00, label: 'Japan Post Express (4–7 days)', carrier: 'Japan Post' }
   },
   DEFAULT: {
-    standard: { price: 19.99, label: 'DHL Standard (8–14 days)', carrier: 'DHL' },
-    express:  { price: 44.99, label: 'DHL Express (4–7 days)', carrier: 'DHL Express' }
+    standard: { price: 19.99, label: 'Australia Post International (8–14 days)', carrier: 'Australia Post' },
+    express:  { price: 44.99, label: 'Australia Post Priority International (4–7 days)', carrier: 'Australia Post' }
   }
 };
 
@@ -771,7 +775,7 @@ function isProductAvailable(productId, countryCode) {
 }
 
 function getShippingRates(countryCode) {
-  return DHL_SHIPPING_RATES[countryCode] || DHL_SHIPPING_RATES.DEFAULT;
+  return COUNTRY_SHIPPING_RATES[countryCode] || COUNTRY_SHIPPING_RATES.DEFAULT;
 }
 
 function formatPrice(price) {
@@ -780,7 +784,7 @@ function formatPrice(price) {
 }
 
 window.LB_PRODUCTS = LB_PRODUCTS;
-window.DHL_SHIPPING_RATES = DHL_SHIPPING_RATES;
+window.COUNTRY_SHIPPING_RATES = COUNTRY_SHIPPING_RATES;
 window.COUNTRY_NAMES = COUNTRY_NAMES;
 window.getProductPrice = getProductPrice;
 window.isProductAvailable = isProductAvailable;

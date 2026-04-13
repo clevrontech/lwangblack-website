@@ -1,4 +1,4 @@
-// ── Logistics Routes — Shippo, DHL, FedEx, Nepali Couriers, Delivery Zones ──
+// ── Logistics Routes — Country-specific carriers + delivery zones ────────────
 const express = require('express');
 const fetch = require('node-fetch');
 const db = require('../db/pool');
@@ -12,35 +12,24 @@ router.use(requireAuth);
 
 // ── Supported Carriers ───────────────────────────────────────────────────────
 const CARRIERS = {
-  dhl:     { id: 'dhl',     name: 'DHL Express',     trackUrl: 'https://www.dhl.com/global-en/home/tracking.html?tracking-id=', global: true },
-  fedex:   { id: 'fedex',   name: 'FedEx',           trackUrl: 'https://www.fedex.com/fedextrack/?trknbr=', global: true },
-  ups:     { id: 'ups',     name: 'UPS',             trackUrl: 'https://www.ups.com/track?tracknum=', global: true },
-  shippo:  { id: 'shippo',  name: 'Shippo',          trackUrl: 'https://goshippo.com/track/', global: true },
-  auspost: { id: 'auspost', name: 'Australia Post',  trackUrl: 'https://auspost.com.au/mypost/track/#/details/', global: false },
-  ship24:  { id: 'ship24',  name: 'Ship24',          trackUrl: 'https://www.ship24.com/tracking?p=', global: true },
-  sajilo:  { id: 'sajilo',  name: 'Sajilo Courier',  trackUrl: '', nepal: true },
-  aramex:  { id: 'aramex',  name: 'Aramex Nepal',    trackUrl: 'https://www.aramex.com/track/results?ShipmentNumber=', nepal: true },
-  local:   { id: 'local',   name: 'Nepal Local',     trackUrl: '', nepal: true },
+  chitchats: { id: 'chitchats', name: 'Chit Chats',     trackUrl: 'https://chitchats.com/tracking/', countries: ['CA'] },
+  auspost:   { id: 'auspost',   name: 'Australia Post', trackUrl: 'https://auspost.com.au/mypost/track/#/details/', countries: ['AU'], internationalFromAU: true },
+  nzpost:    { id: 'nzpost',    name: 'NZ Post',        trackUrl: 'https://www.nzpost.co.nz/tools/tracking?trackid=', countries: ['NZ'] },
+  japanpost: { id: 'japanpost', name: 'Japan Post',     trackUrl: 'https://trackings.post.japanpost.jp/services/srv/search/direct?reqCodeNo1=', countries: ['JP'] },
+  pathao:    { id: 'pathao',    name: 'Pathao',         trackUrl: 'https://pathao.com/np/', countries: ['NP'] },
 };
-
-const SHIPPO_BASE = 'https://api.goshippo.com';
-const STORE_ADDRESS = {
-  name: 'Lwang Black',
-  street1: 'Durbarmarg',
-  city: 'Kathmandu',
-  state: 'Bagmati',
-  zip: '44600',
-  country: 'NP',
-  phone: '+977-1-4000000',
-  email: config.email.fromEmail,
-};
-
 // ── GET /api/logistics/carriers ──────────────────────────────────────────────
 router.get('/carriers', (req, res) => {
-  const safe = Object.values(CARRIERS).map(c => ({
-    id: c.id, name: c.name, trackUrl: c.trackUrl,
-    global: c.global || false, nepal: c.nepal || false,
-  }));
+  const country = (req.query.country || '').toUpperCase();
+  const safe = Object.values(CARRIERS)
+    .filter(c => !country || getPreferredCarrierId(country) === c.id)
+    .map(c => ({
+      id: c.id,
+      name: c.name,
+      trackUrl: c.trackUrl,
+      countries: c.countries || [],
+      internationalFromAU: !!c.internationalFromAU,
+    }));
   res.json({ carriers: safe });
 });
 
@@ -130,68 +119,32 @@ router.post('/shipping-cost', async (req, res) => {
 });
 
 // ── POST /api/logistics/rates ───────────────────────────────────────────────
-// Get live shipping rates from Shippo (falls back to zone-based rates)
+// Return one country-specific carrier rate.
 router.post('/rates', async (req, res) => {
   try {
-    const { toCountry, toCity, toZip, toState, weight, weightUnit } = req.body;
-
-    // Try Shippo first for international shipments
-    if (config.shippo.apiKey && toCountry && toCountry !== 'NP') {
-      try {
-        const shipment = await shippoCreateShipment({
-          to: { city: toCity || '', state: toState || '', zip: toZip || '00000', country: toCountry },
-          weight: weight || 0.5,
-          weightUnit: weightUnit || 'kg',
-        });
-
-        if (shipment.rates?.length) {
-          const rates = shipment.rates
-            .filter(r => r.amount && parseFloat(r.amount) > 0)
-            .map(r => ({
-              carrier: r.provider || r.servicelevel?.name || 'Standard',
-              carrierId: r.provider?.toLowerCase() || 'shippo',
-              service: r.servicelevel?.name || 'Standard',
-              days: r.estimated_days || r.duration_terms || '5-10',
-              price: parseFloat(r.amount),
-              currency: (r.currency || 'USD').toUpperCase(),
-              shippoRateId: r.object_id,
-            }));
-          return res.json({ rates, source: 'shippo', from: 'NP', to: toCountry });
-        }
-      } catch (shippoErr) {
-        console.log('[Logistics] Shippo rates fallback:', shippoErr.message);
-      }
-    }
-
-    // Fallback: zone-based rates + static carrier options
+    const country = (req.body.toCountry || '').toUpperCase();
+    const carrierId = getPreferredCarrierId(country);
     let zones;
     if (db.isUsingMemory()) {
-      zones = (db.getMemStore().delivery_zones || getDefaultZones()).filter(z => z.country === toCountry);
+      zones = (db.getMemStore().delivery_zones || getDefaultZones()).filter(z => z.country === country);
     } else {
-      zones = await db.queryAll('SELECT * FROM delivery_zones WHERE country = $1 AND is_active = true', [toCountry || 'US']);
+      zones = await db.queryAll('SELECT * FROM delivery_zones WHERE country = $1 AND is_active = true', [country || 'AU']);
     }
-    if (!zones.length) zones = getDefaultZones().filter(z => z.country === (toCountry || 'US'));
+    if (!zones.length) zones = getDefaultZones().filter(z => z.country === (country || 'AU'));
 
     const zone = zones[0];
     const basePrice = zone ? parseFloat(zone.shipping_cost) : 15;
     const currency = zone?.currency || 'USD';
-
-    const rates = [];
-    if (toCountry === 'NP') {
-      rates.push(
-        { carrier: 'Local Courier', carrierId: 'local', service: 'Standard', days: '1-3', price: 0, currency: 'NPR' },
-        { carrier: 'Sajilo Courier', carrierId: 'sajilo', service: 'Express', days: '1-2', price: 150, currency: 'NPR' },
-        { carrier: 'Aramex Nepal', carrierId: 'aramex', service: 'Standard', days: '2-4', price: 250, currency: 'NPR' },
-      );
-    } else {
-      rates.push(
-        { carrier: 'DHL Express', carrierId: 'dhl', service: 'Express', days: '3-5', price: basePrice, currency },
-        { carrier: 'FedEx International', carrierId: 'fedex', service: 'Economy', days: '5-7', price: Math.max(basePrice - 2, 0), currency },
-        { carrier: 'Standard Shipping', carrierId: 'shippo', service: 'Standard', days: '7-14', price: Math.max(basePrice - 4, 0), currency },
-      );
-    }
-
-    res.json({ rates, source: 'zones', from: 'NP', to: toCountry });
+    const carrier = CARRIERS[carrierId];
+    const rates = [{
+      carrier: carrier.name,
+      carrierId: carrier.id,
+      service: carrierId === 'auspost' && country !== 'AU' ? 'International' : 'Standard',
+      days: zone?.estimated_days || '5-10 days',
+      price: basePrice,
+      currency,
+    }];
+    res.json({ rates, source: 'country-logistics', from: 'AU', to: country || 'AU' });
   } catch (err) {
     console.error('[Logistics] Rates error:', err);
     res.status(500).json({ error: 'Rate fetch failed' });
@@ -201,24 +154,19 @@ router.post('/rates', async (req, res) => {
 // ── POST /api/logistics/create-shipment ─────────────────────────────────────
 router.post('/create-shipment', async (req, res) => {
   try {
-    const { orderId, carrierId, to, weight, dimensions, shippoRateId, adminOverrideShipping } = req.body;
+    const { orderId, carrierId, adminOverrideShipping } = req.body;
     if (!orderId) return res.status(400).json({ error: 'orderId required' });
 
     let trackingNumber = null;
     let labelUrl = null;
-    let carrier = carrierId || 'dhl';
-
-    // Shippo label purchase
-    if (config.shippo.apiKey && shippoRateId) {
-      try {
-        const txn = await shippoCreateTransaction(shippoRateId);
-        if (txn.tracking_number) trackingNumber = txn.tracking_number;
-        if (txn.label_url) labelUrl = txn.label_url;
-        carrier = txn.provider || carrier;
-      } catch (shippoErr) {
-        console.error('[Logistics] Shippo label error:', shippoErr.message);
-      }
+    let carrier = carrierId;
+    if (!carrier) {
+      const order = db.isUsingMemory()
+        ? db.getMemStore().orders.find(o => o.id === orderId)
+        : await db.queryOne('SELECT id, country FROM orders WHERE id = $1', [orderId]);
+      carrier = getPreferredCarrierId(order?.country);
     }
+    if (!CARRIERS[carrier]) carrier = 'auspost';
 
     if (!trackingNumber) {
       trackingNumber = `LB${Date.now().toString(36).toUpperCase()}`;
@@ -284,8 +232,8 @@ router.post('/track', async (req, res) => {
     // Try Shippo universal tracking
     if (config.shippo.apiKey) {
       try {
-        const carrier = carrierId || 'dhl';
-        const trackRes = await fetch(`${SHIPPO_BASE}/tracks/${carrier}/${trackingNumber}`, {
+        const carrier = carrierId || 'auspost';
+        const trackRes = await fetch(`https://api.goshippo.com/tracks/${carrier}/${trackingNumber}`, {
           headers: { 'Authorization': `ShippoToken ${config.shippo.apiKey}` },
         });
         if (trackRes.ok) {
@@ -311,51 +259,11 @@ router.post('/track', async (req, res) => {
       }
     }
 
-    // Try direct DHL API
-    if (!trackingData && carrierId === 'dhl') {
-      let keys = null;
-      try {
-        const row = await db.queryOne(
-          'SELECT * FROM logistics_config WHERE carrier_id = $1 AND is_active = true LIMIT 1', ['dhl']
-        );
-        if (row?.keys_data) {
-          const raw = JSON.parse(row.keys_data);
-          keys = { apiKey: raw.api_key ? Buffer.from(raw.api_key, 'base64').toString('utf8') : null, isLive: row.is_live };
-        }
-      } catch {}
-
-      if (keys?.apiKey) {
-        try {
-          const dhlUrl = keys.isLive ? 'https://api.dhl.com' : 'https://api-sandbox.dhl.com';
-          const dhlRes = await fetch(`${dhlUrl}/track/shipments?trackingNumber=${trackingNumber}`, {
-            headers: { 'DHL-API-Key': keys.apiKey },
-          });
-          if (dhlRes.ok) {
-            const data = await dhlRes.json();
-            const shipment = data.shipments?.[0];
-            if (shipment) {
-              trackingData = {
-                number: trackingNumber, carrier: 'DHL',
-                status: shipment.status?.status || 'unknown',
-                description: shipment.status?.description || '',
-                location: `${shipment.status?.location?.address?.addressLocality || ''}, ${shipment.status?.location?.address?.countryCode || ''}`,
-                estimatedDelivery: shipment.estimatedTimeOfDelivery,
-                events: (shipment.events || []).map(e => ({
-                  time: e.timestamp, description: e.description,
-                  location: `${e.location?.address?.addressLocality || ''}, ${e.location?.address?.countryCode || ''}`,
-                })),
-              };
-            }
-          }
-        } catch {}
-      }
-    }
-
     // Demo fallback
     if (!trackingData) {
       trackingData = {
         number: trackingNumber,
-        carrier: CARRIERS[carrierId]?.name || carrierId || 'DHL',
+        carrier: CARRIERS[carrierId]?.name || carrierId || 'Australia Post',
         status: 'in_transit',
         description: 'Parcel is in transit to destination',
         location: 'Singapore Hub',
@@ -471,59 +379,13 @@ router.post('/admin-override', requireRole('owner', 'manager'), async (req, res)
   }
 });
 
-// ── Shippo Helpers ──────────────────────────────────────────────────────────
-
-async function shippoCreateShipment({ to, weight, weightUnit }) {
-  const shippoKey = config.shippo.apiKey;
-  if (!shippoKey) throw new Error('Shippo API key not configured');
-
-  const res = await fetch(`${SHIPPO_BASE}/shipments`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `ShippoToken ${shippoKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      address_from: STORE_ADDRESS,
-      address_to: {
-        city: to.city || 'Unknown',
-        state: to.state || '',
-        zip: to.zip || '00000',
-        country: to.country || 'US',
-      },
-      parcels: [{
-        length: '30', width: '20', height: '10',
-        distance_unit: 'cm',
-        weight: String(weight || 0.5),
-        mass_unit: weightUnit || 'kg',
-      }],
-      async: false,
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Shippo shipment error: ${res.status}`);
-  return res.json();
-}
-
-async function shippoCreateTransaction(rateId) {
-  const shippoKey = config.shippo.apiKey;
-  if (!shippoKey) throw new Error('Shippo API key not configured');
-
-  const res = await fetch(`${SHIPPO_BASE}/transactions`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `ShippoToken ${shippoKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      rate: rateId,
-      label_file_type: 'PDF',
-      async: false,
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Shippo transaction error: ${res.status}`);
-  return res.json();
+function getPreferredCarrierId(country) {
+  const c = (country || '').toUpperCase();
+  if (c === 'NP') return 'pathao';
+  if (c === 'CA') return 'chitchats';
+  if (c === 'NZ') return 'nzpost';
+  if (c === 'JP') return 'japanpost';
+  return 'auspost'; // AU + all remaining international countries
 }
 
 // ── Default Zones (fallback when DB empty) ──────────────────────────────────

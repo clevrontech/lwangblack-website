@@ -5,6 +5,15 @@
 const { db, snapToArr, seedOrdersIfEmpty } = require('../_db');
 const { verifyToken } = require('../auth/verify');
 
+function getCarrierByCountry(country) {
+  const c = (country || '').toUpperCase();
+  if (c === 'NP') return 'Pathao';
+  if (c === 'CA') return 'Chit Chats';
+  if (c === 'NZ') return 'NZ Post';
+  if (c === 'JP') return 'Japan Post';
+  return 'Australia Post';
+}
+
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -54,7 +63,7 @@ module.exports = async (req, res) => {
       subtotal: body.subtotal || 0,
       shipping: body.shipping || 0,
       total:    body.total    || 0,
-      carrier:  body.country === 'NP' ? 'Local Courier' : 'DHL',
+      carrier:  getCarrierByCountry(body.country),
       tracking: '',
       customer: body.customer || {},
       payment:  { method: body.paymentMethod || 'pending', status: 'pending', ref: null },

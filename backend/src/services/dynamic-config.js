@@ -100,25 +100,34 @@ async function getGatewayConfig(gateway) {
         enabled:    isEnabled(s, 'nabil', 'NABIL_MERCHANT_ID'),
       };
 
-    case 'shippo':
+    case 'chitchats':
       return {
-        apiKey:  s.shippo_api_key || env.SHIPPO_API_KEY || '',
-        enabled: isEnabled(s, 'shippo', 'SHIPPO_API_KEY'),
+        apiKey:  s.chitchats_api_key || env.CHITCHATS_API_KEY || '',
+        enabled: isEnabled(s, 'chitchats', 'CHITCHATS_API_KEY'),
       };
 
-    case 'dhl':
+    case 'auspost':
       return {
-        apiKey:   s.dhl_api_key   || env.DHL_API_KEY   || '',
-        accountNo:s.dhl_account   || env.DHL_ACCOUNT   || '',
-        enabled:  isEnabled(s, 'dhl', 'DHL_API_KEY'),
+        apiKey:  s.auspost_api_key || env.AUSPOST_API_KEY || '',
+        enabled: isEnabled(s, 'auspost', 'AUSPOST_API_KEY'),
       };
 
-    case 'fedex':
+    case 'nzpost':
       return {
-        apiKey:    s.fedex_api_key    || env.FEDEX_API_KEY    || '',
-        accountNo: s.fedex_account   || env.FEDEX_ACCOUNT    || '',
-        meterNo:   s.fedex_meter_no  || env.FEDEX_METER_NO   || '',
-        enabled:   isEnabled(s, 'fedex', 'FEDEX_API_KEY'),
+        apiKey:  s.nzpost_api_key || env.NZPOST_API_KEY || '',
+        enabled: isEnabled(s, 'nzpost', 'NZPOST_API_KEY'),
+      };
+
+    case 'japanpost':
+      return {
+        apiKey:  s.japanpost_api_key || env.JAPANPOST_API_KEY || '',
+        enabled: isEnabled(s, 'japanpost', 'JAPANPOST_API_KEY'),
+      };
+
+    case 'pathao':
+      return {
+        apiKey:  s.pathao_api_key || env.PATHAO_API_KEY || '',
+        enabled: isEnabled(s, 'pathao', 'PATHAO_API_KEY'),
       };
 
     case 'sendgrid':
@@ -183,20 +192,30 @@ async function getGatewayStatus() {
       hasMerchantId: present(s.nabil_merchant_id || env.NABIL_MERCHANT_ID),
       hasSecret:     present(s.nabil_secret_key || env.NABIL_SECRET_KEY),
     },
-    shippo: {
-      enabled: isEnabled(s, 'shippo', 'SHIPPO_API_KEY'),
-      hasKey:  present(s.shippo_api_key || env.SHIPPO_API_KEY),
-      keyHint: mask(s.shippo_api_key || env.SHIPPO_API_KEY),
+    chitchats: {
+      enabled: isEnabled(s, 'chitchats', 'CHITCHATS_API_KEY'),
+      hasKey:  present(s.chitchats_api_key || env.CHITCHATS_API_KEY),
+      keyHint: mask(s.chitchats_api_key || env.CHITCHATS_API_KEY),
     },
-    dhl: {
-      enabled:    isEnabled(s, 'dhl', 'DHL_API_KEY'),
-      hasKey:     present(s.dhl_api_key || env.DHL_API_KEY),
-      hasAccount: present(s.dhl_account || env.DHL_ACCOUNT),
+    auspost: {
+      enabled: isEnabled(s, 'auspost', 'AUSPOST_API_KEY'),
+      hasKey:  present(s.auspost_api_key || env.AUSPOST_API_KEY),
+      keyHint: mask(s.auspost_api_key || env.AUSPOST_API_KEY),
     },
-    fedex: {
-      enabled:    isEnabled(s, 'fedex', 'FEDEX_API_KEY'),
-      hasKey:     present(s.fedex_api_key || env.FEDEX_API_KEY),
-      hasAccount: present(s.fedex_account || env.FEDEX_ACCOUNT),
+    nzpost: {
+      enabled: isEnabled(s, 'nzpost', 'NZPOST_API_KEY'),
+      hasKey:  present(s.nzpost_api_key || env.NZPOST_API_KEY),
+      keyHint: mask(s.nzpost_api_key || env.NZPOST_API_KEY),
+    },
+    japanpost: {
+      enabled: isEnabled(s, 'japanpost', 'JAPANPOST_API_KEY'),
+      hasKey:  present(s.japanpost_api_key || env.JAPANPOST_API_KEY),
+      keyHint: mask(s.japanpost_api_key || env.JAPANPOST_API_KEY),
+    },
+    pathao: {
+      enabled: isEnabled(s, 'pathao', 'PATHAO_API_KEY'),
+      hasKey:  present(s.pathao_api_key || env.PATHAO_API_KEY),
+      keyHint: mask(s.pathao_api_key || env.PATHAO_API_KEY),
     },
     sendgrid: {
       enabled:    isEnabled(s, 'sendgrid', 'SENDGRID_API_KEY'),
@@ -223,9 +242,11 @@ function isEnabled(settings, key, envKey) {
     case 'khalti':   return !!(settings.khalti_secret_key   || env[envKey]);
     case 'esewa':    return !!(settings.esewa_merchant_id   || env[envKey]);
     case 'nabil':    return !!(settings.nabil_merchant_id   || env[envKey]);
-    case 'shippo':   return !!(settings.shippo_api_key      || env[envKey]);
-    case 'dhl':      return !!(settings.dhl_api_key         || env[envKey]);
-    case 'fedex':    return !!(settings.fedex_api_key       || env[envKey]);
+    case 'chitchats':return !!(settings.chitchats_api_key   || env[envKey]);
+    case 'auspost':  return !!(settings.auspost_api_key     || env[envKey]);
+    case 'nzpost':   return !!(settings.nzpost_api_key      || env[envKey]);
+    case 'japanpost':return !!(settings.japanpost_api_key   || env[envKey]);
+    case 'pathao':   return !!(settings.pathao_api_key      || env[envKey]);
     case 'sendgrid': return !!(settings.sendgrid_api_key    || env[envKey]);
     case 'twilio':   return !!(settings.twilio_account_sid  || env[envKey]);
     default: return false;

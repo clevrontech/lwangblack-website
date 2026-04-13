@@ -19,6 +19,15 @@ const PAYMENT_METHODS = {
   JP: ['card']
 };
 
+function getCarrierByCountry(country) {
+  const c = (country || '').toUpperCase();
+  if (c === 'NP') return 'Pathao';
+  if (c === 'CA') return 'Chit Chats';
+  if (c === 'NZ') return 'NZ Post';
+  if (c === 'JP') return 'Japan Post';
+  return 'Australia Post';
+}
+
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -66,7 +75,7 @@ module.exports = async (req, res) => {
       lineItems.push({
         price_data: {
           currency,
-          product_data: { name: 'International Shipping (DHL)' },
+          product_data: { name: `Shipping (${getCarrierByCountry(country)})` },
           unit_amount: Math.round(req.body.shipping * multiplier)
         },
         quantity: 1

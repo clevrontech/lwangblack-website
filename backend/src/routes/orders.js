@@ -9,6 +9,15 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(applyCountryFilter);
 
+function getCarrierByCountry(country) {
+  const c = (country || '').toUpperCase();
+  if (c === 'NP') return 'Pathao';
+  if (c === 'CA') return 'Chit Chats';
+  if (c === 'NZ') return 'NZ Post';
+  if (c === 'JP') return 'Japan Post';
+  return 'Australia Post';
+}
+
 // ── GET /api/orders/export/csv ── MUST come BEFORE /:id ─────────────────────
 router.get('/export/csv', async (req, res) => {
   try {
@@ -188,7 +197,7 @@ router.post('/', async (req, res) => {
         id: orderId, customer_id: customerId, status: 'pending',
         country: country || 'NP', currency: currency || 'NPR', symbol: symbol || 'Rs',
         items: items || [], subtotal: subtotal || 0, shipping: shipping || 0, total: total || 0,
-        carrier: carrier || (country === 'NP' ? 'Local Courier' : 'DHL'),
+        carrier: carrier || getCarrierByCountry(country),
         tracking: '', notes: '', payment_method: paymentMethod || 'pending',
         discount_code: discountCode || null, discount_amount: discountAmount || 0,
         created_at: new Date(), updated_at: new Date(),
@@ -228,7 +237,7 @@ router.post('/', async (req, res) => {
          VALUES ($1,$2,'pending',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
         [orderId, customerId, country || 'NP', currency || 'NPR', symbol || 'Rs',
          JSON.stringify(items || []), subtotal || 0, shipping || 0, total || 0,
-         carrier || 'DHL', paymentMethod || 'pending', discountCode || null, discountAmount || 0]
+         carrier || getCarrierByCountry(country), paymentMethod || 'pending', discountCode || null, discountAmount || 0]
       );
       await db.query(
         'INSERT INTO transactions (order_id, method, status, amount, currency) VALUES ($1,$2,$3,$4,$5)',

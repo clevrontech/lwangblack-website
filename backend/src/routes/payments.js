@@ -19,6 +19,15 @@ const CURRENCY_MAP = {
   AU: 'aud', US: 'usd', GB: 'gbp', CA: 'cad', NZ: 'nzd', JP: 'jpy', NP: 'npr',
 };
 
+function getCarrierByCountry(country) {
+  const c = (country || '').toUpperCase();
+  if (c === 'NP') return 'Pathao';
+  if (c === 'CA') return 'Chit Chats';
+  if (c === 'NZ') return 'NZ Post';
+  if (c === 'JP') return 'Japan Post';
+  return 'Australia Post';
+}
+
 // ── Helper: Create order in DB or memory ─────────────────────────────────────
 async function createOrder({ orderId, customer, items, country, currency, symbol, subtotal, shipping, total, carrier, paymentMethod, discountCode, discountAmount }) {
   if (db.isUsingMemory()) {
@@ -43,7 +52,7 @@ async function createOrder({ orderId, customer, items, country, currency, symbol
       id: orderId, customer_id: customerId, status: 'pending',
       country: country || 'NP', currency: currency || 'NPR', symbol: symbol || 'Rs',
       items: items || [], subtotal: subtotal || 0, shipping: shipping || 0, total: total || 0,
-      carrier: carrier || (country === 'NP' ? 'Local Courier' : 'DHL'),
+      carrier: carrier || getCarrierByCountry(country),
       tracking: '', notes: '', payment_method: paymentMethod || 'pending',
       discount_code: discountCode || null, discount_amount: discountAmount || 0,
       created_at: new Date(), updated_at: new Date(),
@@ -81,7 +90,7 @@ async function createOrder({ orderId, customer, items, country, currency, symbol
        VALUES ($1,$2,'pending',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
       [orderId, customerId, country || 'NP', currency || 'NPR', symbol || 'Rs',
        JSON.stringify(items || []), subtotal || 0, shipping || 0, total || 0,
-       carrier || 'DHL', paymentMethod || 'pending', discountCode || null, discountAmount || 0]
+       carrier || getCarrierByCountry(country), paymentMethod || 'pending', discountCode || null, discountAmount || 0]
     );
     await db.query(
       'INSERT INTO transactions (order_id, method, status, amount, currency) VALUES ($1,$2,$3,$4,$5)',
@@ -251,7 +260,7 @@ router.post('/checkout', async (req, res) => {
         lineItems.push({
           price_data: {
             currency: stripeCurrency,
-            product_data: { name: 'Shipping (DHL Express)' },
+            product_data: { name: `Shipping (${getCarrierByCountry(country)})` },
             unit_amount: Math.round(parseFloat(shipping) * 100),
           },
           quantity: 1,
@@ -571,7 +580,7 @@ router.post('/stripe-session', async (req, res) => {
       lineItems.push({
         price_data: {
           currency,
-          product_data: { name: 'International Shipping (DHL)' },
+          product_data: { name: `Shipping (${getCarrierByCountry(country)})` },
           unit_amount: Math.round(parseFloat(shipping) * 100),
         },
         quantity: 1,

@@ -19,10 +19,11 @@ describe('Logistics API', () => {
     expect(res.status).toBe(200);
     expect(res.body.carriers).toBeDefined();
     const ids = res.body.carriers.map(c => c.id);
-    expect(ids).toContain('dhl');
-    expect(ids).toContain('shippo');
-    expect(ids).toContain('sajilo');
-    expect(ids).toContain('aramex');
+    expect(ids).toContain('auspost');
+    expect(ids).toContain('chitchats');
+    expect(ids).toContain('nzpost');
+    expect(ids).toContain('japanpost');
+    expect(ids).toContain('pathao');
   });
 
   test('GET /api/logistics/zones — list delivery zones', async () => {
@@ -78,23 +79,22 @@ describe('Logistics API', () => {
     expect(res.body.rates.length).toBeGreaterThan(0);
   });
 
-  test('POST /api/logistics/rates — Nepal local couriers', async () => {
+  test('POST /api/logistics/rates — Nepal uses Pathao only', async () => {
     const res = await request(app)
       .post('/api/logistics/rates')
       .set('Authorization', `Bearer ${token}`)
       .send({ toCountry: 'NP' });
 
     expect(res.status).toBe(200);
-    const localRate = res.body.rates.find(r => r.carrierId === 'local');
-    expect(localRate).toBeDefined();
-    expect(localRate.price).toBe(0);
+    expect(res.body.rates).toHaveLength(1);
+    expect(res.body.rates[0].carrierId).toBe('pathao');
   });
 
   test('POST /api/logistics/create-shipment — create', async () => {
     const res = await request(app)
       .post('/api/logistics/create-shipment')
       .set('Authorization', `Bearer ${token}`)
-      .send({ orderId: 'LB-2449', carrierId: 'dhl' });
+      .send({ orderId: 'LB-2449', carrierId: 'auspost' });
 
     expect(res.status).toBe(200);
     expect(res.body.trackingNumber).toBeDefined();
@@ -105,10 +105,10 @@ describe('Logistics API', () => {
     const res = await request(app)
       .post('/api/logistics/track')
       .set('Authorization', `Bearer ${token}`)
-      .send({ trackingNumber: 'DHL123456', carrierId: 'dhl' });
+      .send({ trackingNumber: 'AUP123456', carrierId: 'auspost' });
 
     expect(res.status).toBe(200);
     expect(res.body.tracking).toBeDefined();
-    expect(res.body.tracking.number).toBe('DHL123456');
+    expect(res.body.tracking.number).toBe('AUP123456');
   });
 });

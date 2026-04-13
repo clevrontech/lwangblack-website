@@ -291,7 +291,7 @@ async function handleSubscription() {
     if (authToken && authToken !== 'local') h.Authorization = `Bearer ${authToken}`;
     const r = await fetch(`${API}/subscription/create-checkout`, {
       method: 'POST', headers: h,
-      body: JSON.stringify({ successUrl: `${location.origin}/admin.html?subscription=success`, cancelUrl: `${location.origin}/admin.html?subscription=cancelled` }),
+      body: JSON.stringify({ successUrl: `${location.origin}/admin/?subscription=success`, cancelUrl: `${location.origin}/admin/?subscription=cancelled` }),
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Checkout failed');
@@ -340,13 +340,11 @@ async function cancelSubscription() {
 // LOGISTICS — Carrier API Integration
 // ══════════════════════════════════════════════════════════════════════════════
 const CARRIER_DEFS = {
-  dhl:     { name:'DHL Express',       icon:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFCC00" stroke-width="2"><path d="M5 21h14a2 2 0 0 0 2-2V7.5L14.5 2H5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>', color:'#FFCC00', fields:[{id:'apiKey',label:'DHL API Key',type:'password'},{id:'accountNumber',label:'Account Number',type:'text'}] },
-  fedex:   { name:'FedEx',             icon:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4D148C" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>', color:'#4D148C', fields:[{id:'apiKey',label:'API Key',type:'password'},{id:'apiSecret',label:'API Secret',type:'password'},{id:'accountNumber',label:'Account Number',type:'text'}] },
-  ups:     { name:'UPS',               icon:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#351C15" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>', color:'#351C15', fields:[{id:'clientId',label:'Client ID',type:'text'},{id:'clientSecret',label:'Client Secret',type:'password'},{id:'accountNumber',label:'Account Number',type:'text'}] },
-  ship24:  { name:'Ship24 (Universal)',icon:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0066FF" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>', color:'#0066FF', fields:[{id:'apiKey',label:'Ship24 API Key',type:'password'}] },
-  shippo:  { name:'Shippo',            icon:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>', color:'#8B5CF6', fields:[{id:'apiKey',label:'Shippo API Key',type:'password'}] },
-  auspost: { name:'Australia Post',    icon:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#DA291C" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>', color:'#DA291C', fields:[{id:'apiKey',label:'Australia Post API Key',type:'password'}] },
-  nabil:   { name:'Nabil Bank Logistics',icon:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#CC0000" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>', color:'#CC0000', fields:[{id:'merchantId',label:'Merchant ID',type:'text'},{id:'apiKey',label:'API Key',type:'password'},{id:'secretKey',label:'Secret Key',type:'password'}] },
+  chitchats: { name:'Chit Chats (Canada)', icon:'📦', color:'#1f2937', fields:[{id:'apiKey',label:'Chit Chats API Key',type:'password'}] },
+  auspost:   { name:'Australia Post (AU + International)', icon:'📮', color:'#DA291C', fields:[{id:'apiKey',label:'Australia Post API Key',type:'password'}] },
+  nzpost:    { name:'NZ Post (New Zealand)', icon:'🇳🇿', color:'#0ea5e9', fields:[{id:'apiKey',label:'NZ Post API Key',type:'password'}] },
+  japanpost: { name:'Japan Post (Japan)', icon:'🇯🇵', color:'#dc2626', fields:[{id:'apiKey',label:'Japan Post API Key',type:'password'}] },
+  pathao:    { name:'Pathao (Nepal)', icon:'🛵', color:'#16a34a', fields:[{id:'apiKey',label:'Pathao API Key',type:'password'}] },
 };
 let _logisticsConfigs = {};
 let _currentCarrierId = null;
@@ -405,7 +403,7 @@ function openCarrierModal(carrierId) {
       <div style="font-size:2.5rem">${c.icon}</div>
       <div>
         <div style="font-weight:700">${c.name}</div>
-        <a href="#" style="font-size:.7rem;color:var(--accent2)" onclick="window.open('https://developer.dhl.com','_blank')">View API Documentation ↗</a>
+        <a href="#" style="font-size:.7rem;color:var(--accent2)" onclick="window.open('https://lwangblack.co','_blank')">View integration notes ↗</a>
       </div>
     </div>
     ${c.fields.map(f => `
@@ -478,7 +476,7 @@ function openTrackModal() { openModal('modalTrack'); document.getElementById('tr
 
 async function doTrackShipment() {
   const num    = document.getElementById('trackNumInput')?.value.trim();
-  const cid    = document.getElementById('trackCarrierSelect')?.value || 'dhl';
+  const cid    = document.getElementById('trackCarrierSelect')?.value || 'auspost';
   const result = document.getElementById('trackResult');
   if (!num) { showToast('Enter tracking number', 'error'); return; }
   result.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)"><div style="font-size:2rem;animation:spin 1s linear infinite">⏳</div><div style="margin-top:.5rem">Tracking shipment…</div></div>';
@@ -529,10 +527,10 @@ async function loadRecentShipments() {
     ${shipped.map(o => `<tr>
       <td class="mono" style="color:var(--accent2)">${o.id}</td>
       <td>${o.customer?.fname||'—'} ${o.customer?.lname||''}</td>
-      <td>${o.carrier||'DHL'}</td>
+      <td>${o.carrier||'Australia Post'}</td>
       <td class="mono">${o.tracking||o.tracking_number||'—'}</td>
       <td>${typeof pill==='function'?pill(o.status):`<span class="pill">${o.status}</span>`}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="quickTrack('${o.tracking||o.tracking_number||''}','${o.carrier?.toLowerCase()||'dhl'}')">Track</button></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="quickTrack('${o.tracking||o.tracking_number||''}','${o.carrier?.toLowerCase()||'auspost'}')">Track</button></td>
     </tr>`).join('')}
   </tbody></table></div>`;
 }

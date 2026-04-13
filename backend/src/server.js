@@ -117,6 +117,9 @@ app.use('/invoices', express.static(path.join(__dirname, '..', 'invoices')));
 // ── Serve React Admin Dashboard ─────────────────────────────────────────────
 const adminPath = path.resolve(__dirname, '..', '..', 'admin-dashboard', 'dist');
 app.use('/admin', express.static(adminPath));
+app.get('/admin.html', (req, res) => {
+  res.redirect(301, '/admin/');
+});
 app.get('/admin/*', (req, res) => {
   res.sendFile(path.join(adminPath, 'index.html'));
 });

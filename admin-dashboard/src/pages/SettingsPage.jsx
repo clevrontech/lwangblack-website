@@ -3,7 +3,8 @@ import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import {
   Save, Eye, EyeOff, CheckCircle, XCircle, AlertTriangle,
-  Store, CreditCard, Truck, Bell, Shield, User, Lock, AtSign, RefreshCw, ExternalLink
+  Store, CreditCard, Truck, Bell, Shield, User, Lock, AtSign, RefreshCw, ExternalLink,
+  ChevronDown, ChevronRight
 } from 'lucide-react';
 
 // ── Real brand logo URLs (official sources, no AI icons) ─────────────────────
@@ -19,10 +20,11 @@ const LOGOS = {
   applepay:   'https://upload.wikimedia.org/wikipedia/commons/b/b0/Apple_Pay_logo.svg',
   googlepay:  'https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg',
   afterpay:   'https://upload.wikimedia.org/wikipedia/commons/4/41/Afterpay_logo_2020.svg',
-  dhl:        'https://upload.wikimedia.org/wikipedia/commons/a/a6/DHL_Logo.svg',
-  fedex:      'https://upload.wikimedia.org/wikipedia/commons/b/b9/FedEx_Corporation_-_2016_Logo.svg',
-  ups:        'https://upload.wikimedia.org/wikipedia/commons/1/1b/UPS_Logo_Shield_2017.svg',
-  shippo:     'https://goshippo.com/favicon.ico',
+  chitchats:  'https://chitchats.com/favicon.ico',
+  auspost:    'https://auspost.com.au/favicon.ico',
+  nzpost:     'https://www.nzpost.co.nz/favicon.ico',
+  japanpost:  'https://www.post.japanpost.jp/favicon.ico',
+  pathao:     'https://pathao.com/favicon.ico',
   sendgrid:   'https://sendgrid.com/favicon.ico',
   twilio:     'https://www.twilio.com/favicon.ico',
 };
@@ -485,63 +487,94 @@ export default function SettingsPage() {
               <p className="text-sm text-white/40">Configure shipping carriers. Keys are used live for rate calculation, label generation, and tracking.</p>
             </div>
 
-            {/* Shippo */}
+            {/* Canada */}
             <GatewayCard
-              logo={LOGOS.shippo}
-              name="Shippo"
-              description="Multi-carrier shipping API — rates, labels, and tracking for DHL, UPS, FedEx, USPS and more."
-              status={gatewayStatus.shippo?.enabled}
-              docUrl="https://goshippo.com/docs/"
+              logo={LOGOS.chitchats}
+              name="Chit Chats (Canada)"
+              description="Canada logistics provider for all CA shipments."
+              status={gatewayStatus.chitchats?.enabled}
+              docUrl="https://chitchats.com/"
             >
               <SecretInput
-                label="API Token"
-                value={pending.shippo_api_key || ''}
-                onChange={v => setField('shippo_api_key', v)}
-                placeholder="shippo_live_..."
-                hint={gatewayStatus.shippo?.keyHint}
+                label="API Key"
+                value={pending.chitchats_api_key || ''}
+                onChange={v => setField('chitchats_api_key', v)}
+                placeholder="chitchats_api_key"
+                hint={gatewayStatus.chitchats?.keyHint}
               />
-              <SaveBtn keys={['shippo_api_key']} label="Save Shippo settings" />
+              <SaveBtn keys={['chitchats_api_key']} label="Save Chit Chats settings" />
             </GatewayCard>
 
-            {/* DHL */}
+            {/* Australia + International */}
             <GatewayCard
-              logo={LOGOS.dhl}
-              name="DHL Express"
-              description="International express shipping used as the primary global carrier for Lwang Black."
-              status={gatewayStatus.dhl?.enabled}
-              docUrl="https://developer.dhl.com/"
+              logo={LOGOS.auspost}
+              name="Australia Post (AU + International)"
+              description="Primary carrier for Australia and all other international countries."
+              status={gatewayStatus.auspost?.enabled}
+              docUrl="https://auspost.com.au/"
             >
-              <TextInput label="API Key" value={field('dhl_api_key')} onChange={v => setField('dhl_api_key', v)} placeholder="DHL_API_KEY" />
-              <TextInput label="Account Number" value={field('dhl_account')} onChange={v => setField('dhl_account', v)} placeholder="123456789" />
-              <SaveBtn keys={['dhl_api_key','dhl_account']} label="Save DHL settings" />
+              <SecretInput
+                label="API Key"
+                value={pending.auspost_api_key || ''}
+                onChange={v => setField('auspost_api_key', v)}
+                placeholder="auspost_api_key"
+                hint={gatewayStatus.auspost?.keyHint}
+              />
+              <SaveBtn keys={['auspost_api_key']} label="Save Australia Post settings" />
             </GatewayCard>
 
-            {/* FedEx */}
+            {/* New Zealand */}
             <GatewayCard
-              logo={LOGOS.fedex}
-              name="FedEx"
-              description="Global express shipping alternative for select markets."
-              status={gatewayStatus.fedex?.enabled}
-              docUrl="https://developer.fedex.com/"
+              logo={LOGOS.nzpost}
+              name="NZ Post (New Zealand)"
+              description="Dedicated carrier for New Zealand shipments."
+              status={gatewayStatus.nzpost?.enabled}
+              docUrl="https://www.nzpost.co.nz/"
             >
-              <TextInput label="API Key" value={field('fedex_api_key')} onChange={v => setField('fedex_api_key', v)} placeholder="FEDEX_API_KEY" />
-              <TextInput label="Account Number" value={field('fedex_account')} onChange={v => setField('fedex_account', v)} placeholder="Account No." />
-              <TextInput label="Meter Number" value={field('fedex_meter_no')} onChange={v => setField('fedex_meter_no', v)} placeholder="Meter No." />
-              <SaveBtn keys={['fedex_api_key','fedex_account','fedex_meter_no']} label="Save FedEx settings" />
+              <SecretInput
+                label="API Key"
+                value={pending.nzpost_api_key || ''}
+                onChange={v => setField('nzpost_api_key', v)}
+                placeholder="nzpost_api_key"
+                hint={gatewayStatus.nzpost?.keyHint}
+              />
+              <SaveBtn keys={['nzpost_api_key']} label="Save NZ Post settings" />
             </GatewayCard>
 
-            {/* UPS */}
+            {/* Japan */}
             <GatewayCard
-              logo={LOGOS.ups}
-              name="UPS"
-              description="UPS shipping for North America and global routes."
-              status={false}
-              docUrl="https://developer.ups.com/"
+              logo={LOGOS.japanpost}
+              name="Japan Post (Japan)"
+              description="Dedicated carrier for Japan shipments."
+              status={gatewayStatus.japanpost?.enabled}
+              docUrl="https://www.post.japanpost.jp/"
             >
-              <TextInput label="Client ID" value={field('ups_client_id')} onChange={v => setField('ups_client_id', v)} placeholder="UPS_CLIENT_ID" />
-              <SecretInput label="Client Secret" value={pending.ups_client_secret || ''} onChange={v => setField('ups_client_secret', v)} placeholder="UPS_CLIENT_SECRET" />
-              <TextInput label="Account Number" value={field('ups_account')} onChange={v => setField('ups_account', v)} placeholder="Account No." />
-              <SaveBtn keys={['ups_client_id','ups_client_secret','ups_account']} label="Save UPS settings" />
+              <SecretInput
+                label="API Key"
+                value={pending.japanpost_api_key || ''}
+                onChange={v => setField('japanpost_api_key', v)}
+                placeholder="japanpost_api_key"
+                hint={gatewayStatus.japanpost?.keyHint}
+              />
+              <SaveBtn keys={['japanpost_api_key']} label="Save Japan Post settings" />
+            </GatewayCard>
+
+            {/* Nepal */}
+            <GatewayCard
+              logo={LOGOS.pathao}
+              name="Pathao (Nepal)"
+              description="Dedicated logistics provider for Nepal shipments."
+              status={gatewayStatus.pathao?.enabled}
+              docUrl="https://pathao.com/np/"
+            >
+              <SecretInput
+                label="API Key"
+                value={pending.pathao_api_key || ''}
+                onChange={v => setField('pathao_api_key', v)}
+                placeholder="pathao_api_key"
+                hint={gatewayStatus.pathao?.keyHint}
+              />
+              <SaveBtn keys={['pathao_api_key']} label="Save Pathao settings" />
             </GatewayCard>
           </>
         )}

@@ -139,7 +139,9 @@ export default function Logistics() {
               <div>
                 <p className="font-medium text-sm">{c.name}</p>
                 <p className="text-xs text-zinc-500">
-                  {c.global ? 'Global' : ''}{c.nepal ? 'Nepal' : ''}
+                  {Array.isArray(c.countries) && c.countries.length
+                    ? `Country: ${c.countries.join(', ')}`
+                    : (c.internationalFromAU ? 'International from Australia' : 'Country specific')}
                 </p>
               </div>
             </div>

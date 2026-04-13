@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout — Lwang Black | Secure Global Checkout</title>
-  <meta name="description" content="Complete your Lwang Black order. Secure checkout with DHL global shipping and multiple payment options." />
+  <meta name="description" content="Complete your Lwang Black order. Secure checkout with country-specific shipping and multiple payment options." />
   <meta name="robots" content="noindex, nofollow" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -336,7 +336,7 @@
           </span>
           <span class="co-badge">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><rect x="1" y="3" width="15" height="13"/><polyline points="16 8 20 8 23 11 23 16 16 16"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-            DHL Express
+            Country-specific carrier
           </span>
           <span class="co-badge">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -790,7 +790,7 @@
       if (!validateStep1()) { goStep(1); return; }
 
       const rates = window.getShippingRates?.(LB_REGION.get()) || {};
-      const rate = rates[selectedShipping] || { price: 0, carrier: 'Local Courier', label: 'Standard' };
+      const rate = rates[selectedShipping] || { price: 0, carrier: 'Australia Post', label: 'Standard' };
       const subtotal = cartTotals.subtotal || 0;
       const shipping = rate.price;
       const total = subtotal + shipping + tipAmount;

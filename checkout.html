@@ -357,6 +357,7 @@
   <script src="au-currency-converter.js"></script>
   <script src="region.js"></script>
   <script src="cart.js"></script>
+  <script src="script.js"></script>
 
   <script>
     // ── State ──────────────────────────────────────
@@ -366,6 +367,7 @@
     let cartItems = [];
     let cartTotals = {};
     let shippingRates = {};
+    let appliedDiscount = { code: null, amount: 0 };
 
     // ── Init ──────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
@@ -405,8 +407,8 @@
     });
 
     document.addEventListener('lb:regionChanged', (e) => {
-      checkRegion(e.detail.country);
-      renderShippingOptions(e.detail.country);
+      checkRegion(e.detail.code);
+      renderShippingOptions(e.detail.code);
       renderOrderSummary();
     });
 
@@ -471,7 +473,7 @@
       if (countryCode === 'US' && rates.liveRates) {
         container.innerHTML = '<div style="font-size:0.8rem;color:rgba(255,255,255,0.5);padding:1rem 0;text-align:center;">Fetching live USPS rates…</div>';
         try {
-          const toZip  = (document.getElementById('co-zip') || {}).value || '';
+          const toZip  = (document.getElementById('co-postal') || {}).value || '';
           const apiBase = window.LB_API_BASE || '/api';
           const resp = await fetch(`${apiBase}/logistics/usps/rates`, {
             method: 'POST',
@@ -629,8 +631,6 @@
       const METHODS = isNepal ? [
         { id:'card',   label:'Credit card',      icons: CARD_ICONS },
         { id:'esewa',  label:'eSewa',             icons:`<span class="co-pay-icon">${BRAND_ICONS.esewa}</span>`,  redirect:"You'll be redirected to eSewa to complete payment." },
-        { id:'khalti', label:'Khalti',            icons:`<span class="co-pay-icon">${BRAND_ICONS.khalti}</span>`, redirect:"You'll be redirected to Khalti to complete payment." },
-        { id:'nabil',  label:'Nabil Bank',        icons:`<span class="co-pay-icon">${BRAND_ICONS.nabil}</span>`,  redirect:"You'll be redirected to Nabil Bank's secure gateway." },
         { id:'cod',    label:'Cash on Delivery',  icons:`<span class="co-pay-icon">${BRAND_ICONS.cod}</span>`,    desc:'Pay NPR cash upon delivery. Available within Nepal only.' },
       ] : [
         { id:'card',       label:'Credit card', icons: CARD_ICONS },
@@ -875,7 +875,8 @@
           const intentRes = await fetch('/api/payments/stripe-intent', {
             method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({ customer, items:cartItems, country, currency:cartTotals.currency,
-              symbol:cartTotals.symbol, subtotal, shipping:shipping+tipAmount, total, carrier:rate.carrier, tip:tipAmount }),
+              symbol:cartTotals.symbol, subtotal, shipping:shipping+tipAmount, total, carrier:rate.carrier, tip:tipAmount,
+              discountCode: appliedDiscount.code, discountAmount: appliedDiscount.amount }),
           });
           const intentData = await intentRes.json();
           if (!intentRes.ok) {
@@ -911,7 +912,8 @@
           const res = await fetch('/api/payments/checkout', {
             method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({ gateway:'stripe', country, currency:cartTotals.currency, symbol:cartTotals.symbol,
-              items:cartItems, subtotal, shipping, total, carrier:rate.carrier, customer }),
+              items:cartItems, subtotal, shipping, total, carrier:rate.carrier, customer,
+              discountCode: appliedDiscount.code, discountAmount: appliedDiscount.amount }),
           });
           const data = await res.json();
           if (!res.ok) { showCheckoutError(data.error + (data.setup?`\n\nSetup: ${data.setup}`:'')); resetBtn(); return; }
@@ -925,7 +927,8 @@
         const res = await fetch('/api/payments/checkout', {
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ gateway, country, currency:cartTotals.currency, symbol:cartTotals.symbol,
-            items:cartItems, subtotal, shipping, total, carrier:rate.carrier, customer }),
+            items:cartItems, subtotal, shipping, total, carrier:rate.carrier, customer,
+            discountCode: appliedDiscount.code, discountAmount: appliedDiscount.amount }),
         });
         const data = await res.json();
 
@@ -1000,6 +1003,7 @@
         });
         const data = await res.json();
         if (data.valid) {
+          appliedDiscount = { code: code.toUpperCase(), amount: data.discountAmount || 0 };
           if (msgEl) { msgEl.style.color = '#2e624c'; msgEl.textContent = `✓ ${code.toUpperCase()}: -${data.type === 'percent' ? data.value + '%' : cartTotals.symbol + data.discountAmount.toFixed(2)} applied!`; }
           const totalEl = document.getElementById('co-sum-total');
           if (totalEl) {
@@ -1008,6 +1012,7 @@
             totalEl.textContent = `${cartTotals.symbol}${(data.newTotal + rate.price).toFixed(2)}`;
           }
         } else {
+          appliedDiscount = { code: null, amount: 0 };
           if (msgEl) { msgEl.style.color = 'rgba(255,100,100,0.7)'; msgEl.textContent = data.error || 'Invalid code'; }
         }
       } catch(e) {

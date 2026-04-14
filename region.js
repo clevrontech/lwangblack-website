@@ -172,7 +172,7 @@ function updateHomeProducts(code) {
     'lb-pot-and-press-gift-set',
     'lwang-black-drip-set',
     '5oog-lwang-black-mix',
-    '250g-lwang-black',
+    '250g-lwang-black-mix',
     'lwang-black-drip-coffee-bags'
   ];
   let html = '';

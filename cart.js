@@ -20,8 +20,9 @@ const LB_CART = {
   },
 
   /** Add item to cart */
-  add(productId, variant = null) {
-    const country = window.LB_REGION?.get() || 'US';
+  add(productId, variant = null, qty = 1) {
+    qty = Math.max(1, parseInt(qty) || 1);
+    const country = window.LB_REGION?.get() || 'AU';
     const product = window.LB_PRODUCTS?.[productId];
     const priceObj = window.getProductPrice?.(productId, country);
 
@@ -35,7 +36,7 @@ const LB_CART = {
     const existing = items.find(i => i.key === key);
 
     if (existing) {
-      existing.qty++;
+      existing.qty += qty;
     } else {
       items.push({
         key,
@@ -47,7 +48,7 @@ const LB_CART = {
         currency: priceObj.currency,
         symbol: priceObj.symbol,
         display: priceObj.display,
-        qty: 1
+        qty
       });
     }
 
@@ -62,7 +63,7 @@ const LB_CART = {
         event: 'add_to_cart',
         currency: priceObj.currency,
         value: priceObj.amount,
-        items: [{ item_id: productId, item_name: product.name, price: priceObj.amount, quantity: 1, item_variant: variant || '' }]
+        items: [{ item_id: productId, item_name: product.name, price: priceObj.amount, quantity: qty, item_variant: variant || '' }]
       });
     }
   },

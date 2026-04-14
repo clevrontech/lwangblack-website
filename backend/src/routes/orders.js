@@ -13,6 +13,7 @@ function getCarrierByCountry(country) {
   const c = (country || '').toUpperCase();
   if (c === 'NP') return 'Pathao';
   if (c === 'CA') return 'Chit Chats';
+  if (c === 'US') return 'USPS';
   if (c === 'NZ') return 'NZ Post';
   if (c === 'JP') return 'Japan Post';
   return 'Australia Post';

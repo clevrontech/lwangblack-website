@@ -414,7 +414,7 @@
 
   // ── Listen for region and currency changes ─────────────
   document.addEventListener('lb:regionChanged', (e) => {
-    renderRegionalPrices(e.detail.country || window.LB_REGION?.get() || 'AU');
+    renderRegionalPrices(e.detail.code || window.LB_REGION?.get() || 'AU');
   });
 
   document.addEventListener('lb:currencyConverted', () => {

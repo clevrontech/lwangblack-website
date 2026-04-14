@@ -439,11 +439,13 @@ router.get('/stripe-session-verify', async (req, res) => {
     const { session_id, order_id } = req.query;
     if (!session_id || !order_id) return res.status(400).json({ error: 'session_id and order_id required' });
 
-    if (!config.stripe.secretKey || config.stripe.secretKey === 'sk_test_placeholder') {
+    const stripeCfg = await dynConfig.getGatewayConfig('stripe');
+    const secretKey = stripeCfg.secretKey || config.stripe.secretKey;
+    if (!secretKey || secretKey === 'sk_test_placeholder') {
       return res.status(503).json({ error: 'Stripe not configured' });
     }
 
-    const stripe = Stripe(config.stripe.secretKey);
+    const stripe = Stripe(secretKey);
     const session = await stripe.checkout.sessions.retrieve(session_id);
 
     if (session.payment_status === 'paid' && session.metadata?.orderId === order_id) {
@@ -539,12 +541,15 @@ router.post('/stripe-session', async (req, res) => {
 // ── POST /api/payments/stripe-webhook ────────────────────────────────────────
 router.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
-    const stripe = Stripe(config.stripe.secretKey || 'sk_test_placeholder');
+    const stripeCfg = await dynConfig.getGatewayConfig('stripe');
+    const secretKey = stripeCfg.secretKey || config.stripe.secretKey || 'sk_test_placeholder';
+    const webhookSecret = stripeCfg.webhookSecret || config.stripe.webhookSecret;
+    const stripe = Stripe(secretKey);
     const sig = req.headers['stripe-signature'];
     let event;
 
-    if (config.stripe.webhookSecret && config.stripe.webhookSecret !== 'whsec_placeholder') {
-      event = stripe.webhooks.constructEvent(req.body, sig, config.stripe.webhookSecret);
+    if (webhookSecret && webhookSecret !== 'whsec_placeholder') {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } else {
       // Dev mode: parse raw body
       try { event = JSON.parse(req.body.toString()); }
@@ -558,6 +563,16 @@ router.post('/stripe-webhook', express.raw({ type: 'application/json' }), async 
       if (orderId && orderId !== 'unknown') {
         await updateOrderStatus(orderId, 'paid', paymentType, session.payment_intent);
         broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: paymentType } });
+      }
+    }
+
+    // Mark orders paid when embedded PaymentIntent (Stripe Elements) succeeds
+    if (event.type === 'payment_intent.succeeded') {
+      const pi = event.data.object;
+      const orderId = pi.metadata?.orderId;
+      if (orderId) {
+        await updateOrderStatus(orderId, 'paid', 'card', pi.id);
+        broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'card' } });
       }
     }
 
@@ -794,9 +809,11 @@ router.post('/:orderId/refund', requireAuth, async (req, res) => {
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
     // Stripe refund
-    if (txn?.method === 'stripe' && txn.reference && config.stripe.secretKey !== 'sk_test_placeholder') {
+    const stripeCfgForRefund = await dynConfig.getGatewayConfig('stripe');
+    const stripeKeyForRefund = stripeCfgForRefund.secretKey || config.stripe.secretKey;
+    if (txn?.method === 'stripe' && txn.reference && stripeKeyForRefund && stripeKeyForRefund !== 'sk_test_placeholder') {
       try {
-        const stripe = Stripe(config.stripe.secretKey);
+        const stripe = Stripe(stripeKeyForRefund);
         await stripe.refunds.create({
           payment_intent: txn.reference,
           reason: reason || 'requested_by_customer',
@@ -807,13 +824,17 @@ router.post('/:orderId/refund', requireAuth, async (req, res) => {
     }
 
     // PayPal refund
-    if (txn?.method === 'paypal' && txn.reference && config.paypal.clientId !== 'paypal_client_placeholder') {
+    const ppCfgForRefund = await dynConfig.getGatewayConfig('paypal');
+    const ppClientForRefund = ppCfgForRefund.clientId || config.paypal.clientId;
+    const ppSecretForRefund = ppCfgForRefund.clientSecret || config.paypal.clientSecret;
+    const ppIsLiveForRefund = ppCfgForRefund.isLive || config.paypal.isLive;
+    if (txn?.method === 'paypal' && txn.reference && ppClientForRefund && ppClientForRefund !== 'paypal_client_placeholder') {
       try {
-        const baseUrl = config.paypal.isLive ? config.paypal.liveUrl : config.paypal.sandboxUrl;
+        const baseUrl = ppIsLiveForRefund ? (ppCfgForRefund.liveUrl || config.paypal.liveUrl) : (ppCfgForRefund.sandboxUrl || config.paypal.sandboxUrl);
         const authRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
           method: 'POST',
           headers: {
-            'Authorization': 'Basic ' + Buffer.from(`${config.paypal.clientId}:${config.paypal.clientSecret}`).toString('base64'),
+            'Authorization': 'Basic ' + Buffer.from(`${ppClientForRefund}:${ppSecretForRefund}`).toString('base64'),
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: 'grant_type=client_credentials',

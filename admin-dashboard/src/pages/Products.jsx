@@ -193,12 +193,34 @@ function ProductModal({ product, onClose, onSaved }) {
     if (!form.price)       { alert('Price is required.'); return; }
     setSaving(true);
     try {
+      const usdPrice = parseFloat(form.price) || 0;
+      // Build multi-currency prices object from the USD base price
+      const prices = {
+        AU: { amount: +(usdPrice * 1.54).toFixed(2), currency: 'AUD', symbol: 'A$', display: `A$${(usdPrice * 1.54).toFixed(2)}` },
+        US: { amount: usdPrice, currency: 'USD', symbol: '$', display: `$${usdPrice.toFixed(2)}` },
+        GB: { amount: +(usdPrice * 0.79).toFixed(2), currency: 'GBP', symbol: '£', display: `£${(usdPrice * 0.79).toFixed(2)}` },
+        NP: { amount: +(usdPrice * 135).toFixed(0), currency: 'NPR', symbol: 'Rs', display: `Rs ${(usdPrice * 135).toFixed(0)}` },
+        CA: { amount: +(usdPrice * 1.38).toFixed(2), currency: 'CAD', symbol: 'CA$', display: `CA$${(usdPrice * 1.38).toFixed(2)}` },
+        NZ: { amount: +(usdPrice * 1.66).toFixed(2), currency: 'NZD', symbol: 'NZ$', display: `NZ$${(usdPrice * 1.66).toFixed(2)}` },
+        JP: { amount: +(usdPrice * 150).toFixed(0), currency: 'JPY', symbol: '¥', display: `¥${(usdPrice * 150).toFixed(0)}` },
+        CN: { amount: +(usdPrice * 7.2).toFixed(2), currency: 'CNY', symbol: '¥', display: `¥${(usdPrice * 7.2).toFixed(2)}` },
+        DEFAULT: { amount: usdPrice, currency: 'USD', symbol: '$', display: `$${usdPrice.toFixed(2)}` },
+      };
+
       const body = {
-        ...form,
-        price:               parseFloat(form.price),
+        name: form.name,
+        description: form.description,
+        image: form.image,
+        category: form.category || 'coffee',
+        prices,
         stock:               parseInt(form.stock) || 0,
         low_stock_threshold: parseInt(form.low_stock_threshold) || 10,
         weight_g:            form.weight ? parseFloat(form.weight) : undefined,
+        sku:                 form.sku || undefined,
+        allowed_regions:     'ALL',
+        badge:               form.badge || null,
+        // keep price as convenience field for display in admin
+        price: usdPrice,
       };
       const result = isEdit
         ? await apiFetch(`/products/${product.id}`, { method: 'PUT', body })

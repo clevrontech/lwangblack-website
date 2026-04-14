@@ -713,7 +713,7 @@ function UsernameForm() {
     try {
       await apiFetch('/auth/change-username', { method: 'POST', body: { newUsername: newUsername.trim(), password } });
       setStatus('Username changed! You will be logged out to re-login with your new username.');
-      setTimeout(() => { localStorage.clear(); window.location.href = '/login'; }, 2500);
+      setTimeout(() => { localStorage.clear(); window.location.href = '/admin/login'; }, 2500);
     } catch (err) { setStatus('Error: ' + err.message); }
     finally { setSaving(false); }
   };
@@ -788,7 +788,7 @@ function PasswordForm() {
       await apiFetch('/auth/change-password', { method: 'POST', body: { currentPassword: form.current, newPassword: form.newPw } });
       setStatus('Password changed successfully! Please log in again.');
       setForm({ current: '', newPw: '', confirm: '' });
-      setTimeout(() => { localStorage.clear(); window.location.href = '/login'; }, 2500);
+      setTimeout(() => { localStorage.clear(); window.location.href = '/admin/login'; }, 2500);
     } catch (err) { setStatus('Error: ' + err.message); }
     finally { setSaving(false); }
   };

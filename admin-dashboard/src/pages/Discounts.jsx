@@ -30,7 +30,7 @@ function DiscountModal({ discount, onClose, onSaved }) {
         active: form.active,
       };
       const res = isEdit
-        ? await apiFetch(`/discounts/${discount.id}`, { method: 'PUT', body })
+        ? await apiFetch(`/discounts/${discount.id}`, { method: 'PATCH', body })
         : await apiFetch('/discounts', { method: 'POST', body });
       onSaved(res.discount || { ...body, id: res.id || Date.now(), uses: 0 });
       onClose();

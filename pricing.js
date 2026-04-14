@@ -10,7 +10,7 @@ const LB_PRODUCTS = {
   "2-0-combo-set": {
     "id": "2-0-combo-set",
     "name": "2.0 Combo Set (Choose your French Press)",
-    "category": "coffee",
+    "category": "bundles",
     "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/product_image-chatgpt-image-oct-11-2025-04_50_16-pm-8048.webp?v=1769347132",
     "description": "Experience bold, rich flavour with our Limited Edition Coffee Set, featuring premium ground coffee infused with aroma...",
     "stock": 100,
@@ -63,7 +63,7 @@ const LB_PRODUCTS = {
   "2-0-filter": {
     "id": "2-0-filter",
     "name": "2.0 Filter",
-    "category": "coffee",
+    "category": "accessories",
     "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/2.0_Filter.png?v=1753708044",
     "description": "Experience Better, Smoother, Stronger & Cleaner CoffeeOur triple-layered filter system is designed to deliver a bolde...",
     "stock": 100,
@@ -169,7 +169,7 @@ const LB_PRODUCTS = {
   "250g-500g-lwang-black-mix": {
     "id": "250g-500g-lwang-black-mix",
     "name": "250g Lwang Black + 500g Lwang Black",
-    "category": "coffee",
+    "category": "bundles",
     "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC07286.jpg?v=1753318831",
     "description": "Crafted from premium ground coffee beans infused with aromatic cloves, Lwang Black delivers a rich, smooth body with ...",
     "stock": 100,
@@ -222,7 +222,7 @@ const LB_PRODUCTS = {
   "250g-lwang-black-white-french-press-1": {
     "id": "250g-lwang-black-white-french-press-1",
     "name": "250g Lwang Black Coffee + French Press (Choose Your Colour)",
-    "category": "coffee",
+    "category": "bundles",
     "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00367.jpg?v=1769326597",
     "description": "This package includes a 250g pack of Lwang Black Mix \u2014 premium ground coffee infused with aromatic cloves \u2014 paired wi...",
     "stock": 100,
@@ -275,7 +275,7 @@ const LB_PRODUCTS = {
   "500g-lwang-black-pink-french-press-copy": {
     "id": "500g-lwang-black-pink-french-press-copy",
     "name": "500g Lwang Black Coffee + French Press (Choose Your Colour)",
-    "category": "coffee",
+    "category": "bundles",
     "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00364_9dc3a32f-1021-42c6-b756-caed2cb5f171.jpg?v=1769262874",
     "description": "This package includes a 500g pack of Lwang Black Mix \u2014 premium ground coffee infused with aromatic cloves \u2014 along wit...",
     "stock": 100,
@@ -381,7 +381,7 @@ const LB_PRODUCTS = {
   "plunger-french-press": {
     "id": "plunger-french-press",
     "name": "French Press/Plunger",
-    "category": "coffee",
+    "category": "accessories",
     "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC07397.jpg?v=1768363098",
     "description": "An insulated coffee plunger, elegantly designed to brew the perfect cup of Lwang Black Mix coffee. Its insulation ens...",
     "stock": 100,
@@ -434,7 +434,7 @@ const LB_PRODUCTS = {
   "lwang-black-drip-set": {
     "id": "lwang-black-drip-set",
     "name": "LB Drip & Sip Set",
-    "category": "coffee",
+    "category": "bundles",
     "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00248.jpg?v=1768362482",
     "description": "Lwang Black Drip & Sip includes 14 premium drip coffee sachets and 1 insulated pot, designed to keep your coffee warm...",
     "stock": 100,
@@ -487,7 +487,7 @@ const LB_PRODUCTS = {
   "lb-pot-and-press-gift-set": {
     "id": "lb-pot-and-press-gift-set",
     "name": "LB Pot & Press gift set",
-    "category": "coffee",
+    "category": "bundles",
     "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/CF2AB6CD-E6A1-419E-869B-B8275262687D.jpg?v=1768362305",
     "description": "LB Pot & Press Gift Set \u2013 the perfect gift for coffee lovers! This all-in-one set includes: 1 Insulated Leakproof Pot...",
     "stock": 100,
@@ -540,7 +540,7 @@ const LB_PRODUCTS = {
   "untitled-dec25_22-48": {
     "id": "untitled-dec25_22-48",
     "name": "Lwang Black Brewing Pot",
-    "category": "coffee",
+    "category": "accessories",
     "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/DSC00214.jpg?v=1768362755",
     "description": "Premium insulated keep cup designed for life on the go, 100% leakproof and keeps your drink warm for up to 5\u20136 hours....",
     "stock": 100,
@@ -646,7 +646,7 @@ const LB_PRODUCTS = {
   "qr-based-surprise-message-send-love-in-a-unique-way": {
     "id": "qr-based-surprise-message-send-love-in-a-unique-way",
     "name": "QR-Based Surprise Message \u2013 Send Love in a Unique Way",
-    "category": "coffee",
+    "category": "accessories",
     "image": "https://cdn.shopify.com/s/files/1/0741/9589/4489/files/jjjjj.jpg?v=1764157383",
     "description": "Click here to fill the form Form Link \ud83d\udc48 Make your gift unforgettable with a personalized QR message card.You share yo...",
     "stock": 100,

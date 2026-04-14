@@ -119,7 +119,7 @@ app.use('/api/marketing', apiLimiter, require('./routes/marketing'));
 const settingsRoutes = require('./routes/settings');
 app.use('/api/settings/public', settingsRoutes.publicRouter);
 app.use('/api/settings', apiLimiter, settingsRoutes);
-app.use('/api/payments', require('./routes/payments'));
+app.use('/api/payments', apiLimiter, require('./routes/payments'));
 app.use('/api/subscription', apiLimiter, require('./routes/subscription'));
 app.use('/api/logistics', apiLimiter, require('./routes/logistics'));
 app.use('/api/social', apiLimiter, require('./routes/social'));
@@ -147,7 +147,7 @@ app.get('/api/checkout-config', (req, res) => {
 });
 
 // ── 404 handler for API ─────────────────────────────────────────────────────
-app.use('/api/*', (req, res) => {
+app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Endpoint not found', path: req.originalUrl });
 });
 

@@ -88,6 +88,25 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ── GeoIP: country detection from visitor IP ────────────────────────────────
+const geoip = require('geoip-lite');
+app.get('/api/ip-country', (req, res) => {
+  // Prefer forwarded IP (Vercel, proxies) then socket IP
+  const forwarded = req.headers['x-forwarded-for'];
+  const ip = (forwarded ? forwarded.split(',')[0] : null) ||
+             req.headers['x-real-ip'] ||
+             req.socket.remoteAddress || '';
+  const cleanIp = ip.replace(/^::ffff:/, '');
+
+  // On localhost / private IPs return AU so dev mode works
+  const isPrivate = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|^$)/.test(cleanIp);
+  if (isPrivate) return res.json({ country: 'AU', source: 'private' });
+
+  const geo = geoip.lookup(cleanIp);
+  if (geo && geo.country) return res.json({ country: geo.country, source: 'geoip' });
+  return res.json({ country: 'AU', source: 'fallback' });
+});
+
 // ── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/orders', apiLimiter, require('./routes/orders'));

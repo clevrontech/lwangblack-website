@@ -1,4 +1,20 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+function resolveApiBase() {
+  const raw = import.meta.env.VITE_API_URL;
+  if (raw == null || raw === '') return '/api';
+  if (raw.startsWith('/')) return raw.replace(/\/+$/, '') || '/api';
+  try {
+    const u = new URL(raw);
+    let p = u.pathname.replace(/\/+$/, '');
+    if (!p || p === '/') p = '/api';
+    else if (!p.startsWith('/api')) p = '/api' + (p.startsWith('/') ? p : `/${p}`);
+    u.pathname = p;
+    return u.origin + u.pathname;
+  } catch {
+    return '/api';
+  }
+}
+
+const API_BASE = resolveApiBase();
 
 let accessToken = localStorage.getItem('lb_token') || null;
 let refreshToken = localStorage.getItem('lb_refresh') || null;

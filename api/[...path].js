@@ -5,7 +5,9 @@
 // every deeper request with req.url set to the ORIGINAL full path.
 // The Express backend at BACKEND_URL hosts all real API logic.
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://api.lwangblack.co';
+const { normalizeProxyTargetPath } = require('../lib/vercel-proxy-path');
+
+const BACKEND_URL = (process.env.BACKEND_URL || 'https://api.lwangblack.co').replace(/\/$/, '');
 const CORS_ORIGIN  = process.env.CORS_ORIGIN  || '*';
 
 module.exports = async (req, res) => {
@@ -26,8 +28,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // req.url is the original request URL including the full /api/... path
-    const targetPath = req.url || '/';
+    // Vercel often strips the /api prefix from req.url — normalize before proxying
+    const targetPath = normalizeProxyTargetPath(req.url || '/');
     const targetUrl  = `${BACKEND_URL}${targetPath}`;
 
     const headers = { ...req.headers };

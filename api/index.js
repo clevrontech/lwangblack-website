@@ -4,7 +4,9 @@
 // All API logic lives in backend/src/. This function proxies requests
 // to the deployed Express backend.
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://api.lwangblack.co';
+const { normalizeProxyTargetPath } = require('../lib/vercel-proxy-path');
+
+const BACKEND_URL = (process.env.BACKEND_URL || 'https://api.lwangblack.co').replace(/\/$/, '');
 const CORS_ORIGIN  = process.env.CORS_ORIGIN  || '*';
 
 module.exports = async (req, res) => {
@@ -24,8 +26,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // For the root /api, req.url may be "/" or "/api" — forward as-is to backend
-    const targetPath = req.url && req.url !== '/' ? req.url : '/api';
+    const targetPath = normalizeProxyTargetPath(req.url && req.url !== '/' ? req.url : '/api');
     const targetUrl  = targetPath.startsWith('http') ? targetPath : `${BACKEND_URL}${targetPath}`;
 
     const headers = { ...req.headers };

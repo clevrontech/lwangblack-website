@@ -1,15 +1,3 @@
-/**
- * Vercel build script — assembles the public/ output directory.
- *
- * Steps:
- *  1. Build the admin React dashboard (outputs to <root>/admin/)
- *  2. Create public/ and copy all static storefront assets into it
- *  3. Copy the built admin dashboard into public/admin/
- *
- * Vercel serverless functions (api/) stay at the project root and are
- * discovered automatically — they must NOT live inside public/.
- */
-
 'use strict';
 
 const fs   = require('fs');
@@ -19,15 +7,13 @@ const { execSync } = require('child_process');
 const ROOT   = path.resolve(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'public');
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function run(cmd, opts = {}) {
+function run(cmd) {
   console.log(`\n> ${cmd}`);
-  execSync(cmd, { stdio: 'inherit', cwd: ROOT, ...opts });
+  execSync(cmd, { stdio: 'inherit', cwd: ROOT });
 }
 
 function ensureDir(dir) {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(dir, { recursive: true });
 }
 
 function copyFile(src, dest) {
@@ -41,51 +27,62 @@ function copyDir(src, dest) {
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     const s = path.join(src, entry.name);
     const d = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDir(s, d);
-    } else {
-      copyFile(s, d);
-    }
+    if (entry.isDirectory()) copyDir(s, d);
+    else copyFile(s, d);
   }
 }
 
-// ── 1. Build admin dashboard ──────────────────────────────────────────────────
-console.log('\n===  Building admin dashboard  ===');
-run('npm --prefix admin-dashboard install');
-run('npm --prefix admin-dashboard run build');
-// Vite outputs to <root>/admin/ (configured in vite.config.js outDir: '../admin')
-
-// ── 2. Create clean public/ directory ────────────────────────────────────────
-console.log('\n===  Assembling public/  ===');
-if (fs.existsSync(PUBLIC)) {
-  fs.rmSync(PUBLIC, { recursive: true, force: true });
+function countFiles(dir) {
+  let n = 0;
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    n += e.isDirectory() ? countFiles(path.join(dir, e.name)) : 1;
+  }
+  return n;
 }
+
+// ── Create public/ FIRST (so it always exists even if later steps fail) ──────
+console.log('\n===  Preparing public/ output directory  ===');
+if (fs.existsSync(PUBLIC)) fs.rmSync(PUBLIC, { recursive: true, force: true });
 ensureDir(PUBLIC);
 
-// File extensions to copy from the root level
+// ── Build admin dashboard ────────────────────────────────────────────────────
+const adminDashboardDir = path.join(ROOT, 'admin-dashboard');
+const adminOutDir       = path.join(ROOT, 'admin');
+
+if (fs.existsSync(path.join(adminDashboardDir, 'package.json'))) {
+  try {
+    console.log('\n===  Building admin dashboard  ===');
+    run('npm --prefix admin-dashboard install --no-audit --no-fund');
+    run('npm --prefix admin-dashboard run build');
+    console.log('  Admin dashboard built successfully.');
+  } catch (err) {
+    console.error('\n  WARNING: Admin dashboard build failed:', err.message);
+    console.error('  Will copy pre-built admin/ from git if available.\n');
+  }
+} else {
+  console.log('\n  admin-dashboard/package.json not found — using pre-built admin/');
+}
+
+// ── Copy static storefront files into public/ ────────────────────────────────
+console.log('\n===  Copying storefront files → public/  ===');
+
 const STATIC_EXTS = new Set([
-  '.html', '.css', '.js', '.json',
+  '.html', '.css', '.js',
   '.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg', '.ico',
   '.mp4', '.webm', '.mov',
   '.woff', '.woff2', '.ttf', '.eot',
   '.txt', '.xml',
 ]);
 
-// Root-level directories to copy into public/ verbatim
-const COPY_DIRS = ['images', 'fonts', 'icons', 'assets'];
+const COPY_DIRS = new Set(['images', 'fonts', 'icons', 'assets']);
 
-// Root-level files/dirs to never copy
 const SKIP = new Set([
   'node_modules', '.git', '.github', 'backend', 'admin-dashboard',
-  'admin',          // copied separately below (after the Vite build)
-  'api',            // Vercel serverless functions — must stay at project root
-  'scripts',        // build tooling only
-  'public',         // output dir itself
-  '.env', '.env.example', '.env.local',
-  'package.json', 'package-lock.json',
-  'vercel.json',
+  'admin', 'api', 'scripts', 'public',
+  '.env', '.env.example', '.env.local', '.env.production',
+  'package.json', 'package-lock.json', 'vercel.json',
+  '.gitignore', '.vercelignore', '.node-version', '.nvmrc',
   'apply_clone.py', 'fetch_images.js',
-  '.gitignore', '.vercelignore',
 ]);
 
 for (const entry of fs.readdirSync(ROOT, { withFileTypes: true })) {
@@ -95,38 +92,41 @@ for (const entry of fs.readdirSync(ROOT, { withFileTypes: true })) {
   const dest = path.join(PUBLIC, entry.name);
 
   if (entry.isDirectory()) {
-    if (COPY_DIRS.includes(entry.name)) {
-      console.log(`  copy dir  ${entry.name}/`);
+    if (COPY_DIRS.has(entry.name)) {
+      console.log(`  dir   ${entry.name}/`);
       copyDir(src, dest);
     }
-    // Other unlisted directories are skipped
   } else {
     const ext = path.extname(entry.name).toLowerCase();
     if (STATIC_EXTS.has(ext)) {
-      console.log(`  copy file ${entry.name}`);
+      console.log(`  file  ${entry.name}`);
       copyFile(src, dest);
     }
   }
 }
 
-// ── 3. Copy built admin dashboard → public/admin/ ────────────────────────────
-const adminSrc  = path.join(ROOT, 'admin');
-const adminDest = path.join(PUBLIC, 'admin');
-if (fs.existsSync(adminSrc)) {
-  console.log('\n  copy dir  admin/');
-  copyDir(adminSrc, adminDest);
+// ── Copy built admin dashboard → public/admin/ ──────────────────────────────
+if (fs.existsSync(adminOutDir)) {
+  console.log('\n===  Copying admin dashboard → public/admin/  ===');
+  copyDir(adminOutDir, path.join(PUBLIC, 'admin'));
+  console.log('  Done.');
 } else {
-  console.warn('\n  WARNING: admin/ directory not found — skipping');
+  console.warn('\n  WARNING: admin/ directory not found — admin dashboard will not be available');
 }
 
-// ── Done ─────────────────────────────────────────────────────────────────────
-const fileCount = countFiles(PUBLIC);
-console.log(`\n===  Build complete: ${fileCount} files → public/  ===\n`);
+// ── Verify ──────────────────────────────────────────────────────────────────
+const total = countFiles(PUBLIC);
+const hasIndex = fs.existsSync(path.join(PUBLIC, 'index.html'));
+const hasAdmin = fs.existsSync(path.join(PUBLIC, 'admin', 'index.html'));
 
-function countFiles(dir) {
-  let n = 0;
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    n += e.isDirectory() ? countFiles(path.join(dir, e.name)) : 1;
-  }
-  return n;
+console.log(`\n===  Build complete  ===`);
+console.log(`  Total files:   ${total}`);
+console.log(`  index.html:    ${hasIndex ? 'OK' : 'MISSING!'}`);
+console.log(`  admin/:        ${hasAdmin ? 'OK' : 'MISSING!'}`);
+
+if (!hasIndex) {
+  console.error('\nFATAL: public/index.html not found — build is broken');
+  process.exit(1);
 }
+
+console.log('');

@@ -97,7 +97,15 @@ module.exports = {
 
   // Site
   siteUrl: process.env.SITE_URL || 'https://www.lwangblack.co',
-  corsOrigins: (process.env.CORS_ORIGIN || 'http://localhost:3001,http://localhost:3000,https://www.lwangblack.co').split(','),
+  // Browsers on apex + www + local dev must be allowed when the admin calls the API directly (VITE_API_URL).
+  corsOrigins: (process.env.CORS_ORIGIN || [
+    'http://localhost:3001',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://www.lwangblack.co',
+    'https://lwangblack.co',
+  ].join(',')).split(',').map((o) => o.trim()).filter(Boolean),
 
   // Currency rates (USD base)
   currencies: {

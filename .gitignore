@@ -2,6 +2,7 @@ node_modules/
 .env
 .env.local
 .env.production
+!admin-dashboard/.env.production
 *.log
 .DS_Store
 Thumbs.db

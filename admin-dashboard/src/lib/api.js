@@ -14,6 +14,13 @@ function resolveApiBase() {
   }
 }
 
+/** Avoid `base` + `path` joining bugs (missing or double slashes). */
+function joinApiUrl(base, path) {
+  const p = path.startsWith('/') ? path : `/${path}`;
+  const b = String(base).replace(/\/+$/, '');
+  return b + p;
+}
+
 const API_BASE = resolveApiBase();
 
 let accessToken = localStorage.getItem('lb_token') || null;
@@ -40,7 +47,7 @@ export function clearTokens() {
 async function tryRefresh() {
   if (!refreshToken) return false;
   try {
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
+    const res = await fetch(joinApiUrl(API_BASE, '/auth/refresh'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
@@ -56,7 +63,7 @@ async function tryRefresh() {
 }
 
 export async function apiFetch(path, options = {}) {
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const url = path.startsWith('http') ? path : joinApiUrl(API_BASE, path);
   const headers = { ...options.headers };
 
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;

@@ -1,16 +1,13 @@
 // ── api/index.js ─────────────────────────────────────────────────────────────
-// Vercel Serverless Proxy → Express Backend (root /api handler)
-// Sub-paths (/api/*) are handled by api/[...path].js (catch-all).
-// All API logic lives in backend/src/. This function proxies requests
-// to the deployed Express backend.
+// Vercel handler for exact `/api` → Express backend.
 
 const { normalizeProxyTargetPath } = require('../lib/vercel-proxy-path');
+const { forwardToBackend } = require('../lib/vercel-proxy-fetch');
 
 const BACKEND_URL = (process.env.BACKEND_URL || 'https://api.lwangblack.co').replace(/\/$/, '');
 const CORS_ORIGIN  = process.env.CORS_ORIGIN  || '*';
 
 module.exports = async (req, res) => {
-  // ── CORS headers ──────────────────────────────────────────────────────────
   const origin = req.headers.origin || '';
   const allowedOrigin = CORS_ORIGIN === '*' ? '*' : (CORS_ORIGIN.split(',').includes(origin) ? origin : CORS_ORIGIN.split(',')[0]);
 
@@ -29,39 +26,26 @@ module.exports = async (req, res) => {
     const targetPath = normalizeProxyTargetPath(req.url && req.url !== '/' ? req.url : '/api');
     const targetUrl  = targetPath.startsWith('http') ? targetPath : `${BACKEND_URL}${targetPath}`;
 
-    const headers = { ...req.headers };
-    delete headers.host;
-    headers['x-forwarded-for']   = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
-    headers['x-forwarded-proto'] = 'https';
-    headers['x-forwarded-host']  = req.headers.host || '';
-
-    const fetchOpts = { method: req.method, headers };
-
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      if (req.body) {
-        if (Buffer.isBuffer(req.body)) {
-          fetchOpts.body = req.body;
-        } else if (typeof req.body === 'object') {
-          fetchOpts.body = JSON.stringify(req.body);
-          fetchOpts.headers['content-type'] = 'application/json';
-        } else {
-          fetchOpts.body = String(req.body);
-        }
-      }
+    let body;
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
+      if (Buffer.isBuffer(req.body)) body = req.body;
+      else if (typeof req.body === 'object') body = JSON.stringify(req.body);
+      else body = String(req.body);
     }
 
-    const upstream = await fetch(targetUrl, fetchOpts);
+    const upstream = await forwardToBackend(targetUrl, req, body);
 
     res.status(upstream.status);
-    const contentType = upstream.headers.get('content-type') || '';
+    const contentType = upstream.headers.get('content-type');
     if (contentType) res.setHeader('Content-Type', contentType);
 
-    const body = await upstream.text();
-    return res.send(body);
+    const text = await upstream.text();
+    return res.send(text);
   } catch (err) {
-    console.error('[API Proxy] Root handler error:', err.message);
+    console.error('[API Proxy] Root:', err.message, err.code || '');
     return res.status(502).json({
       error: 'Backend unavailable. Please try again.',
+      hint: 'Confirm api host is up and BACKEND_URL on Vercel matches your API deployment.',
     });
   }
 };

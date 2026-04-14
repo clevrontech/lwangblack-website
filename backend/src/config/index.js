@@ -42,7 +42,8 @@ module.exports = {
   paypal: {
     clientId: process.env.PAYPAL_CLIENT_ID || 'paypal_client_placeholder',
     clientSecret: process.env.PAYPAL_CLIENT_SECRET || 'paypal_secret_placeholder',
-    isLive: process.env.PAYPAL_LIVE === 'true',
+    // Support both PAYPAL_LIVE (legacy) and PAYPAL_MODE (current) env vars
+    isLive: process.env.PAYPAL_LIVE === 'true' || process.env.PAYPAL_MODE === 'live',
     sandboxUrl: 'https://api-m.sandbox.paypal.com',
     liveUrl: 'https://api-m.paypal.com',
   },
@@ -109,10 +110,9 @@ module.exports = {
     JP: { code: 'JPY', symbol: '¥',    rate: 0.007 },
   },
 
-  // Payment methods per country
-  // FIXED: NP now uses Nabil Bank as primary + COD; esewa kept as fallback
+  // Payment methods per country — only include methods that are implemented in /api/payments/checkout
   paymentMethods: {
-    NP: ['nabil', 'khalti', 'cod'],
+    NP: ['card', 'esewa', 'cod'],
     AU: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     US: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     GB: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],

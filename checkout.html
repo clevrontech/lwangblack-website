@@ -398,7 +398,7 @@
             value: totals.subtotal,
             currency: totals.currency || 'NPR',
             items: currentCart.map(item => ({
-              item_id: item.id, item_name: item.name,
+              item_id: item.productId, item_name: item.name,
               price: item.price, quantity: item.qty
             }))
           }
@@ -475,7 +475,7 @@
         try {
           const toZip  = (document.getElementById('co-postal') || {}).value || '';
           const apiBase = window.LB_API_BASE || '/api';
-          const resp = await fetch(`${apiBase}/logistics/usps/rates`, {
+          const resp = await fetch(`${apiBase}/logistics/usps/rates/public`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ toZip, weightLbs: 1 }),

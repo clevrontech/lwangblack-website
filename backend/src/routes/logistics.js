@@ -8,6 +8,21 @@ const { broadcast } = require('../ws');
 const { sendShippingUpdate } = require('../services/notifications');
 
 const router = express.Router();
+
+// ── Public rate-quote endpoint (used by storefront checkout for live USPS rates)
+// Must be declared BEFORE router.use(requireAuth) so it doesn't need a JWT.
+const uspsServicePublic = require('../services/usps');
+router.post('/usps/rates/public', async (req, res) => {
+  try {
+    const { toZip, fromZip, weightLbs, weightOz } = req.body;
+    if (!toZip) return res.status(400).json({ error: 'toZip required' });
+    const rates = await uspsServicePublic.getRates({ toZip, fromZip, weightLbs, weightOz });
+    res.json({ rates, configured: uspsServicePublic.isConfigured() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.use(requireAuth);
 
 // ── Supported Carriers ───────────────────────────────────────────────────────

@@ -391,7 +391,8 @@
       
       const grid = document.getElementById('pp-recs-grid');
       grid.innerHTML = recs.map(p => {
-        const priceObj = window.getProductPrice(p.id, countryCode);
+        const priceObj = window.getProductPrice ? window.getProductPrice(p.id, countryCode) : null;
+        const priceDisplay = priceObj ? priceObj.display : '';
         const badgeHtml = p.badge ? `<div class="product-badge">${p.badge}</div>` : '';
         const labelColor = p.category === 'bundles' ? 'color: var(--accent);' : '';
         
@@ -406,7 +407,7 @@
               <a href="product.html?id=${p.id}" style="color:inherit; text-decoration:none;">${p.name}</a>
             </h2>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:auto;">
-              <span style="font-family:var(--font-heading); font-size:1.5rem;">${priceObj.display}</span>
+              <span style="font-family:var(--font-heading); font-size:1.5rem;">${priceDisplay}</span>
               <a href="product.html?id=${p.id}" class="btn-solid" style="padding:0.7rem 1.2rem; text-decoration:none;">VIEW</a>
             </div>
           </div>

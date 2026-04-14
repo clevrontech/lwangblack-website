@@ -755,13 +755,13 @@ function getProductPrice(productId, countryCode) {
   const prices = product.prices;
   let basePrice = prices[countryCode] || prices.DEFAULT || null;
 
-  if (countryCode === 'AU' && window.AUCurrencyState && window.AUCurrencyState.active && basePrice) {
+  if (window.AUCurrencyState && window.AUCurrencyState.active && basePrice) {
     const convertedAmount = basePrice.amount * window.AUCurrencyState.rate;
-    const sym = window.AUCurrencyState.symbol;
+    const sym = window.AUCurrencyState.symbol || window.AUCurrencyState.targetCurrency;
     const cFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(convertedAmount);
     return {
       amount: convertedAmount,
-      currency: window.AUCurrencyState.currencyCode,
+      currency: window.AUCurrencyState.targetCurrency,
       symbol: sym,
       display: sym + cFormat
     };

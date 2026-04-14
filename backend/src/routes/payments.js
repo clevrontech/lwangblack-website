@@ -473,11 +473,13 @@ router.get('/stripe-session-verify', async (req, res) => {
 // Legacy endpoint — prefer POST /api/payments/checkout for new integrations.
 router.post('/stripe-session', async (req, res) => {
   try {
-    if (!config.stripe.secretKey || config.stripe.secretKey === 'sk_test_placeholder') {
-      return res.status(503).json({ error: 'Stripe payment gateway is not configured. Set STRIPE_SECRET_KEY in your environment.' });
+    const stripeCfgLegacy = await dynConfig.getGatewayConfig('stripe');
+    const secretKeyLegacy = stripeCfgLegacy.secretKey || config.stripe.secretKey;
+    if (!secretKeyLegacy || secretKeyLegacy === 'sk_test_placeholder') {
+      return res.status(503).json({ error: 'Stripe payment gateway is not configured. Set STRIPE_SECRET_KEY in your environment or add it in Admin → Settings → Payments.' });
     }
 
-    const stripe = Stripe(config.stripe.secretKey);
+    const stripe = Stripe(secretKeyLegacy);
     const { items, country, orderId, customerEmail, successUrl, cancelUrl, shipping, paymentType } = req.body;
     if (!items?.length) return res.status(400).json({ error: 'No items provided' });
 
@@ -597,15 +599,19 @@ router.post('/paypal-create', async (req, res) => {
     const { orderId, amount, currency, country } = req.body;
     if (!orderId || !amount) return res.status(400).json({ error: 'orderId and amount required' });
 
-    if (!config.paypal.clientId || config.paypal.clientId === 'paypal_client_placeholder') {
-      return res.status(503).json({ error: 'PayPal payment gateway is not configured. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in your environment.' });
+    const ppCfg = await dynConfig.getGatewayConfig('paypal');
+    const clientId     = ppCfg.clientId     || config.paypal.clientId;
+    const clientSecret = ppCfg.clientSecret  || config.paypal.clientSecret;
+    const isLive       = ppCfg.isLive        || config.paypal.isLive;
+    if (!clientId || clientId === 'paypal_client_placeholder') {
+      return res.status(503).json({ error: 'PayPal payment gateway is not configured. Add your PayPal Client ID and Secret in Admin → Settings → Payments.' });
     }
 
-    const baseUrl = config.paypal.isLive ? config.paypal.liveUrl : config.paypal.sandboxUrl;
+    const baseUrl = isLive ? (ppCfg.liveUrl || config.paypal.liveUrl) : (ppCfg.sandboxUrl || config.paypal.sandboxUrl);
     const authRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${config.paypal.clientId}:${config.paypal.clientSecret}`).toString('base64'),
+        'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'grant_type=client_credentials',
@@ -656,26 +662,31 @@ router.get('/paypal-capture', async (req, res) => {
   try {
     const { token: paypalOrderId, orderId } = req.query;
 
-    if (!config.paypal.clientId || config.paypal.clientId === 'paypal_client_placeholder') {
+    const ppCfg = await dynConfig.getGatewayConfig('paypal');
+    const clientId     = ppCfg.clientId     || config.paypal.clientId;
+    const clientSecret = ppCfg.clientSecret  || config.paypal.clientSecret;
+    const isLive       = ppCfg.isLive        || config.paypal.isLive;
+
+    if (!clientId || clientId === 'paypal_client_placeholder') {
       return res.redirect(`${config.siteUrl}/checkout.html?paypal_failed=true`);
     }
 
-    const baseUrl = config.paypal.isLive ? config.paypal.liveUrl : config.paypal.sandboxUrl;
+    const baseUrl = isLive ? (ppCfg.liveUrl || config.paypal.liveUrl) : (ppCfg.sandboxUrl || config.paypal.sandboxUrl);
     const authRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${config.paypal.clientId}:${config.paypal.clientSecret}`).toString('base64'),
+        'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'grant_type=client_credentials',
     });
     const authData = await authRes.json();
 
-      const captureRes = await fetch(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${authData.access_token}`, 'Content-Type': 'application/json' },
-      });
-      const captureData = await captureRes.json();
+    const captureRes = await fetch(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${authData.access_token}`, 'Content-Type': 'application/json' },
+    });
+    const captureData = await captureRes.json();
 
     if (captureData.status === 'COMPLETED') {
       await updateOrderStatus(orderId, 'paid', 'paypal', paypalOrderId);

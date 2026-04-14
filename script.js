@@ -1,12 +1,14 @@
 // ── Visitor tracking (feeds admin analytics/realtime) ─────────────────────
 (function trackVisit() {
   try {
-    // Get country from region.js if available, otherwise use geo API
-    const country = window._LB_COUNTRY || localStorage.getItem('lb_country') || null;
+    // Read region from geo-router.js storage key (lb_region_v2) — stored as plain string
+    const country = localStorage.getItem('lb_region_v2') || null;
     const payload = { page: location.pathname, country };
     // Fire-and-forget — don't block page render
+    // sendBeacon needs a Blob with the right content-type for Express to parse the body
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
     if (navigator.sendBeacon) {
-      navigator.sendBeacon('/api/analytics/ip-log', JSON.stringify(payload));
+      navigator.sendBeacon('/api/analytics/ip-log', blob);
     } else {
       fetch('/api/analytics/ip-log', {
         method: 'POST',

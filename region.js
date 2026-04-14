@@ -81,7 +81,7 @@ function initRegionUI() {
 
   // When currency converter changes, re-render product prices
   document.addEventListener('lb:currencyConverted', () => {
-    const code = GeoRouter.get();
+    const code = window.GeoRouter.get();
     updateHomeProducts(code);
   });
 }
@@ -237,13 +237,13 @@ function getLangCode(code) {
 // ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initRegionUI();
-  // GeoRouter.init() dispatches lb:regionChanged once the region is resolved
-  if (typeof GeoRouter !== 'undefined') {
-    GeoRouter.init();
+  // window.GeoRouter.init() dispatches lb:regionChanged once the region is resolved
+  if (window.GeoRouter) {
+    window.GeoRouter.init();
   } else {
     console.error('[region.js] GeoRouter not found — is geo-router.js loaded first?');
   }
 });
 
-// Backward-compat alias
-window.LB_REGION = GeoRouter;
+// Backward-compat alias — set after DOMContentLoaded so GeoRouter is guaranteed available
+window.LB_REGION = window.GeoRouter;

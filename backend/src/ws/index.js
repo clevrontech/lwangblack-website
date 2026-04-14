@@ -126,4 +126,16 @@ function getClientCount() {
   return wss ? wss.clients.size : 0;
 }
 
-module.exports = { initWebSocket, broadcast, sendToUser, getClientCount };
+/**
+ * Gracefully shut down the WebSocket server — clears heartbeat interval.
+ * Call this in test afterAll or process cleanup.
+ */
+function closeWebSocket() {
+  if (wss) {
+    wss.close();
+    wss = null;
+  }
+  clients.clear();
+}
+
+module.exports = { initWebSocket, broadcast, sendToUser, getClientCount, closeWebSocket };

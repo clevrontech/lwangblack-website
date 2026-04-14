@@ -20,10 +20,17 @@ if (process.env.SUPPRESS_LOGS !== 'false') {
 }
 
 const app = require('../src/server');
+const { closeWebSocket } = require('../src/ws');
 
 // Wait for in-memory store to be ready
 beforeAll(async () => {
   await new Promise(resolve => setTimeout(resolve, 500));
+});
+
+// Clean up open handles (WS heartbeat interval) after all tests
+afterAll(async () => {
+  closeWebSocket();
+  await new Promise(resolve => setTimeout(resolve, 200));
 });
 
 module.exports = { app };

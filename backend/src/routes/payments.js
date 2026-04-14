@@ -191,13 +191,16 @@ router.get('/methods', (req, res) => {
   const country = (req.query.country || 'US').toUpperCase();
 
   const METHOD_META = {
-    cod:        { id: 'cod',        label: 'Cash on Delivery',        icon: '💵', description: 'Pay Rs when your order arrives' },
+    cod:        { id: 'cod',        label: 'Cash on Delivery',        icon: '💵', description: 'Pay when your order arrives' },
     paypal:     { id: 'paypal',     label: 'PayPal',                  icon: '🅿️', description: 'Pay securely with your PayPal account' },
     stripe:     { id: 'stripe',     label: 'Credit / Debit Card',     icon: '💳', description: 'Visa, Mastercard, AMEX — encrypted by Stripe' },
     apple_pay:  { id: 'apple_pay',  label: 'Apple Pay',               icon: '🍎', description: 'Fast checkout with Apple Pay' },
     google_pay: { id: 'google_pay', label: 'Google Pay',              icon: '🔵', description: 'Quick checkout with Google Pay' },
     afterpay:   { id: 'afterpay',   label: 'Afterpay',                icon: '🟩', description: 'Buy now, pay in 4 interest-free installments' },
     card:       { id: 'card',       label: 'Mastercard / Debit Card', icon: '💳', description: 'Mastercard, Visa Debit — secured checkout' },
+    esewa:      { id: 'esewa',      label: 'eSewa',                   icon: '🟢', description: 'Pay with your eSewa digital wallet' },
+    khalti:     { id: 'khalti',     label: 'Khalti',                  icon: '🟣', description: 'Pay with your Khalti digital wallet' },
+    nabil:      { id: 'nabil',      label: 'Nabil Bank Card',         icon: '💳', description: 'Pay with Nabil Bank Visa/Mastercard' },
   };
 
   const allowed = config.paymentMethods?.[country] || config.paymentMethods?.US || ['paypal', 'stripe', 'card'];
@@ -363,6 +366,78 @@ router.post('/checkout', async (req, res) => {
         orderId,
         gatewayUrl: esewaCfg.isLive ? esewaCfg.liveUrl : esewaCfg.testUrl,
         formData, transactionUuid,
+      });
+    }
+
+    // ── Khalti (Nepal) ──
+    if (gateway === 'khalti') {
+      const khaltiCfg = await dynConfig.getGatewayConfig('khalti');
+      const khaltiKey = khaltiCfg.secretKey || config.khalti?.secretKey || '';
+      if (!khaltiKey) {
+        await cancelOrder(orderId);
+        return res.status(503).json({
+          error: 'Khalti payment gateway is not configured. Add KHALTI_SECRET_KEY in Admin → Settings → Payments.',
+          gateway, setup: 'https://docs.khalti.com/',
+        });
+      }
+      const khaltiBase = (khaltiCfg.isLive || config.khalti?.isLive) ? 'https://khalti.com/api/v2' : 'https://a.khalti.com/api/v2';
+      try {
+        const totalPaisa = Math.round(parseFloat(total) * 100);
+        const khaltiRes = await fetch(`${khaltiBase}/epayment/initiate/`, {
+          method: 'POST',
+          headers: { 'Authorization': `Key ${khaltiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            return_url: `${origin}/api/payments/khalti-verify?orderId=${orderId}`,
+            website_url: origin,
+            amount: totalPaisa,
+            purchase_order_id: orderId,
+            purchase_order_name: `Lwang Black Order ${orderId}`,
+            customer_info: { name: `${customer.fname || ''} ${customer.lname || ''}`.trim(), email: customer.email, phone: customer.phone || '' },
+          }),
+        });
+        const khaltiData = await khaltiRes.json();
+        if (!khaltiData.payment_url) {
+          await cancelOrder(orderId);
+          return res.status(502).json({ error: 'Khalti did not return a payment URL. Check your Khalti credentials.', details: khaltiData });
+        }
+        broadcast({ type: 'order:new', data: { orderId, country, total, status: 'pending', method: 'khalti' } });
+        return res.json({ orderId, url: khaltiData.payment_url, pidx: khaltiData.pidx });
+      } catch (khaltiErr) {
+        await cancelOrder(orderId);
+        return res.status(502).json({ error: 'Khalti initiation failed: ' + khaltiErr.message });
+      }
+    }
+
+    // ── Nabil Bank (Nepal card payments) ──
+    if (gateway === 'nabil' || gateway === 'card' && country === 'NP') {
+      const nabilCfg = await dynConfig.getGatewayConfig('nabil');
+      const merchantId = nabilCfg?.merchantId || config.nabil?.merchantId || '';
+      const nabilKey = nabilCfg?.secretKey || config.nabil?.secretKey || '';
+      if (!merchantId || merchantId === 'NB_MERCHANT_PLACEHOLDER' || !nabilKey) {
+        await cancelOrder(orderId);
+        return res.status(503).json({
+          error: 'Nabil Bank payment gateway is not configured. Add NABIL_MERCHANT_ID and NABIL_SECRET_KEY in Admin → Settings → Payments.',
+          gateway: 'nabil', setup: 'https://www.nabilbank.com/merchant',
+        });
+      }
+      const nabilBase = (nabilCfg?.isLive || config.nabil?.isLive) ? config.nabil.liveUrl : config.nabil.sandboxUrl;
+      const totalAmount = parseFloat(total).toFixed(2);
+      const nabilSignatureData = `${merchantId},${orderId},${totalAmount},NPR`;
+      const nabilSignature = crypto.createHmac('sha256', nabilKey).update(nabilSignatureData).digest('base64');
+      broadcast({ type: 'order:new', data: { orderId, country: 'NP', total, status: 'pending', method: 'nabil' } });
+      return res.json({
+        orderId,
+        gatewayUrl: nabilBase,
+        formData: {
+          merchant_id: merchantId,
+          order_id: orderId,
+          amount: totalAmount,
+          currency: 'NPR',
+          success_url: `${origin}/api/payments/nabil-callback?orderId=${orderId}&status=success`,
+          failure_url: `${origin}/api/payments/nabil-callback?orderId=${orderId}&status=failed`,
+          cancel_url: `${origin}/checkout.html?cancelled=true&order_id=${orderId}`,
+          signature: nabilSignature,
+        },
       });
     }
 
@@ -794,6 +869,81 @@ router.get('/esewa-verify', async (req, res) => {
   } catch (err) {
     console.error('[Payments] eSewa verify error:', err);
     res.redirect(`${config.siteUrl}/checkout.html?esewa_failed=true`);
+  }
+});
+
+// ── GET /api/payments/khalti-verify ──────────────────────────────────────────
+router.get('/khalti-verify', async (req, res) => {
+  try {
+    const { pidx, orderId, transaction_id, amount, status: khaltiStatus } = req.query;
+    if (!orderId) return res.redirect(`${config.siteUrl}/checkout.html?khalti_failed=true`);
+
+    const khaltiCfg = await dynConfig.getGatewayConfig('khalti');
+    const khaltiKey = khaltiCfg.secretKey || config.khalti?.secretKey || '';
+
+    if (khaltiKey && pidx) {
+      const khaltiBase = (khaltiCfg.isLive || config.khalti?.isLive) ? 'https://khalti.com/api/v2' : 'https://a.khalti.com/api/v2';
+      try {
+        const lookupRes = await fetch(`${khaltiBase}/epayment/lookup/`, {
+          method: 'POST',
+          headers: { 'Authorization': `Key ${khaltiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pidx }),
+        });
+        const lookupData = await lookupRes.json();
+        if (lookupData.status === 'Completed') {
+          await updateOrderStatus(orderId, 'paid', 'khalti', pidx || transaction_id);
+          broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'khalti' } });
+        }
+      } catch (e) {
+        console.error('[Payments] Khalti lookup error:', e.message);
+      }
+    }
+
+    res.redirect(`${config.siteUrl}/order-confirmation.html?order_id=${orderId}&method=khalti`);
+  } catch (err) {
+    console.error('[Payments] Khalti verify error:', err);
+    res.redirect(`${config.siteUrl}/checkout.html?khalti_failed=true`);
+  }
+});
+
+// ── GET /api/payments/nabil-callback ─────────────────────────────────────────
+router.get('/nabil-callback', async (req, res) => {
+  try {
+    const { orderId, status, transaction_id, reference_id } = req.query;
+    if (!orderId) return res.redirect(`${config.siteUrl}/checkout.html?nabil_failed=true`);
+
+    if (status === 'success') {
+      await updateOrderStatus(orderId, 'paid', 'nabil', transaction_id || reference_id || `NABIL_${Date.now()}`);
+      broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'nabil' } });
+      return res.redirect(`${config.siteUrl}/order-confirmation.html?order_id=${orderId}&method=nabil`);
+    }
+
+    // Payment failed or cancelled
+    await cancelOrder(orderId).catch(() => {});
+    return res.redirect(`${config.siteUrl}/checkout.html?nabil_failed=true&order_id=${orderId}`);
+  } catch (err) {
+    console.error('[Payments] Nabil callback error:', err);
+    res.redirect(`${config.siteUrl}/checkout.html?nabil_failed=true`);
+  }
+});
+
+// ── POST /api/payments/nabil-callback (POST variant) ─────────────────────────
+router.post('/nabil-callback', async (req, res) => {
+  try {
+    const { orderId, status, transaction_id, reference_id } = req.body;
+    if (!orderId) return res.status(400).json({ error: 'orderId required' });
+
+    if (status === 'success' || status === 'COMPLETED') {
+      await updateOrderStatus(orderId, 'paid', 'nabil', transaction_id || reference_id || `NABIL_${Date.now()}`);
+      broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'nabil' } });
+      return res.json({ success: true, orderId, status: 'paid' });
+    }
+
+    await cancelOrder(orderId).catch(() => {});
+    return res.json({ success: false, orderId, status: 'failed' });
+  } catch (err) {
+    console.error('[Payments] Nabil POST callback error:', err);
+    res.status(500).json({ error: 'Nabil callback processing failed' });
   }
 });
 

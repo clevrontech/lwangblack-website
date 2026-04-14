@@ -16,6 +16,7 @@ services:
       - ./src/db/migrations/002_seed.sql:/docker-entrypoint-initdb.d/002_seed.sql
       - ./src/db/migrations/002_subscriptions_logistics_social.sql:/docker-entrypoint-initdb.d/003_subscriptions.sql
       - ./src/db/migrations/004_payments_logistics_notifications.sql:/docker-entrypoint-initdb.d/004_payments.sql
+      - ./src/db/migrations/007_complete_schema.sql:/docker-entrypoint-initdb.d/007_complete_schema.sql
     ports:
       - "5432:5432"
     healthcheck:
@@ -76,6 +77,22 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      USPS_USER_ID: ${USPS_USER_ID:-}
+      USPS_PASSWORD: ${USPS_PASSWORD:-}
+      USPS_TEST_MODE: ${USPS_TEST_MODE:-true}
+      AUSPOST_API_KEY: ${AUSPOST_API_KEY:-}
+      NZPOST_API_KEY: ${NZPOST_API_KEY:-}
+      NZPOST_CLIENT_ID: ${NZPOST_CLIENT_ID:-}
+      NZPOST_CLIENT_SECRET: ${NZPOST_CLIENT_SECRET:-}
+      JAPANPOST_API_KEY: ${JAPANPOST_API_KEY:-}
+      CHITCHATS_API_KEY: ${CHITCHATS_API_KEY:-}
+      CHITCHATS_CLIENT_ID: ${CHITCHATS_CLIENT_ID:-}
+      PATHAO_CLIENT_ID: ${PATHAO_CLIENT_ID:-}
+      PATHAO_CLIENT_EMAIL: ${PATHAO_CLIENT_EMAIL:-}
+      PATHAO_CLIENT_PASSWORD: ${PATHAO_CLIENT_PASSWORD:-}
+      PATHAO_SECRET_KEY: ${PATHAO_SECRET_KEY:-}
+      PATHAO_STORE_ID: ${PATHAO_STORE_ID:-}
+      PATHAO_LIVE: ${PATHAO_LIVE:-false}
       SHIPPO_API_KEY: ${SHIPPO_API_KEY:-}
       SITE_URL: ${SITE_URL:-https://www.lwangblack.co}
       CORS_ORIGIN: ${CORS_ORIGIN:-https://www.lwangblack.co,http://localhost:3000}

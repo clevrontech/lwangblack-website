@@ -86,8 +86,9 @@ describe('Logistics API', () => {
       .send({ toCountry: 'NP' });
 
     expect(res.status).toBe(200);
-    expect(res.body.rates).toHaveLength(1);
-    expect(res.body.rates[0].carrierId).toBe('pathao');
+    expect(res.body.rates.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.rates.every(r => r.carrierId === 'pathao')).toBe(true);
+    expect(res.body.source).toBe('pathao');
   });
 
   test('POST /api/logistics/create-shipment — create', async () => {

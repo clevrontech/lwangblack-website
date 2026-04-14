@@ -21,14 +21,17 @@ describe('Payments API', () => {
     expect(ids).toContain('paypal');
   });
 
-  test('GET /api/payments/methods?country=NP — Nepal methods include khalti', async () => {
+  test('GET /api/payments/methods?country=NP — Nepal methods: esewa, card, cod', async () => {
     const res = await request(app).get('/api/payments/methods?country=NP');
 
     expect(res.status).toBe(200);
     const ids = res.body.methods.map(m => m.id);
-    expect(ids).toContain('nabil');
-    expect(ids).toContain('khalti');
+    expect(ids).toContain('esewa');
+    expect(ids).toContain('card');
     expect(ids).toContain('cod');
+    // Khalti and Nabil not offered
+    expect(ids).not.toContain('khalti');
+    expect(ids).not.toContain('nabil');
   });
 
   test('POST /api/payments/stripe-session — returns 503 when keys not configured', async () => {
@@ -45,11 +48,18 @@ describe('Payments API', () => {
     expect(res.body.error).toBeDefined();
   });
 
-  test('POST /api/payments/khalti-initiate — returns 503 when keys not configured', async () => {
+  test('POST /api/payments/checkout with khalti — returns 503 when keys not configured', async () => {
     const res = await request(app)
-      .post('/api/payments/khalti-initiate')
-      .send({ orderId: 'LB-TEST', amount: 1599 });
+      .post('/api/payments/checkout')
+      .send({
+        gateway: 'khalti',
+        customer: { fname: 'Aarav', lname: 'Shrestha', email: 'aarav.khalti@test.com' },
+        items: [{ name: 'Lwang Black 250g', qty: 1, price: 1599 }],
+        country: 'NP', currency: 'NPR', symbol: 'Rs',
+        subtotal: 1599, shipping: 0, total: 1599,
+      });
 
+    // No KHALTI_SECRET_KEY in test env → 503
     expect(res.status).toBe(503);
     expect(res.body.error).toBeDefined();
   });

@@ -7,11 +7,18 @@ const { requireAuth, requireRole, auditLog } = require('../middleware/auth');
 const { broadcast } = require('../ws');
 const { sendShippingUpdate } = require('../services/notifications');
 
+// ── Carrier service imports ──────────────────────────────────────────────────
+const uspsServicePublic = require('../services/usps');
+const auspostService = require('../services/auspost');
+const japanpostService = require('../services/japanpost');
+const nzpostService = require('../services/nzpost');
+const chitchatsService = require('../services/chitchats');
+const pathaoService = require('../services/pathao');
+
 const router = express.Router();
 
-// ── Public rate-quote endpoint (used by storefront checkout for live USPS rates)
-// Must be declared BEFORE router.use(requireAuth) so it doesn't need a JWT.
-const uspsServicePublic = require('../services/usps');
+// ── Public rate-quote endpoints (used by storefront checkout for live rates)
+// Must be declared BEFORE router.use(requireAuth) so they don't need a JWT.
 router.post('/usps/rates/public', async (req, res) => {
   try {
     const { toZip, fromZip, weightLbs, weightOz } = req.body;
@@ -21,6 +28,64 @@ router.post('/usps/rates/public', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+router.post('/auspost/rates/public', async (req, res) => {
+  try {
+    const { toPostcode, toCountry, fromPostcode, weightKg } = req.body;
+    const rates = await auspostService.getRates({ toPostcode, toCountry, fromPostcode, weightKg });
+    res.json({ rates, configured: auspostService.isConfigured() });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/nzpost/rates/public', async (req, res) => {
+  try {
+    const { toCountry, toPostcode, fromPostcode, weightKg } = req.body;
+    const rates = await nzpostService.getRates({ toCountry, toPostcode, fromPostcode, weightKg });
+    res.json({ rates, configured: nzpostService.isConfigured() });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/japanpost/rates/public', async (req, res) => {
+  try {
+    const { toCountry, weightGrams } = req.body;
+    const rates = await japanpostService.getRates({ toCountry, weightGrams });
+    res.json({ rates });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/chitchats/rates/public', async (req, res) => {
+  try {
+    const { toCountry, toPostalCode, fromPostalCode, weightGrams } = req.body;
+    const rates = await chitchatsService.getRates({ toCountry, toPostalCode, fromPostalCode, weightGrams });
+    res.json({ rates, configured: chitchatsService.isConfigured() });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/pathao/rates/public', async (req, res) => {
+  try {
+    const { recipientCity, recipientZone, itemWeight } = req.body;
+    const rates = await pathaoService.getRates({ recipientCity, recipientZone, itemWeight });
+    res.json({ rates, configured: pathaoService.isConfigured() });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Public tracking endpoint
+router.get('/track/public/:carrier/:trackingNumber', async (req, res) => {
+  try {
+    const { carrier, trackingNumber } = req.params;
+    let result;
+    switch (carrier) {
+      case 'usps': result = await uspsServicePublic.trackShipment(trackingNumber); break;
+      case 'auspost': result = await auspostService.trackShipment(trackingNumber); break;
+      case 'nzpost': result = await nzpostService.trackShipment(trackingNumber); break;
+      case 'japanpost': result = await japanpostService.trackShipment(trackingNumber); break;
+      case 'chitchats': result = await chitchatsService.trackShipment(trackingNumber); break;
+      case 'pathao': result = await pathaoService.trackShipment(trackingNumber); break;
+      default: return res.status(400).json({ error: `Unknown carrier: ${carrier}` });
+    }
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.use(requireAuth);
@@ -137,43 +202,65 @@ router.post('/shipping-cost', async (req, res) => {
 });
 
 // ── POST /api/logistics/rates ───────────────────────────────────────────────
-// Return carrier rate(s) for a country. For US, fetches live USPS rates.
+// Return carrier rate(s) for a country using live carrier APIs.
 router.post('/rates', async (req, res) => {
   try {
     const country   = (req.body.toCountry || '').toUpperCase();
     const toZip     = req.body.toZip     || '';
     const weightLbs = parseFloat(req.body.weightLbs) || 1;
     const weightOz  = parseFloat(req.body.weightOz)  || 0;
+    const weightKg  = parseFloat(req.body.weightKg)  || (weightLbs * 0.4536);
+    const weightGrams = parseFloat(req.body.weightGrams) || Math.round(weightKg * 1000);
     const carrierId = getPreferredCarrierId(country);
 
-    // ── USPS: live rates for US ───────────────────────────────────────────────
-    if (carrierId === 'usps') {
-      const rates = await uspsService.getRates({ toZip: toZip || '90210', weightLbs, weightOz });
-      return res.json({ rates, source: 'usps', carrier: 'USPS', to: country });
-    }
+    let rates;
+    switch (carrierId) {
+      case 'usps':
+        rates = await uspsService.getRates({ toZip: toZip || '90210', weightLbs, weightOz });
+        return res.json({ rates, source: 'usps', carrier: 'USPS', to: country });
 
-    // ── Zone-based rates for other countries ──────────────────────────────────
-    let zones;
-    if (db.isUsingMemory()) {
-      zones = (db.getMemStore().delivery_zones || getDefaultZones()).filter(z => z.country === country);
-    } else {
-      zones = await db.queryAll('SELECT * FROM delivery_zones WHERE country = $1 AND is_active = true', [country || 'AU']);
-    }
-    if (!zones.length) zones = getDefaultZones().filter(z => z.country === (country || 'AU'));
+      case 'auspost':
+        rates = await auspostService.getRates({ toPostcode: toZip, toCountry: country !== 'AU' ? country : undefined, weightKg });
+        return res.json({ rates, source: 'auspost', carrier: 'Australia Post', to: country });
 
-    const zone      = zones[0];
-    const basePrice = zone ? parseFloat(zone.shipping_cost) : 15;
-    const currency  = zone?.currency || 'USD';
-    const carrier   = CARRIERS[carrierId];
-    const rates     = [{
-      carrier:   carrier.name,
-      carrierId: carrier.id,
-      service:   carrierId === 'auspost' && country !== 'AU' ? 'International' : 'Standard',
-      days:      zone?.estimated_days || '5-10 days',
-      price:     basePrice,
-      currency,
-    }];
-    res.json({ rates, source: 'country-logistics', from: 'AU', to: country || 'AU' });
+      case 'japanpost':
+        rates = await japanpostService.getRates({ toCountry: country !== 'JP' ? country : 'AU', weightGrams });
+        return res.json({ rates, source: 'japanpost', carrier: 'Japan Post', to: country });
+
+      case 'nzpost':
+        rates = await nzpostService.getRates({ toCountry: country !== 'NZ' ? country : undefined, toPostcode: toZip, weightKg });
+        return res.json({ rates, source: 'nzpost', carrier: 'NZ Post', to: country });
+
+      case 'chitchats':
+        rates = await chitchatsService.getRates({ toCountry: country !== 'CA' ? country : 'US', toPostalCode: toZip, weightGrams });
+        return res.json({ rates, source: 'chitchats', carrier: 'Chit Chats', to: country });
+
+      case 'pathao':
+        rates = await pathaoService.getRates({ recipientCity: req.body.recipientCity, recipientZone: req.body.recipientZone, itemWeight: weightKg });
+        return res.json({ rates, source: 'pathao', carrier: 'Pathao', to: country });
+
+      default: {
+        // Fallback: zone-based flat rate
+        let zones;
+        if (db.isUsingMemory()) {
+          zones = (db.getMemStore().delivery_zones || getDefaultZones()).filter(z => z.country === country);
+        } else {
+          zones = await db.queryAll('SELECT * FROM delivery_zones WHERE country = $1 AND is_active = true', [country || 'AU']);
+        }
+        if (!zones.length) zones = getDefaultZones().filter(z => z.country === (country || 'AU'));
+        const zone = zones[0];
+        const basePrice = zone ? parseFloat(zone.shipping_cost) : 15;
+        rates = [{
+          carrier: CARRIERS[carrierId]?.name || 'Standard',
+          carrierId: carrierId,
+          service: 'Standard',
+          days: zone?.estimated_days || '5-10 days',
+          price: basePrice,
+          currency: zone?.currency || 'USD',
+        }];
+        return res.json({ rates, source: 'zone-fallback', to: country });
+      }
+    }
   } catch (err) {
     console.error('[Logistics] Rates error:', err);
     res.status(500).json({ error: 'Rate fetch failed' });
@@ -183,11 +270,12 @@ router.post('/rates', async (req, res) => {
 // ── POST /api/logistics/create-shipment ─────────────────────────────────────
 router.post('/create-shipment', async (req, res) => {
   try {
-    const { orderId, carrierId, adminOverrideShipping } = req.body;
+    const { orderId, carrierId, adminOverrideShipping, toAddress, fromAddress, serviceCode } = req.body;
     if (!orderId) return res.status(400).json({ error: 'orderId required' });
 
     let trackingNumber = null;
     let labelUrl = null;
+    let labelResult = null;
     let carrier = carrierId;
     if (!carrier) {
       const order = db.isUsingMemory()
@@ -196,6 +284,40 @@ router.post('/create-shipment', async (req, res) => {
       carrier = getPreferredCarrierId(order?.country);
     }
     if (!CARRIERS[carrier]) carrier = 'auspost';
+
+    // Delegate to carrier-specific label/shipment API
+    try {
+      switch (carrier) {
+        case 'usps':
+          labelResult = await uspsService.generateLabel({ fromAddress, toAddress, orderId, serviceType: serviceCode });
+          trackingNumber = labelResult.trackingNumber;
+          break;
+        case 'auspost':
+          labelResult = await auspostService.generateLabel({ fromAddress, toAddress, orderId, serviceCode });
+          trackingNumber = labelResult.trackingNumber;
+          break;
+        case 'chitchats':
+          labelResult = await chitchatsService.createShipment({ orderId, toAddress, fromAddress, serviceCode });
+          trackingNumber = labelResult.trackingNumber;
+          labelUrl = labelResult.labelUrl;
+          break;
+        case 'pathao':
+          labelResult = await pathaoService.createOrder({
+            orderId,
+            recipientName: toAddress?.name,
+            recipientPhone: toAddress?.phone,
+            recipientAddress: toAddress?.street,
+            recipientCity: toAddress?.city,
+            recipientZone: toAddress?.zone,
+          });
+          trackingNumber = labelResult.trackingNumber;
+          break;
+        default:
+          break;
+      }
+    } catch (labelErr) {
+      console.error(`[Logistics] ${carrier} label error:`, labelErr.message);
+    }
 
     if (!trackingNumber) {
       trackingNumber = `LB${Date.now().toString(36).toUpperCase()}`;

@@ -83,6 +83,26 @@ async function getGatewayConfig(gateway) {
         enabled:    isEnabled(s, 'esewa', 'ESEWA_MERCHANT_ID'),
       };
 
+    case 'khalti':
+      return {
+        secretKey:  s.khalti_secret_key  || env.KHALTI_SECRET_KEY  || '',
+        publicKey:  s.khalti_public_key  || env.KHALTI_PUBLIC_KEY  || '',
+        isLive:     (s.khalti_mode || env.KHALTI_MODE || 'test') === 'live',
+        testUrl:    'https://a.khalti.com/api/v2',
+        liveUrl:    'https://khalti.com/api/v2',
+        enabled:    isEnabled(s, 'khalti', 'KHALTI_SECRET_KEY'),
+      };
+
+    case 'nabil':
+      return {
+        merchantId:  s.nabil_merchant_id  || env.NABIL_MERCHANT_ID  || '',
+        secretKey:   s.nabil_secret_key   || env.NABIL_SECRET_KEY   || '',
+        isLive:      (s.nabil_mode || env.NABIL_LIVE || 'false') === 'true' || (s.nabil_mode || '') === 'live',
+        sandboxUrl:  'https://payment-sandbox.nabilbank.com/checkout',
+        liveUrl:     'https://payment.nabilbank.com/checkout',
+        enabled:     isEnabled(s, 'nabil', 'NABIL_MERCHANT_ID'),
+      };
+
     case 'usps':
       return {
         userId:   s.usps_user_id  || env.USPS_USER_ID  || '',
@@ -172,6 +192,19 @@ async function getGatewayStatus() {
       hasMerchantId: present(s.esewa_merchant_id || env.ESEWA_MERCHANT_ID),
       hasSecret:     present(s.esewa_secret_key || env.ESEWA_SECRET_KEY),
     },
+    khalti: {
+      enabled:      isEnabled(s, 'khalti', 'KHALTI_SECRET_KEY'),
+      mode:         s.khalti_mode || env.KHALTI_MODE || 'test',
+      hasSecretKey: present(s.khalti_secret_key || env.KHALTI_SECRET_KEY),
+      hasPublicKey: present(s.khalti_public_key || env.KHALTI_PUBLIC_KEY),
+      keyHint:      mask(s.khalti_secret_key || env.KHALTI_SECRET_KEY),
+    },
+    nabil: {
+      enabled:      isEnabled(s, 'nabil', 'NABIL_MERCHANT_ID'),
+      mode:         (s.nabil_mode || env.NABIL_LIVE || 'false') === 'true' ? 'live' : 'sandbox',
+      hasMerchantId:present(s.nabil_merchant_id || env.NABIL_MERCHANT_ID),
+      hasSecret:    present(s.nabil_secret_key || env.NABIL_SECRET_KEY),
+    },
     usps: {
       enabled:    isEnabled(s, 'usps', 'USPS_USER_ID'),
       hasUserId:  present(s.usps_user_id || env.USPS_USER_ID),
@@ -225,7 +258,9 @@ function isEnabled(settings, key, envKey) {
   switch (key) {
     case 'stripe':   return !!(settings.stripe_secret_key   || env[envKey]);
     case 'paypal':   return !!(settings.paypal_client_id    || env[envKey]);
-    case 'esewa':    return !!(settings.esewa_merchant_id   || env[envKey]);
+    case 'khalti':  return !!(settings.khalti_secret_key   || env[envKey]);
+    case 'nabil':   return !!(settings.nabil_merchant_id   || env[envKey]);
+    case 'esewa':   return !!(settings.esewa_merchant_id   || env[envKey]);
     case 'usps':     return !!(settings.usps_user_id         || env[envKey]);
     case 'chitchats':return !!(settings.chitchats_api_key   || env[envKey]);
     case 'auspost':  return !!(settings.auspost_api_key     || env[envKey]);

@@ -1,5 +1,7 @@
 // ── Products Routes ─────────────────────────────────────────────────────────
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const db = require('../db/pool');
 const { cacheFlush, cacheGet, cacheSet } = require('../db/redis');
 const { requireAuth, requireRole, auditLog } = require('../middleware/auth');
@@ -7,10 +9,41 @@ const { broadcast } = require('../ws');
 
 const router = express.Router();
 
+function loadJsonCatalogProducts() {
+  try {
+    const p = path.join(__dirname, '..', '..', 'data', 'products.json');
+    if (!fs.existsSync(p)) return null;
+    const arr = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (!Array.isArray(arr) || !arr.length) return null;
+    return arr.filter((x) => x && x.status === 'active');
+  } catch {
+    return null;
+  }
+}
+
 // ── GET /api/products (public) ──────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
     const { category, status, search } = req.query;
+
+    const jsonCatalog = loadJsonCatalogProducts();
+    if (jsonCatalog && jsonCatalog.length) {
+      let products = jsonCatalog;
+      if (category && category !== 'all') {
+        products = products.filter((p) => p.category === category);
+      }
+      if (search) {
+        const q = String(search).toLowerCase();
+        products = products.filter(
+          (p) =>
+            (p.title || '').toLowerCase().includes(q) ||
+            (p.description || '').toLowerCase().includes(q) ||
+            (p.tags && p.tags.some((t) => String(t).toLowerCase().includes(q)))
+        );
+      }
+      return res.json({ products });
+    }
+
     const cacheKey = 'products:all';
     const cached = await cacheGet(cacheKey);
     if (cached && !category && !status && !search) return res.json({ products: cached });
@@ -50,6 +83,16 @@ router.get('/', async (req, res) => {
 // ── GET /api/products/:id ───────────────────────────────────────────────────
 router.get('/:id', async (req, res) => {
   try {
+    const jsonCatalog = loadJsonCatalogProducts();
+    if (jsonCatalog && req.params.id && req.params.id !== 'inventory') {
+      const product = jsonCatalog.find((p) => {
+        if (p.id === req.params.id || p.handle === req.params.id) return true;
+        const aliases = p.handleAliases;
+        return Array.isArray(aliases) && aliases.includes(req.params.id);
+      });
+      if (product) return res.json({ product });
+    }
+
     const productCacheKey = `products:item:${req.params.id}`;
     const cached = await cacheGet(productCacheKey);
     if (cached) return res.json({ product: cached });

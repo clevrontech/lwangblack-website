@@ -5,32 +5,14 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public",
 
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin",  "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PATCH,PUT,DELETE,OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
-      ]
-    }
-  ],
-
   "redirects": [
     { "source": "/admin",      "destination": "/admin/",  "permanent": false },
     { "source": "/admin.html", "destination": "/admin/",  "permanent": true  }
   ],
 
   "rewrites": [
-    { "source": "/api",               "destination": "/api/index.js"     },
-    { "source": "/api/:path*",         "destination": "/api/[...path].js" },
     { "source": "/admin/assets/:path*","destination": "/admin/assets/:path*" },
     { "source": "/admin/:path*",        "destination": "/admin/index.html"    },
     { "source": "/admin",              "destination": "/admin/index.html"    }
-  ],
-
-  "functions": {
-    "api/index.js":     { "memory": 512, "maxDuration": 30 },
-    "api/[...path].js": { "memory": 512, "maxDuration": 30 }
-  }
+  ]
 }

@@ -136,7 +136,7 @@ const GeoRouter = {
   rawCountryCode: null,
 
   getRegion(code) {
-    return REGION_DATA[code] || REGION_DATA['AU'];
+    return REGION_DATA[code] || REGION_DATA['NP'];
   },
 
   getStored() {
@@ -148,7 +148,7 @@ const GeoRouter = {
   },
 
   async detect() {
-    if (IS_BOT) return 'AU';
+    if (IS_BOT) return 'NP';
 
     // 1. Try own backend (fastest — avoids CORS & rate limits)
     try {
@@ -159,7 +159,7 @@ const GeoRouter = {
           const raw = data.country.toUpperCase();
           this.rawCountryCode = raw;
           const code = raw === 'UK' ? 'GB' : raw;
-          return SUPPORTED_CODES.includes(code) ? code : 'AU';
+          return SUPPORTED_CODES.includes(code) ? code : 'NP';
         }
       }
     } catch(e) { /* continue */ }
@@ -173,7 +173,7 @@ const GeoRouter = {
           const raw = data.country_code.toUpperCase();
           this.rawCountryCode = raw;
           const code = raw === 'UK' ? 'GB' : raw;
-          return SUPPORTED_CODES.includes(code) ? code : 'AU';
+          return SUPPORTED_CODES.includes(code) ? code : 'NP';
         }
       }
     } catch(e) { /* continue */ }
@@ -187,7 +187,7 @@ const GeoRouter = {
       if (tz && tz.startsWith('Asia/Tokyo')) return 'JP';
     } catch(e) {}
 
-    return 'AU';
+    return 'NP';
   },
 
   async init() {
@@ -215,13 +215,13 @@ const GeoRouter = {
 
   set(code) {
     const normalized = code.toUpperCase() === 'UK' ? 'GB' : code.toUpperCase();
-    this.current = SUPPORTED_CODES.includes(normalized) ? normalized : 'AU';
+    this.current = SUPPORTED_CODES.includes(normalized) ? normalized : 'NP';
     this.persist(this.current);
     this._broadcast(this.current);
   },
 
   get() {
-    return this.current || this.getStored() || 'AU';
+    return this.current || this.getStored() || 'NP';
   },
 
   _broadcast(code) {

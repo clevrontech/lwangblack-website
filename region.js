@@ -247,3 +247,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Backward-compat alias — set after DOMContentLoaded so GeoRouter is guaranteed available
 window.LB_REGION = window.GeoRouter;
+
+// Sync storefront pricing region (used by /api/store cart + product cards)
+(function syncLwbRegion() {
+  function mapCode(code) {
+    const m = { AU: 'AU', NP: 'NP', US: 'US', GB: 'GB', CA: 'CA', JP: 'JP', NZ: 'NZ', CN: 'NP' };
+    return m[code] || 'NP';
+  }
+  document.addEventListener('lb:regionChanged', (e) => {
+    try {
+      const code = e.detail && e.detail.code;
+      if (code) localStorage.setItem('lwb_region', mapCode(code));
+    } catch (_) {}
+  });
+})();

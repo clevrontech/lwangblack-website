@@ -20,6 +20,14 @@
   } catch {}
 })();
 
+/** Same-origin JSON store API (works with or without lwb-api.js on the page). */
+function lwbStoreUrl(path) {
+    const p = path.startsWith('/') ? path : '/' + path;
+    if (typeof window.lwbApiUrl === 'function') return window.lwbApiUrl(p);
+    const base = window.LWB_API_BASE || (typeof location !== 'undefined' ? location.origin.replace(/\/$/, '') + '/api' : '/api');
+    return String(base).replace(/\/$/, '') + p;
+}
+
 // capsul-in-pro EXACT ANIMATION CLONE (GSAP)
 document.addEventListener("DOMContentLoaded", () => {
     
@@ -247,19 +255,43 @@ document.addEventListener("DOMContentLoaded", () => {
         // --- NEWSLETTER SUBMISSION ---
         const newsletterForm = document.getElementById('newsletterForm');
         if (newsletterForm) {
-            newsletterForm.addEventListener('submit', (e) => {
+            newsletterForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = newsletterForm.querySelector('button[type="submit"]');
                 const origText = btn.innerText;
-                btn.innerText = "SUBSCRIBED";
-                btn.style.background = "var(--accent)";
-                btn.style.color = "#fff";
-                setTimeout(() => {
-                    btn.innerText = origText;
-                    btn.style.background = "";
-                    btn.style.color = "";
+                const email = document.getElementById('nl-email')?.value?.trim();
+                const name = document.getElementById('nl-name')?.value?.trim();
+                const phone = document.getElementById('nl-phone')?.value?.trim();
+                if (!email) return;
+                btn.disabled = true;
+                btn.innerText = 'SUBSCRIBING…';
+                try {
+                    const res = await fetch(lwbStoreUrl('/subscribe'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, name, phone }),
+                    });
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error || 'Subscribe failed');
+                    btn.innerText = 'SUBSCRIBED ✓';
+                    btn.style.background = 'var(--accent)';
+                    btn.style.color = '#fff';
+                    const code = data.discountCode ? ` Use code ${data.discountCode} for 10% off.` : '';
+                    const note = document.createElement('p');
+                    note.style.cssText = 'font-size:0.75rem;margin-top:1rem;color:var(--text-muted);';
+                    note.textContent = (data.message || 'Thank you!') + code;
+                    if (!newsletterForm.querySelector('[data-newsletter-note]')) {
+                        note.setAttribute('data-newsletter-note', '1');
+                        newsletterForm.appendChild(note);
+                    }
                     newsletterForm.reset();
-                }, 3000);
+                } catch (err) {
+                    btn.innerText = origText;
+                    alert('Could not subscribe right now. Please try again or email brewed@lwangblack.co.');
+                } finally {
+                    btn.disabled = false;
+                    if (btn.innerText === 'SUBSCRIBING…') btn.innerText = origText;
+                }
             });
         }
 
@@ -292,18 +324,66 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (promoForm) {
-                promoForm.addEventListener('submit', (e) => {
+                promoForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = promoForm.querySelector('button[type="submit"]');
                     const origText = btn.innerText;
-                    btn.innerText = "OFFER CLAIMED!";
-                    btn.style.background = "var(--accent)";
-                    btn.style.color = "#fff";
-                    setTimeout(() => {
-                        closePromo();
-                    }, 1500);
+                    const email = document.getElementById('promo-email')?.value?.trim();
+                    if (!email) return;
+                    btn.disabled = true;
+                    btn.innerText = 'SENDING…';
+                    try {
+                        const res = await fetch(lwbStoreUrl('/subscribe'), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, name: '' }),
+                        });
+                        const data = await res.json();
+                        if (!data.success) throw new Error(data.error || 'Failed');
+                        btn.innerText = 'OFFER CLAIMED!';
+                        btn.style.background = 'var(--accent)';
+                        btn.style.color = '#fff';
+                        if (window.dataLayer) window.dataLayer.push({ event: 'promo_subscribe', discount: data.discountCode || 'WELCOME10' });
+                        setTimeout(() => closePromo(), 1800);
+                    } catch (err) {
+                        btn.innerText = origText;
+                        btn.disabled = false;
+                        alert('Could not sign up. Please try the newsletter form below or email us.');
+                    }
                 });
             }
+        }
+
+        const reviewSubmitForm = document.getElementById('review-submit-form');
+        if (reviewSubmitForm) {
+            reviewSubmitForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = reviewSubmitForm.querySelector('button[type="submit"]');
+                const orig = btn.innerText;
+                btn.disabled = true;
+                btn.innerText = 'SENDING…';
+                try {
+                    const payload = {
+                        name: document.getElementById('review-name')?.value?.trim(),
+                        email: document.getElementById('review-email')?.value?.trim() || '',
+                        location: document.getElementById('review-location')?.value?.trim() || '',
+                        rating: document.getElementById('review-rating')?.value,
+                        body: document.getElementById('review-body')?.value?.trim(),
+                    };
+                    const res = await fetch(lwbStoreUrl('/reviews'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error || 'Failed');
+                    reviewSubmitForm.innerHTML = '<p style="text-align:center;padding:2rem 0;font-size:0.9rem;">Thank you! Your review will appear after verification.</p>';
+                } catch (err) {
+                    btn.innerText = orig;
+                    btn.disabled = false;
+                    alert('Could not submit. Please try again or use the contact page.');
+                }
+            });
         }
     }
 });

@@ -1,0 +1,19 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Connect this repo in Render → New → Blueprint, or create a Web Service with root directory "backend".
+
+services:
+  - type: web
+    name: lwangblack-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Set in the Render dashboard (sensitive values):
+      # FRONTEND_URL — production Vercel URL, e.g. https://your-app.vercel.app or custom domain
+      # CORS_ORIGIN — comma list including that URL plus https://www.lwangblack.co if used
+      # DATABASE_URL, STRIPE_SECRET_KEY, JWT_SECRET, etc. — see backend/.env.example

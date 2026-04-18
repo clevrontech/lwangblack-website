@@ -36,16 +36,29 @@ const swaggerDoc = require('./swagger.json');
 
 const app = express();
 
+const staticCorsOrigins = new Set(config.corsOrigins);
+/** Allow env-listed origins plus Vercel preview (*.vercel.app) and Render (*.onrender.com). */
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return true;
+  if (staticCorsOrigins.has(origin)) return true;
+  if (/^https:\/\/.+\.vercel\.app$/i.test(origin)) return true;
+  if (/^https:\/\/.+\.onrender\.com$/i.test(origin)) return true;
+  return false;
+}
+
 // ── Security Middleware ─────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: false,  // Disable CSP — frontend uses inline onclick/onchange handlers extensively
 }));
 app.use(cors({
-  origin: config.corsOrigins,
+  origin(origin, callback) {
+    if (isAllowedCorsOrigin(origin)) callback(null, true);
+    else callback(null, false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
 }));
 
 // Rate limiting
@@ -98,17 +111,23 @@ app.get('/api/ip-country', (req, res) => {
              req.socket.remoteAddress || '';
   const cleanIp = ip.replace(/^::ffff:/, '');
 
-  // On localhost / private IPs return AU so dev mode works
+  // Private IPs: default to NP (storefront pricing aligns with Nepal-first site)
   const isPrivate = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|^$)/.test(cleanIp);
-  if (isPrivate) return res.json({ country: 'AU', source: 'private' });
+  if (isPrivate) return res.json({ country: 'NP', source: 'private' });
 
   const geo = geoip.lookup(cleanIp);
   if (geo && geo.country) return res.json({ country: geo.country, source: 'geoip' });
-  return res.json({ country: 'AU', source: 'fallback' });
+  return res.json({ country: 'NP', source: 'fallback' });
 });
 
 // ── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, require('./routes/auth'));
+// JSON flat-file storefront (must mount BEFORE legacy /api/orders so POST /api/orders is public)
+app.use('/api/orders', apiLimiter, require('./routes/json-store/orders'));
+app.use('/api/contact', apiLimiter, require('./routes/json-store/contact'));
+app.use('/api/subscribe', apiLimiter, require('./routes/json-store/subscribe'));
+app.use('/api/checkout', apiLimiter, require('./routes/json-store/checkout'));
+app.use('/api/admin', apiLimiter, require('./routes/json-store/admin'));
 app.use('/api/orders', apiLimiter, require('./routes/orders'));
 app.use('/api/products', apiLimiter, require('./routes/products'));
 app.use('/api/customers', apiLimiter, require('./routes/customers'));
@@ -126,6 +145,9 @@ app.use('/api/social', apiLimiter, require('./routes/social'));
 app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
 app.use('/api/cart', apiLimiter, require('./routes/cart'));
 app.use('/api/upload', apiLimiter, require('./routes/upload'));
+
+// ── JSON flat-file store (products, orders, checkout, admin) ──────────────
+app.use('/api/store', apiLimiter, require('./routes/json-store'));
 
 // ── Public checkout config (GDPR-compliant policy links) ────────────────────
 app.get('/api/checkout-config', (req, res) => {

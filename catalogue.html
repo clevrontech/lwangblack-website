@@ -151,6 +151,7 @@
   <!-- Toast -->
   <div id="cartToast">ADDED TO CART</div>
 
+  <script src="lwb-api.js"></script>
   <script src="i18n.js" defer></script>
   <script src="pricing.js" defer></script>
   <script src="geo-router.js" defer></script>
@@ -159,131 +160,11 @@
   <script src="cart.js" defer></script>
   <script src="script.js" defer></script>
   <script>
-      // Update Prices dynamically based on Region
-      function renderCatalogueProducts() {
-          const grid = document.querySelector('.product-grid');
-          if (!grid || !window.LB_PRODUCTS) return;
-          const code = window.LB_REGION ? window.LB_REGION.get() : 'NP';
-
-          let html = '';
-          for (const [id, prod] of Object.entries(window.LB_PRODUCTS)) {
-              // Check availability
-              if (prod.allowed_regions !== 'ALL' && Array.isArray(prod.allowed_regions) && !prod.allowed_regions.includes(code)) continue;
-
-              let priceData = window.getProductPrice ? window.getProductPrice(id, code) : (prod.prices[code] || prod.prices.DEFAULT);
-              if (!priceData) priceData = prod.prices.DEFAULT;
-              if (!priceData) continue; // Skip if no price
-
-              const priceDisplay = priceData.display;
-
-              // Variants handling
-              let variantsHtml = '';
-              if (prod.variants && prod.variants.length > 0) {
-                  variantsHtml = '<div class="variant-options" onclick="event.stopPropagation()">';
-                  prod.variants.forEach((v, idx) => {
-                      variantsHtml += `<button class="variant-btn ${idx === 0 ? 'selected' : ''}" data-variant="${v}">${v}</button>`;
-                  });
-                  variantsHtml += '</div>';
-              }
-
-              html += `
-              <div class="product-card" data-category="${prod.category}" data-product-id="${id}" onclick="if(!event.target.classList.contains('add-btn') && !event.target.classList.contains('variant-btn')) window.location='product.html?id=${id}'" style="cursor: pointer;">
-                  <div style="position: relative;">
-                      <img src="${prod.image}" alt="${prod.name}" class="product-img" loading="lazy" />
-                  </div>
-                  <span class="label-micro" style="margin-bottom: 0.5rem;">${prod.category.toUpperCase()} ${prod.badge ? "— " + prod.badge : ""}</span>
-                  <h3 style="font-size: 1.8rem; margin-bottom: 1rem;">${prod.name}</h3>
-                  <p style="margin-bottom: ${variantsHtml ? '1rem' : '2rem'}; flex-grow: 1; color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${prod.description}</p>
-                  ${variantsHtml}
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <span style="font-family: var(--font-heading); font-size: 1.5rem;">${priceDisplay}</span>
-                      <button class="btn-solid add-btn" data-id="${id}" style="padding: 0.8rem 1.5rem;">ADD</button>
-                  </div>
-              </div>
-              `;
-          }
-          grid.innerHTML = html;
-
-          // GTM: view_item_list event
-          if (window.dataLayer) {
-              const activeFilterBtn = document.querySelector('.filter-btn.active');
-              const filter = activeFilterBtn ? activeFilterBtn.dataset.filter : 'all';
-              window.dataLayer.push({
-                  event: 'view_item_list',
-                  ecommerce: {
-                      item_list_id: filter === 'all' ? 'catalogue_main' : `catalogue_${filter}`,
-                      item_list_name: filter === 'all' ? 'Catalogue Main' : `Catalogue: ${filter}`,
-                      items: Object.values(window.LB_PRODUCTS)
-                          .filter(p => filter === 'all' || p.category === filter)
-                          .map((p, index) => ({
-                              item_id: p.id,
-                              item_name: p.name,
-                              index: index + 1,
-                              item_category: p.category,
-                              price: window.getProductPrice(p.id, code)?.amount || 0
-                          }))
-                  }
-              });
-          }
-
-          // Re-apply filter logic to show/hide correctly
-          const activeFilterBtn = document.querySelector('.filter-btn.active');
-          const filter = activeFilterBtn ? activeFilterBtn.dataset.filter : 'all';
-          document.querySelectorAll('.product-card').forEach(card => {
-              if (filter === 'all' || card.dataset.category === filter) card.style.display = 'block';
-              else card.style.display = 'none';
-          });
-          if (window.ScrollTrigger) ScrollTrigger.refresh();
-
-          // Bind add-btn
-          document.querySelectorAll('.add-btn').forEach(btn => {
-              btn.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  const pid = btn.dataset.id;
-                  let selectedVariant = null;
-                  const card = btn.closest('.product-card');
-                  const selectedBtn = card.querySelector('.variant-btn.selected');
-                  if (selectedBtn) selectedVariant = selectedBtn.dataset.variant;
-
-                  if (window.LB_CART) LB_CART.add(pid, selectedVariant);
-              });
-          });
-
-          // Bind variants
-          document.querySelectorAll('.variant-btn').forEach(btn => {
-              btn.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  const group = e.target.closest('.variant-options');
-                  group.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('selected'));
-                  btn.classList.add('selected');
-                  
-                  // Swap image
-                  const card = btn.closest('.product-card');
-                  const pid = card.dataset.productId;
-                  const vName = btn.dataset.variant || btn.textContent;
-                  const prod = window.LB_PRODUCTS[pid];
-                  if (prod && prod.variantImages && prod.variantImages[vName]) {
-                     const img = card.querySelector('.product-img');
-                     img.src = prod.variantImages[vName];
-                  }
-              });
-          });
-      }
-
-      document.addEventListener('lb:regionChanged', renderCatalogueProducts);
-      document.addEventListener('DOMContentLoaded', () => { setTimeout(renderCatalogueProducts, 150); });
-      
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-              document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-              btn.classList.add('active');
-              const filter = btn.dataset.filter;
-              document.querySelectorAll('.product-card').forEach(card => {
-                  if (filter === 'all' || card.dataset.category === filter) card.style.display = 'block';
-                  else card.style.display = 'none';
-              });
-              ScrollTrigger.refresh();
-          });
+      document.addEventListener('lb:regionChanged', () => {
+          if (window.lwbPricing && window.lwbPricing.initLwbProductGrids) window.lwbPricing.initLwbProductGrids();
+      });
+      document.addEventListener('DOMContentLoaded', () => {
+          if (window.ScrollTrigger) setTimeout(() => ScrollTrigger.refresh(), 400);
       });
   </script>
 </body>

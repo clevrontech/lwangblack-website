@@ -206,6 +206,7 @@
     <!-- content injected by JS -->
   </div>
 
+  <script src="lwb-api.js"></script>
   <script src="cart.js"></script>
   <script>
     // Hide preloader
@@ -216,7 +217,9 @@
 
     const wrap = document.getElementById('conf-wrap');
     const urlParams = new URLSearchParams(window.location.search);
-    const orderId   = urlParams.get('order_id') || '';
+    const orderFromQuery = urlParams.get('order') || '';
+    const legacyOrderId = urlParams.get('order_id') || '';
+    const orderId = legacyOrderId || orderFromQuery;
     const method    = urlParams.get('method')   || '';
     const sessionId = urlParams.get('session_id') || '';
     const failed    = urlParams.get('failed') === 'true';
@@ -252,6 +255,66 @@
         <div class="conf-row"><span>Total</span><span>${fmtAmount(o, backendData)}</span></div>
         ${pm ? `<div class="conf-row"><span>Payment</span><span>${pm}</span></div>` : ''}
         <div class="conf-row"><span>Status</span><span>${statusHtml}</span></div>`;
+    }
+
+    function renderOrderFromApi(order) {
+      const label = order.orderNumber || order.id;
+      const pm = String(order.paymentMethod || 'cod').toLowerCase();
+      const isCod = pm === 'cod';
+      const itemsHtml = (order.lineItems || []).map((i) => {
+        const line = Number(i.price) * Number(i.qty);
+        return `<div class="conf-row"><span>${i.name || ''}${i.variantTitle ? ` (${i.variantTitle})` : ''} × ${i.qty}</span><span>${line}</span></div>`;
+      }).join('');
+      const totalStr = order.totalDisplay || order.total || '—';
+      const cust = order.customer || {};
+      const email = cust.email || '';
+      const name = cust.name || '';
+      const addr = order.shippingAddress || {};
+      const shipLine = [addr.address, addr.city, addr.postalCode, addr.country].filter(Boolean).join(', ');
+
+      if (isCod) {
+        wrap.innerHTML = `
+        <div class="conf-icon cod">💵</div>
+        <h1 class="conf-title">Order Placed!</h1>
+        <p class="conf-subtitle">
+          Your Cash on Delivery order has been recorded.<br>
+          Please have the exact amount ready when your package arrives.
+        </p>
+        <div class="conf-card">
+          <div class="conf-card-title">Order Summary</div>
+          ${name ? `<div class="conf-row"><span>Customer</span><span>${name}</span></div>` : ''}
+          ${email ? `<div class="conf-row"><span>Email</span><span>${email}</span></div>` : ''}
+          <div class="conf-row"><span>Order</span><span>${label}</span></div>
+          <div class="conf-row"><span>Total</span><span>${totalStr}</span></div>
+          <div class="conf-row"><span>Payment</span><span>Cash on Delivery</span></div>
+          ${itemsHtml ? `<div style="margin-top:1rem">${itemsHtml}</div>` : ''}
+          ${shipLine ? `<div class="conf-row"><span>Ship to</span><span>${shipLine}</span></div>` : ''}
+        </div>
+        <div class="conf-btns">
+          <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
+          <a href="contact.html" class="conf-btn-ghost">CONTACT US</a>
+        </div>
+        <div class="conf-order-id">ORDER · ${label}</div>`;
+        return;
+      }
+      wrap.innerHTML = `
+        <div class="conf-icon success">✓</div>
+        <h1 class="conf-title">Order Confirmed!</h1>
+        <p class="conf-subtitle">
+          Thank you for your purchase.${email ? ` Confirmation sent to <strong>${email}</strong>.` : ''}
+        </p>
+        <div class="conf-card">
+          <div class="conf-card-title">Order Summary</div>
+          <div class="conf-row"><span>Order</span><span>${label}</span></div>
+          <div class="conf-row"><span>Total</span><span>${totalStr}</span></div>
+          <div class="conf-row"><span>Payment</span><span>${pm.toUpperCase()}</span></div>
+          ${itemsHtml ? `<div style="margin-top:1rem">${itemsHtml}</div>` : ''}
+        </div>
+        <div class="conf-btns">
+          <a href="shop.html" class="conf-btn-primary">CONTINUE SHOPPING</a>
+          <a href="index.html" class="conf-btn-ghost">HOME</a>
+        </div>
+        <div class="conf-order-id">ORDER · ${label}</div>`;
     }
 
     // ── Render functions ──────────────────────────────────────────────────────
@@ -409,6 +472,23 @@
 
     // ── Main: verify real payment status from backend ─────────────────────────
     async function verifyAndRender() {
+      if (orderFromQuery && /^LWB-/i.test(orderFromQuery)) {
+        renderLoading('Loading your order…');
+        try {
+          const apiUrl = window.lwbApiUrl
+            ? window.lwbApiUrl('/orders/' + encodeURIComponent(orderFromQuery))
+            : (String(window.LWB_API_BASE || '').replace(/\/$/, '') + '/orders/' + encodeURIComponent(orderFromQuery));
+          const res = await fetch(apiUrl);
+          const data = await res.json();
+          if (data.success && data.order) {
+            renderOrderFromApi(data.order);
+            return;
+          }
+        } catch (e) {
+          console.warn('[order-confirmation]', e);
+        }
+      }
+
       if (!orderId) { renderNotFound(); return; }
       if (failed)   { renderFailed(getLocalOrder(orderId)); return; }
 

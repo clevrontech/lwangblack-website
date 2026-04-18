@@ -224,10 +224,10 @@
             <span class="label-micro">Send a Message</span>
             <h2 class="title-large" style="margin-bottom: 3rem; font-size: clamp(2rem, 4vw, 3.5rem);">WE'LL<br />RESPOND</h2>
             <form id="contactForm">
-                <input type="text" placeholder="FULL NAME" class="input-field" required />
-                <input type="email" placeholder="EMAIL ADDRESS" class="input-field" required />
-                <input type="tel" placeholder="PHONE (OPTIONAL)" class="input-field" />
-                <textarea placeholder="YOUR MESSAGE" class="input-field" rows="5" required style="resize: vertical; padding-top: 1rem; line-height: 1.6;"></textarea>
+                <input type="text" id="contact-name" name="name" placeholder="FULL NAME" class="input-field" required />
+                <input type="email" id="contact-email" name="email" placeholder="EMAIL ADDRESS" class="input-field" required />
+                <input type="tel" id="contact-phone" name="phone" placeholder="PHONE (OPTIONAL)" class="input-field" />
+                <textarea id="contact-message" name="message" placeholder="YOUR MESSAGE" class="input-field" rows="5" required style="resize: vertical; padding-top: 1rem; line-height: 1.6;"></textarea>
                 <button type="submit" class="btn-solid" style="width: 100%; margin-top: 2rem;">SEND MESSAGE</button>
             </form>
         </div>
@@ -270,6 +270,7 @@
       </div>
   </footer>
 
+  <script src="lwb-api.js"></script>
   <script src="geo-router.js" defer></script>
   <script src="au-currency-converter.js" defer></script>
   <script src="region.js" defer></script>
@@ -277,18 +278,41 @@
   <script>
     const contactForm = document.getElementById('contactForm');
     if (contactForm) {
-        contactForm.addEventListener('submit', (e) => {
+        contactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = contactForm.querySelector('button[type="submit"]');
-            btn.innerText = "MESSAGE SENT ✓";
-            btn.style.background = "var(--accent)";
-            btn.style.color = "#fff";
-            setTimeout(() => {
-                btn.innerText = "SEND MESSAGE";
-                btn.style.background = "";
-                btn.style.color = "";
-                contactForm.reset();
-            }, 3000);
+            const orig = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = 'SENDING…';
+            const payload = {
+              name: document.getElementById('contact-name')?.value?.trim(),
+              email: document.getElementById('contact-email')?.value?.trim(),
+              phone: document.getElementById('contact-phone')?.value?.trim() || '',
+              message: document.getElementById('contact-message')?.value?.trim(),
+            };
+            try {
+              const url = window.lwbApiUrl ? window.lwbApiUrl('/contact') : (window.LWB_API_BASE + '/contact');
+              const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+              });
+              const data = await res.json();
+              if (data.success) {
+                btn.innerText = 'MESSAGE SENT ✓';
+                btn.style.background = 'var(--accent)';
+                btn.style.color = '#fff';
+                contactForm.innerHTML = '<p style="text-align:center;padding:2rem 0;font-size:1rem;line-height:1.6;">✅ Message sent! We\'ll reply within 24 hours.</p>';
+              } else {
+                throw new Error(data.error || 'Failed');
+              }
+            } catch (err) {
+              btn.innerText = orig;
+              alert('❌ Failed to send. Please WhatsApp us directly.');
+            } finally {
+              btn.disabled = false;
+              if (btn.innerText === 'SENDING…') btn.innerText = orig;
+            }
         });
     }
   </script>

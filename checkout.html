@@ -157,6 +157,19 @@
     <div id="co-main" class="co-grid" style="width:100%; max-width:1100px; margin:0 auto;">
       <!-- LEFT: Form -->
       <div>
+        <div class="co-region-picker" style="margin-bottom:1.75rem;padding:1.1rem 1.25rem;border:1px solid rgba(255,255,255,0.12);border-radius:12px;background:rgba(255,255,255,0.03);">
+          <label class="co-label" for="checkout-region-select">Region (prices &amp; payment methods)</label>
+          <select id="checkout-region-select" class="co-select" style="max-width:100%;">
+            <option value="NP">Nepal — NPR</option>
+            <option value="AU">Australia — AUD</option>
+            <option value="US">United States — USD</option>
+            <option value="CA">Canada — CAD</option>
+            <option value="NZ">New Zealand — NZD</option>
+            <option value="JP">Japan — JPY</option>
+            <option value="GB">United Kingdom — GBP</option>
+          </select>
+          <p style="font-size:0.68rem;color:rgba(255,255,255,0.38);margin:0.6rem 0 0;line-height:1.4;">Checkout always works worldwide. Change region if prices or payment options look wrong.</p>
+        </div>
         <!-- Steps -->
         <div class="co-steps">
           <div class="co-step active" data-step="1">01 · Contact</div>
@@ -351,6 +364,7 @@
   <!-- Toast -->
   <div id="cartToast">Added</div>
 
+  <script src="lwb-api.js"></script>
   <script src="i18n.js"></script>
   <script src="pricing.js"></script>
   <script src="geo-router.js"></script>
@@ -383,6 +397,17 @@
       const country = LB_REGION.get();
       checkRegion(country);
       buildCountrySelects();
+      const crs = document.getElementById('checkout-region-select');
+      if (crs) {
+        const lr = (function(){ try { return localStorage.getItem('lwb_region'); } catch(e) { return null; } })() || country || 'NP';
+        crs.value = ['NP','AU','US','CA','NZ','JP','GB'].includes(lr) ? lr : 'NP';
+        crs.addEventListener('change', function() {
+          var v = crs.value || 'NP';
+          try { localStorage.setItem('lwb_region', v); } catch(e) {}
+          if (window.GeoRouter && typeof GeoRouter.set === 'function') GeoRouter.set(v);
+          else window.location.reload();
+        });
+      }
       renderOrderSummary();
       // Load Stripe publishable key from backend
       loadPublicSettings();
@@ -604,6 +629,7 @@
           const d = await r.json();
           if (d.stripePublishableKey && typeof Stripe !== 'undefined') {
             stripeInstance = Stripe(d.stripePublishableKey);
+            window.stripeInstance = stripeInstance;
           }
           return d;
         }
@@ -631,6 +657,7 @@
       const METHODS = isNepal ? [
         { id:'card',   label:'Credit card',      icons: CARD_ICONS },
         { id:'esewa',  label:'eSewa',             icons:`<span class="co-pay-icon">${BRAND_ICONS.esewa}</span>`,  redirect:"You'll be redirected to eSewa to complete payment." },
+        { id:'khalti', label:'Khalti',            icons:`<span class="co-pay-icon">${BRAND_ICONS.khalti}</span>`, redirect:"You'll be redirected to Khalti to complete payment." },
         { id:'cod',    label:'Cash on Delivery',  icons:`<span class="co-pay-icon">${BRAND_ICONS.cod}</span>`,    desc:'Pay NPR cash upon delivery. Available within Nepal only.' },
       ] : [
         { id:'card',       label:'Credit card', icons: CARD_ICONS },
@@ -726,6 +753,7 @@
       stripeCardNumber.mount('#stripe-card-number');
       stripeCardExpiry.mount('#stripe-card-expiry');
       stripeCardCvc.mount('#stripe-card-cvc');
+      window.stripeCardNumber = stripeCardNumber;
 
       const showErr = (e) => {
         const el = document.getElementById('stripe-card-errors');
@@ -1020,6 +1048,7 @@
       }
     }
   </script>
+  <script src="lwb-checkout.js"></script>
 </body>
 </html>
 

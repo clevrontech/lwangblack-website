@@ -166,12 +166,14 @@
   <!-- Cart Toast -->
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="lwb-api.js"></script>
   <script src="i18n.js" defer></script>
   <script src="pricing.js" defer></script>
   <script src="geo-router.js" defer></script>
   <script src="au-currency-converter.js" defer></script>
   <script src="region.js" defer></script>
   <script src="cart.js" defer></script>
+  <script src="product-lwb.js" defer></script>
   <script src="script.js" defer></script>
   
   <script>
@@ -419,12 +421,15 @@
 
     // Listen for region changes
     document.addEventListener('lb:regionChanged', () => {
-      renderProduct(); 
-    });
-
-    // Init Page
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(renderProduct, 150); // wait for region to load
+      if (window.__SKIP_LEGACY_PRODUCT__ && window.__lwbCurrentProduct && window.lwbPricing && window.lwbCart) {
+        const region = localStorage.getItem('lwb_region') || 'NP';
+        const p = window.__lwbCurrentProduct;
+        const price = p.prices[region] ?? p.prices.NP;
+        const el = document.getElementById('pp-price');
+        if (el) el.textContent = window.lwbCart.formatPrice(price, region);
+      } else {
+        renderProduct();
+      }
     });
   </script>
 </body>

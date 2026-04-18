@@ -809,6 +809,146 @@ window.getShippingRates = getShippingRates;
 window.getShippingOptions = getShippingOptions;
 window.formatPrice = formatPrice;
 
+// ── API product grid (shop + catalogue) ─────────────────────────────────────
+async function lwbFetchProducts(category) {
+  const qs = category && category !== 'all' ? `?category=${encodeURIComponent(category)}` : '';
+  const url =
+    typeof window.lwbApiUrl === 'function'
+      ? window.lwbApiUrl('/products' + qs)
+      : `${window.LWB_API_BASE}/products${qs}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.products || [];
+  } catch (e) {
+    console.warn('[lwb] products fetch failed', e);
+    return [];
+  }
+}
+
+async function lwbFetchProduct(handleOrId) {
+  const url =
+    typeof window.lwbApiUrl === 'function'
+      ? window.lwbApiUrl('/products/' + encodeURIComponent(handleOrId))
+      : `${window.LWB_API_BASE}/products/${encodeURIComponent(handleOrId)}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.product || null;
+  } catch {
+    return null;
+  }
+}
+
+function lwbRenderStars(rating) {
+  const r = Number(rating) || 0;
+  const full = Math.floor(r);
+  const half = r % 1 >= 0.5;
+  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0));
+}
+
+function lwbRenderProductCard(product) {
+  const region = (typeof window.lwbCart !== 'undefined' && window.lwbCart.getRegion) ? window.lwbCart.getRegion() : (localStorage.getItem('lwb_region') || 'NP');
+  const price = window.lwbCart ? window.lwbCart.formatPrice(product.prices[region] ?? product.prices.NP, region) : '';
+  const cmp = product.compareAtPrices && product.compareAtPrices[region];
+  const comparePrice = cmp ? window.lwbCart.formatPrice(cmp, region) : '';
+  const hasCompare = !!cmp;
+
+  const variantSelect =
+    product.variants && product.variants.length > 1
+      ? `<select class="variant-select lwb-variant" data-lwb-product="${product.id}" style="width:100%;padding:6px;margin-bottom:10px;border:1px solid var(--border-color);border-radius:4px;background:transparent;font-size:12px;color:var(--text-primary);">
+          ${product.variants.map((v) => `<option value="${v.id}">${v.title}</option>`).join('')}
+        </select>`
+      : '';
+
+  return `
+    <div class="product-card" data-category="${product.category}" data-product-id="${product.id}">
+      ${hasCompare ? '<div class="product-badge">SALE</div>' : ''}
+      <a href="product.html?id=${encodeURIComponent(product.handle)}" class="product-image-wrap">
+        <img src="${product.images[0]}" alt="" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover" />
+      </a>
+      <div class="product-info">
+        <p class="product-category" style="font-size:10px;letter-spacing:2px;color:var(--text-muted);margin:0">${String(product.category).toUpperCase()}</p>
+        <h3 class="product-title" style="margin:6px 0 4px;font-size:clamp(1rem,2vw,1.1rem)">${product.title}</h3>
+        <div class="product-rating" style="color:var(--accent);font-size:12px;margin-bottom:8px">
+          ${lwbRenderStars(product.rating)} <span style="color:var(--text-muted)">(${product.reviewCount})</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <span class="product-price" style="font-size:1.35rem;font-family:var(--font-heading)">${price}</span>
+          ${comparePrice ? `<span style="text-decoration:line-through;color:var(--text-muted);font-size:0.85rem">${comparePrice}</span>` : ''}
+        </div>
+        ${variantSelect}
+        <button type="button" class="btn-solid" style="width:100%;padding:0.75rem;font-size:0.65rem;letter-spacing:2px;"
+          data-lwb-add="${product.id}">ADD TO CART</button>
+      </div>
+    </div>`;
+}
+
+let _lwbProductCache = [];
+
+async function lwbAddFromGrid(productId) {
+  let p = _lwbProductCache.find((x) => x.id === productId);
+  if (!p) p = await lwbFetchProduct(productId);
+  if (!p) {
+    if (window.lwbCart && window.lwbCart.showToast) window.lwbCart.showToast('Product not found', 'error');
+    return;
+  }
+  const sel = document.querySelector(`select[data-lwb-product="${productId}"]`);
+  const vid = sel ? sel.value : p.variants[0].id;
+  window.lwbCart.addToCart(p, vid, 1);
+}
+
+async function initLwbProductGrids() {
+  if (typeof window.LWB_API_BASE === 'undefined' && typeof location !== 'undefined') {
+    window.LWB_API_BASE = location.origin.replace(/\/$/, '') + '/api';
+  }
+  const sel = '#lb-shop-grid, .product-grid, #products-grid, #product-grid';
+  const grid = document.querySelector(sel);
+  if (!grid) return;
+
+  grid.innerHTML = `<div class="lwb-loading" style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted)">Loading products…</div>`;
+
+  const products = await lwbFetchProducts('all');
+  _lwbProductCache = products;
+
+  if (!products.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted)">No products available.</div>`;
+    return;
+  }
+
+  function render(list) {
+    grid.innerHTML = list.map(lwbRenderProductCard).join('');
+    grid.querySelectorAll('[data-lwb-add]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        lwbAddFromGrid(btn.getAttribute('data-lwb-add'));
+      });
+    });
+  }
+
+  render(products);
+
+  document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cat = btn.getAttribute('data-filter') || 'all';
+      const filtered = cat === 'all' ? products : products.filter((p) => p.category === cat);
+      render(filtered);
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initLwbProductGrids();
+});
+
+window.lwbPricing = {
+  fetchProducts: lwbFetchProducts,
+  fetchProduct: lwbFetchProduct,
+  initLwbProductGrids,
+  lwbRenderProductCard,
+};
+
 // Variant image preloading removed for performance
 // Images load on-demand when variants are selected
 

@@ -1,0 +1,113 @@
+[
+  {
+    "id": "lwb-001",
+    "handle": "lwang-black-original-100g",
+    "title": "Lwang Black Original — 100g",
+    "subtitle": "Bold. Smooth. Zero Additives.",
+    "category": "coffee",
+    "description": "Specialty-grade Arabica fused with hand-selected cloves. No fillers, no additives. Just the pure, functional power of nature in a 100g pouch.",
+    "images": [
+      "https://cdn2.blanxer.com/uploads/68b26f1169953999df49c53a/product_image-dsc07374-1109.webp",
+      "https://www.lwangblack.co/images/5.png"
+    ],
+    "variants": [
+      { "id": "lwb-001-wb", "title": "Whole Bean", "sku": "LB-100-WB", "inventory": 50 },
+      { "id": "lwb-001-gr", "title": "Ground", "sku": "LB-100-GR", "inventory": 50 }
+    ],
+    "prices": { "NP": 850, "AU": 22, "US": 15, "CA": 20, "JP": 2200, "NZ": 25, "GB": 18 },
+    "compareAtPrices": { "NP": 1000, "AU": 28, "US": 19, "CA": 25, "JP": 2800, "NZ": 30, "GB": 22 },
+    "status": "active",
+    "tags": ["coffee", "bestseller"],
+    "rating": 4.9,
+    "reviewCount": 47,
+    "features": ["Specialty Arabica", "Hand-selected cloves", "No additives", "100g"]
+  },
+  {
+    "id": "lwb-002",
+    "handle": "lwang-black-premium-250g",
+    "title": "Lwang Black Premium — 250g",
+    "subtitle": "Our Flagship Blend",
+    "category": "coffee",
+    "description": "Our signature 250g blend. Double the coffee, double the ritual. Perfect for the dedicated daily brewer who wants premium quality every morning.",
+    "images": [
+      "https://cdn2.blanxer.com/uploads/68b26f1169953999df49c53a/product_image-dsc07374-1109.webp",
+      "https://www.lwangblack.co/images/5.png"
+    ],
+    "variants": [
+      { "id": "lwb-002-wb", "title": "Whole Bean", "sku": "LB-250-WB", "inventory": 30 },
+      { "id": "lwb-002-gr", "title": "Ground", "sku": "LB-250-GR", "inventory": 30 }
+    ],
+    "prices": { "NP": 1800, "AU": 48, "US": 32, "CA": 44, "JP": 4800, "NZ": 54, "GB": 40 },
+    "compareAtPrices": { "NP": 2200, "AU": 58, "US": 39, "CA": 53, "JP": 5800, "NZ": 65, "GB": 48 },
+    "status": "active",
+    "tags": ["coffee", "premium"],
+    "rating": 4.8,
+    "reviewCount": 28,
+    "features": ["250g value size", "Specialty Arabica", "Best for daily use", "Premium packaging"]
+  },
+  {
+    "id": "lwb-003",
+    "handle": "lwang-black-starter-kit",
+    "title": "Starter Kit Bundle",
+    "subtitle": "Everything You Need to Begin",
+    "category": "bundles",
+    "description": "Two 100g pouches — one whole bean, one ground — plus our branded stainless steel travel mug. The perfect introduction to Lwang Black or a premium gift.",
+    "images": [
+      "https://cdn2.blanxer.com/uploads/68b26f1169953999df49c53a/product_image-dsc07374-1109.webp",
+      "https://www.lwangblack.co/images/5.png"
+    ],
+    "variants": [
+      { "id": "lwb-003-std", "title": "Standard Bundle", "sku": "LB-KIT-01", "inventory": 20 }
+    ],
+    "prices": { "NP": 2200, "AU": 58, "US": 40, "CA": 54, "JP": 5900, "NZ": 65, "GB": 50 },
+    "compareAtPrices": { "NP": 2800, "AU": 72, "US": 50, "CA": 68, "JP": 7400, "NZ": 80, "GB": 60 },
+    "status": "active",
+    "tags": ["bundles", "gift", "bestseller"],
+    "rating": 5.0,
+    "reviewCount": 12,
+    "features": ["2x 100g pouches", "Travel mug included", "Gift packaging", "Save 20%"]
+  },
+  {
+    "id": "lwb-004",
+    "handle": "lwang-black-mug",
+    "handleAliases": ["lwang-black-travel-mug"],
+    "title": "Lwang Black Branded Mug",
+    "subtitle": "Premium Stainless Steel",
+    "category": "accessories",
+    "description": "Double-walled insulated stainless steel travel mug. 350ml. Keeps your Lwang Black hot for 6 hours, cold for 12. Matte black with logo embossed.",
+    "images": [
+      "https://www.lwangblack.co/images/5.png"
+    ],
+    "variants": [
+      { "id": "lwb-004-blk", "title": "Matte Black — 350ml", "sku": "LB-MUG-BK", "inventory": 15 }
+    ],
+    "prices": { "NP": 800, "AU": 22, "US": 15, "CA": 20, "JP": 2100, "NZ": 24, "GB": 17 },
+    "compareAtPrices": {},
+    "status": "active",
+    "tags": ["accessories"],
+    "rating": 4.7,
+    "reviewCount": 8,
+    "features": ["350ml capacity", "6hr hot / 12hr cold", "Matte black finish", "BPA-free"]
+  },
+  {
+    "id": "lwb-005",
+    "handle": "lwang-black-gift-set",
+    "title": "Gift Set — Premium",
+    "subtitle": "The Perfect Gift",
+    "category": "bundles",
+    "description": "Our most popular gift. One 250g Premium pouch plus the branded travel mug, presented in a luxury gift box. Ships with a handwritten note.",
+    "images": [
+      "https://cdn2.blanxer.com/uploads/68b26f1169953999df49c53a/product_image-dsc07374-1109.webp"
+    ],
+    "variants": [
+      { "id": "lwb-005-std", "title": "Gift Set", "sku": "LB-GIFT-01", "inventory": 10 }
+    ],
+    "prices": { "NP": 2800, "AU": 72, "US": 50, "CA": 68, "JP": 7500, "NZ": 80, "GB": 62 },
+    "compareAtPrices": { "NP": 3200, "AU": 82, "US": 57, "CA": 77, "JP": 8500, "NZ": 92, "GB": 72 },
+    "status": "active",
+    "tags": ["bundles", "gift"],
+    "rating": 4.9,
+    "reviewCount": 6,
+    "features": ["250g Premium + Mug", "Luxury gift box", "Handwritten note", "Free gift wrapping"]
+  }
+]

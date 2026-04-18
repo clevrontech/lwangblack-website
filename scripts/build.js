@@ -7,9 +7,41 @@ const { execSync } = require('child_process');
 const ROOT   = path.resolve(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'public');
 
-function run(cmd) {
+function run(cmd, envMerge) {
   console.log(`\n> ${cmd}`);
-  execSync(cmd, { stdio: 'inherit', cwd: ROOT });
+  const opts = { stdio: 'inherit', cwd: ROOT };
+  if (envMerge && Object.keys(envMerge).length) opts.env = { ...process.env, ...envMerge };
+  execSync(cmd, opts);
+}
+
+/** Vite admin app: full backend origin (https://xxx.onrender.com). Derived from LWB_API_BASE if unset. */
+function resolveViteApiUrlForAdmin() {
+  const explicit = (process.env.VITE_API_URL || '').trim();
+  if (explicit) return explicit;
+  const lwb = (process.env.LWB_API_BASE || '').trim();
+  if (!lwb) return '';
+  try {
+    return new URL(lwb.startsWith('http') ? lwb : `https://${lwb}`).origin;
+  } catch {
+    return '';
+  }
+}
+
+function injectLwbApiBase() {
+  let base = (process.env.LWB_API_BASE || '').trim().replace(/\/$/, '');
+  if (!base) return;
+  if (!base.endsWith('/api')) base = `${base.replace(/\/$/, '')}/api`;
+  const file = path.join(PUBLIC, 'lwb-api.js');
+  if (!fs.existsSync(file)) return;
+  const needle = "var __LWB_BUILD_API_BASE__ = '';";
+  let s = fs.readFileSync(file, 'utf8');
+  if (!s.includes(needle)) {
+    console.warn('  WARNING: public/lwb-api.js missing __LWB_BUILD_API_BASE__ placeholder');
+    return;
+  }
+  s = s.replace(needle, `var __LWB_BUILD_API_BASE__ = ${JSON.stringify(base)};`);
+  fs.writeFileSync(file, s);
+  console.log('\n===  Injected LWB_API_BASE into public/lwb-api.js  ===');
 }
 
 function ensureDir(dir) {
@@ -52,8 +84,11 @@ const adminOutDir       = path.join(ROOT, 'admin');
 if (fs.existsSync(path.join(adminDashboardDir, 'package.json'))) {
   try {
     console.log('\n===  Building admin dashboard  ===');
-    run('npm --prefix admin-dashboard install --no-audit --no-fund');
-    run('npm --prefix admin-dashboard run build');
+    const viteOrigin = resolveViteApiUrlForAdmin();
+    const adminEnv = viteOrigin ? { VITE_API_URL: viteOrigin } : {};
+    if (viteOrigin) console.log(`  VITE_API_URL → ${viteOrigin} (from env or LWB_API_BASE)`);
+    run('npm --prefix admin-dashboard install --no-audit --no-fund', adminEnv);
+    run('npm --prefix admin-dashboard run build', adminEnv);
     console.log('  Admin dashboard built successfully.');
   } catch (err) {
     console.error('\n  WARNING: Admin dashboard build failed:', err.message);
@@ -82,7 +117,6 @@ const SKIP = new Set([
   '.env', '.env.example', '.env.local', '.env.production',
   'package.json', 'package-lock.json', 'vercel.json',
   '.gitignore', '.vercelignore', '.node-version', '.nvmrc',
-  'apply_clone.py', 'fetch_images.js',
 ]);
 
 for (const entry of fs.readdirSync(ROOT, { withFileTypes: true })) {
@@ -112,6 +146,11 @@ if (fs.existsSync(adminOutDir)) {
   console.log('  Done.');
 } else {
   console.warn('\n  WARNING: admin/ directory not found — admin dashboard will not be available');
+}
+
+injectLwbApiBase();
+if (!(process.env.LWB_API_BASE || '').trim() && process.env.VERCEL) {
+  console.warn('\n  NOTE: Set LWB_API_BASE in Vercel (e.g. https://YOUR-SERVICE.onrender.com/api) so the storefront hits Render.');
 }
 
 // ── Verify ──────────────────────────────────────────────────────────────────

@@ -1,8 +1,8 @@
 {
   "name": "lwang-black",
   "version": "1.0.0",
-  "description": "Lwang Black ecommerce — static storefront + admin dashboard + API proxy",
-  "main": "api/index.js",
+  "description": "Lwang Black ecommerce — static storefront on Vercel, Express API on Render",
+  "main": "scripts/build.js",
   "scripts": {
     "build": "node scripts/build.js",
     "dev": "npm --prefix backend run dev",

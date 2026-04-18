@@ -47,6 +47,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+  <script src="lwb-api.js"></script>
   <script src="i18n.js" defer></script>
   <script src="pricing.js" defer></script>
   <script src="geo-router.js" defer></script>
@@ -266,170 +267,15 @@
 
   <script src="script.js"></script>
   <script>
-  // ── Active filter ────────────────────────
-  let _currentFilter = 'all';
-
-  // Filter buttons
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      _currentFilter = btn.dataset.filter;
-      renderRegionalPrices(LB_REGION.get());
-    });
+  document.addEventListener('lb:regionChanged', () => {
+    if (window.lwbPricing && typeof window.lwbPricing.initLwbProductGrids === 'function') {
+      window.lwbPricing.initLwbProductGrids();
+    }
   });
-
-  // ── Build product card HTML ───────────────
-  function buildProductCard(p, priceObj, country) {
-    const available = !!priceObj;
-    let badgeText = p.badge || '';
-    if (badgeText) badgeText = window.LBi18n ? window.LBi18n.t(`prod.${p.id}.badge`, p.badge) : p.badge;
-    const badgeHtml = badgeText ? `<div class="product-badge">${badgeText}</div>` : '';
-    const labelColor = p.category === 'bundles' ? 'color: var(--accent);' : '';
-    const pName = window.LBi18n ? window.LBi18n.t(`prod.${p.id}.name`, p.name) : p.name;
-    const pDesc = window.LBi18n ? window.LBi18n.t(`prod.${p.id}.desc`, p.description) : p.description;
-    const addText = window.LBi18n ? window.LBi18n.t('btn.add_to_cart', 'ADD TO CART') : 'ADD TO CART';
-
-    let variantHtml = '';
-    if (p.variants) {
-      variantHtml = `<div class="variant-options" id="var-${p.id}">
-        ${p.variants.map((v, i) => `<button class="variant-btn ${i===0?'selected':''}" onclick="selectVariant(event,'${p.id}','${v}')">${v}</button>`).join('')}
-      </div>`;
-    }
-
-    let bottomHtml;
-    if (available) {
-      bottomHtml = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem;">
-          <span style="font-family:var(--font-heading); font-size:1.5rem;">${priceObj.display}</span>
-          <button class="btn-solid" style="padding:0.8rem 1.5rem;"
-            onclick="event.stopPropagation(); addToCartFromShop('${p.id}', this)">
-            ${addText}
-          </button>
-        </div>`;
-    } else {
-      bottomHtml = `
-        <div class="lb-region-unavailable" style="margin-top:auto;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-          Not available in your region
-        </div>`;
-    }
-
-    return `
-      <div class="product-card" data-category="${p.category}" data-product-id="${p.id}" id="product-${p.id}" onclick="if(!event.target.classList.contains('btn-solid') && !event.target.classList.contains('variant-btn')) window.location='product.html?id=${p.id}'" style="cursor:pointer;">
-        <div style="position: relative;">
-            ${badgeHtml}
-            <img src="${p.image}" alt="${pName}" class="product-img" loading="lazy" onerror="this.src='images/product-hero-500g.jpg'" />
-        </div>
-        <span class="label-micro" style="margin-bottom:0.5rem;${labelColor}">${p.category.toUpperCase()}${badgeText && p.category==='bundles' ? ' — BEST VALUE' : ''}</span>
-        <h2 style="font-family:var(--font-heading); font-size:1.8rem; margin-bottom:1rem; font-weight:400;">${pName}</h2>
-        <p style="margin-bottom:1.5rem; flex-grow:1; color:var(--text-muted); font-size:0.9rem; line-height:1.7; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${pDesc}</p>
-        ${variantHtml}
-        ${bottomHtml}
-      </div>`;
-  }
-
-
-  // ── Render all products for current region ─
-  function renderRegionalPrices(countryCode) {
-    const grid = document.getElementById('lb-shop-grid');
-    if (!grid || !window.LB_PRODUCTS) return;
-
-    const products = Object.values(window.LB_PRODUCTS);
-    let html = '';
-
-    products.forEach(p => {
-      if (_currentFilter !== 'all' && p.category !== _currentFilter) return;
-      const priceObj = window.getProductPrice(p.id, countryCode);
-      html += buildProductCard(p, priceObj, countryCode);
-    });
-
-    grid.innerHTML = html;
-
-    // GTM: view_item_list event
-    if (window.dataLayer && products.length > 0) {
-      window.dataLayer.push({
-        event: 'view_item_list',
-        ecommerce: {
-          item_list_id: _currentFilter === 'all' ? 'main_shop' : `category_${_currentFilter}`,
-          item_list_name: _currentFilter === 'all' ? 'Main Shop' : `Category: ${_currentFilter}`,
-          items: products
-            .filter(p => _currentFilter === 'all' || p.category === _currentFilter)
-            .map((p, index) => ({
-              item_id: p.id,
-              item_name: p.name,
-              index: index + 1,
-              item_category: p.category,
-              price: window.getProductPrice(p.id, countryCode)?.amount || 0
-            }))
-        }
-      });
-    }
-
-    // Animate in
-    gsap.fromTo('#lb-shop-grid .product-card',
-      { opacity: 0, y: 20 },
-      { opacity: 1, y: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out' }
-    );
-
-    // Re-wire variant buttons
-    document.querySelectorAll('.variant-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const group = e.target.closest('.variant-options');
-        group?.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        
-        // Swap image logic
-        const card = btn.closest('.product-card');
-        const pid = card.dataset.productId;
-        const vName = btn.textContent;
-        const prod = window.LB_PRODUCTS[pid];
-        if (prod && prod.variantImages && prod.variantImages[vName]) {
-           const img = card.querySelector('.product-img');
-           img.src = prod.variantImages[vName];
-        }
-      });
-    });
-  }
-
-  // ── Track selected variant per product ────
-  const _selectedVariants = {};
-  function selectVariant(e, productId, variantName) {
-    _selectedVariants[productId] = variantName;
-    const group = e.target.closest('.variant-options');
-    group?.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('selected'));
-    e.target.classList.add('selected');
-  }
-
-  // ── Add to cart from shop ─────────────────
-  function addToCartFromShop(productId, btn) {
-    const variant = _selectedVariants[productId] || null;
-    if (window.LB_CART) {
-      LB_CART.add(productId, variant);
-    }
-    // Button flash
-    btn.textContent = '✓ ADDED';
-    btn.style.background = '#2e624c';
-    btn.style.color = '#fff';
-    setTimeout(() => { btn.textContent = 'ADD TO CART'; btn.style.background=''; btn.style.color=''; }, 1500);
-  }
-
-  // ── Listen for region and currency changes ─────────────
-  document.addEventListener('lb:regionChanged', (e) => {
-    renderRegionalPrices(e.detail.code || window.LB_REGION?.get() || 'AU');
-  });
-
   document.addEventListener('lb:currencyConverted', () => {
-    renderRegionalPrices(window.LB_REGION?.get() || 'AU');
-  });
-
-  // ── Init on load ──────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    // Wait for region to init, then render
-    setTimeout(() => {
-      const country = window.LB_REGION?.get() || 'US';
-      renderRegionalPrices(country);
-    }, 300);
+    if (window.lwbPricing && typeof window.lwbPricing.initLwbProductGrids === 'function') {
+      window.lwbPricing.initLwbProductGrids();
+    }
   });
   </script>
 </body>

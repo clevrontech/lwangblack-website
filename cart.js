@@ -483,10 +483,47 @@ function injectCartIcon() {
   LB_CART._updateBadge(LB_CART.load().reduce((s, i) => s + i.qty, 0));
 }
 
+function wireCartRealtime() {
+  window.addEventListener('lwb-inventory-update', (ev) => {
+    const d = ev.detail || {};
+    const cart = getCartRaw();
+    let changed = false;
+    const next = cart
+      .map((line) => {
+        if (d.productId && String(line.productId) === String(d.productId)) {
+          const avail =
+            typeof d.totalStock === 'number'
+              ? d.totalStock
+              : typeof d.stock === 'number'
+                ? d.stock
+                : null;
+          if (avail != null && line.qty > avail) {
+            changed = true;
+            LB_CART._showToast(
+              avail <= 0
+                ? `${line.name} is out of stock — removed from cart.`
+                : `Stock update: ${line.name} limited to ${avail}.`,
+              'error'
+            );
+            if (avail <= 0) return null;
+            return { ...line, qty: avail };
+          }
+        }
+        return line;
+      })
+      .filter(Boolean);
+    if (changed) {
+      saveCartRaw(next);
+      LB_CART.renderDrawer();
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   buildCartDrawer();
   injectCartIcon();
   updateAllBadges();
+  wireCartRealtime();
 });
 
 window.LB_CART = LB_CART;

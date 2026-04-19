@@ -1,5 +1,6 @@
-# Render Blueprint — deploy backend Web service + Postgres + Redis.
-# Connect your repo in Render → New Blueprint → select this file.
+# Render Blueprint — API web + optional background worker + Postgres + Redis.
+# New Blueprint → select this file. Set "sync: false" secrets in the Render dashboard.
+# Autoscaling: upgrade the web service plan in the dashboard (Starter+); workers scale independently.
 services:
   - type: web
     name: lwang-black-api
@@ -28,6 +29,9 @@ services:
         generateValue: true
       - key: SITE_URL
         sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      # Payments
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
@@ -38,6 +42,59 @@ services:
         sync: false
       - key: PAYPAL_WEBHOOK_ID
         sync: false
+      - key: ESEWA_MERCHANT_ID
+        sync: false
+      - key: ESEWA_SECRET_KEY
+        sync: false
+      # Shopify (Storefront + Admin + webhooks)
+      - key: SHOPIFY_ENABLED
+        sync: false
+      - key: SHOPIFY_STORE_DOMAIN
+        sync: false
+      - key: SHOPIFY_STOREFRONT_ACCESS_TOKEN
+        sync: false
+      - key: SHOPIFY_ADMIN_ACCESS_TOKEN
+        sync: false
+      - key: SHOPIFY_API_SECRET
+        sync: false
+      - key: SHOPIFY_API_VERSION
+        value: "2024-10"
+      # Logistics / carriers (set only what you use)
+      - key: USPS_USER_ID
+        sync: false
+      - key: AUSPOST_API_KEY
+        sync: false
+      - key: NZPOST_CLIENT_ID
+        sync: false
+      - key: JAPANPOST_API_KEY
+        sync: false
+      - key: CHITCHATS_API_TOKEN
+        sync: false
+      - key: PATHAO_CLIENT_ID
+        sync: false
+      - key: PATHAO_CLIENT_SECRET
+        sync: false
+
+  # Long-running worker (webhook DLQ / scheduled jobs — extend src/workers/queue.js)
+  - type: worker
+    name: lwang-black-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: node src/workers/queue.js
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lwang-black-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: lwang-black-redis
+          type: redis
+          property: connectionString
 
   - type: redis
     name: lwang-black-redis

@@ -892,3 +892,19 @@ body .nav-brand {
 .variant-btn:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
 .variant-btn.selected { background: #fff; color: #002347; border-color: #fff; font-weight: 600; }
 
+/* ── Global trust strip (#lwb-trust-host + lwb-trust.js) ───────────────────── */
+#lwb-trust-host { margin: 0; padding: 0; }
+.lwb-trust-bar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem 1rem;
+  padding: 0.65rem 1rem; margin: 0 auto 1.25rem; max-width: 960px;
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+  background: rgba(0,0,0,0.25); font-family: 'Inter', sans-serif; font-size: 0.68rem;
+  color: rgba(255,255,255,0.55); letter-spacing: 0.04em;
+}
+.lwb-trust-sep { opacity: 0.35; }
+.lwb-trust-logos { display: inline-flex; flex-wrap: wrap; gap: 0.4rem; }
+.lwb-trust-pay {
+  padding: 0.15rem 0.45rem; border-radius: 4px;
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.65); font-weight: 600; font-size: 0.6rem;
+}
+

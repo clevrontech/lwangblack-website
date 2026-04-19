@@ -3,6 +3,7 @@ const express = require('express');
 const crypto = require('crypto');
 const Stripe = require('stripe');
 const db = require('../db/pool');
+const { cacheGet, cacheSet } = require('../db/redis');
 const config = require('../config');
 const { requireAuth, auditLog } = require('../middleware/auth');
 const { broadcast } = require('../ws');
@@ -140,6 +141,17 @@ function memUpdateOrderPaid(orderId, method, reference) {
 // ── Helper: update order status in DB or memory ─────────────────────────────
 // When status becomes 'paid', triggers confirmation email + invoice generation.
 async function updateOrderStatus(orderId, status, method, reference) {
+  if (status === 'paid') {
+    if (db.isUsingMemory()) {
+      const mem = db.getMemStore();
+      const o = mem.orders.find((x) => x.id === orderId);
+      if (o?.status === 'paid') return;
+    } else {
+      const row = await db.queryOne('SELECT status FROM orders WHERE id = $1', [orderId]);
+      if (row?.status === 'paid') return;
+    }
+  }
+
   let order = null;
   let customer = null;
 
@@ -637,13 +649,26 @@ router.post('/stripe-webhook', express.raw({ type: 'application/json' }), async 
       catch { return res.status(400).json({ error: 'Invalid JSON' }); }
     }
 
+    const evtId = event.id;
+    if (evtId) {
+      const dup = await cacheGet(`stripe:evt:${evtId}`);
+      if (dup) return res.json({ received: true, duplicate: true });
+      await cacheSet(`stripe:evt:${evtId}`, { at: Date.now() }, 86400);
+    }
+
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const orderId = session.metadata?.orderId;
       const paymentType = session.metadata?.paymentType || 'stripe';
       if (orderId && orderId !== 'unknown') {
-        await updateOrderStatus(orderId, 'paid', paymentType, session.payment_intent);
-        broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: paymentType } });
+        await withRetry(
+          async () => {
+            await updateOrderStatus(orderId, 'paid', paymentType, session.payment_intent);
+            broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: paymentType, source: 'stripe_webhook' } });
+            broadcast({ type: 'store:order:new', data: { orderId, status: 'paid', method: paymentType } });
+          },
+          { maxAttempts: 5, baseMs: 400 }
+        );
       }
     }
 
@@ -652,8 +677,14 @@ router.post('/stripe-webhook', express.raw({ type: 'application/json' }), async 
       const pi = event.data.object;
       const orderId = pi.metadata?.orderId;
       if (orderId) {
-        await updateOrderStatus(orderId, 'paid', 'card', pi.id);
-        broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'card' } });
+        await withRetry(
+          async () => {
+            await updateOrderStatus(orderId, 'paid', 'card', pi.id);
+            broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'card', source: 'stripe_webhook' } });
+            broadcast({ type: 'store:order:new', data: { orderId, status: 'paid', method: 'card' } });
+          },
+          { maxAttempts: 5, baseMs: 400 }
+        );
       }
     }
 
@@ -867,8 +898,14 @@ router.get('/esewa-verify', async (req, res) => {
     if (encodedData) {
       const decoded = JSON.parse(Buffer.from(encodedData, 'base64').toString('utf8'));
       if (decoded.status === 'COMPLETE') {
-        await updateOrderStatus(orderId, 'paid', 'esewa', decoded.transaction_uuid || decoded.transaction_code);
-        broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'esewa' } });
+        await withRetry(
+          async () => {
+            await updateOrderStatus(orderId, 'paid', 'esewa', decoded.transaction_uuid || decoded.transaction_code);
+            broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'esewa' } });
+            broadcast({ type: 'store:order:new', data: { orderId, status: 'paid', method: 'esewa' } });
+          },
+          { maxAttempts: 4, baseMs: 400 }
+        );
       }
     }
     res.redirect(`${config.siteUrl}/order-confirmation.html?order_id=${orderId}&method=esewa`);
@@ -1152,6 +1189,13 @@ router.post('/paypal-webhook', async (req, res) => {
     if (!verified) {
       console.warn('[Payments] PayPal webhook verification failed');
       return res.status(401).json({ error: 'Invalid webhook signature' });
+    }
+
+    const ppEvId = eventBody?.id;
+    if (ppEvId) {
+      const dup = await cacheGet(`paypal:evt:${ppEvId}`);
+      if (dup) return res.json({ received: true, duplicate: true });
+      await cacheSet(`paypal:evt:${ppEvId}`, { at: Date.now() }, 86400);
     }
 
     const eventType = eventBody.event_type;

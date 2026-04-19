@@ -49,6 +49,36 @@
     else alert(msg);
   }
 
+  async function validateCartStockLines() {
+    const raw = window.LB_CART?.load() || [];
+    if (!raw.length) return { ok: true };
+    if (raw.every((i) => i.shopify)) return { ok: true };
+    const res = await fetch(`${apiBase()}/products/stock-check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: raw.map((i) => ({
+          productId: i.productId,
+          variantId: i.variantId,
+          qty: i.qty,
+          shopify: i.shopify,
+        })),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok && Array.isArray(data.issues) && data.issues.length) {
+      const msg = data.issues
+        .map((x) =>
+          x.reason === 'not_found'
+            ? `${x.productId}: product unavailable`
+            : `${x.name || x.productId}: only ${x.available ?? 0} left (requested ${x.requested})`
+        )
+        .join('. ');
+      return { ok: false, message: msg || 'Not enough stock for one or more items.' };
+    }
+    return { ok: true };
+  }
+
   async function postOrder(payload) {
     const res = await fetch(`${apiBase()}/orders`, {
       method: 'POST',
@@ -132,6 +162,13 @@
     }
 
     try {
+      const stock = await validateCartStockLines();
+      if (!stock.ok) {
+        showErr(stock.message);
+        resetBtn();
+        return;
+      }
+
       await (window.__lwbShopifyReady || Promise.resolve());
       if (window.__LWB_SHOPIFY_ACTIVE__) {
         const rawLines = window.LB_CART?.load() || [];
@@ -161,6 +198,12 @@
       if (paymentMethod === 'cod') {
         const data = await postOrder({ ...basePayload, paymentMethod: 'cod' });
         if (!data.success) throw new Error(data.error || 'Order failed');
+        window.dispatchEvent(
+          new CustomEvent('lwb-order-placed', { detail: { orderNumber: data.orderNumber, method: 'cod' } })
+        );
+        try {
+          window.LB_CART._showToast('Order placed — preparing confirmation…', 'success');
+        } catch (_) {}
         window.LB_CART.clear();
         window.location.href = `order-confirmation.html?order=${encodeURIComponent(data.orderNumber)}`;
         return;
@@ -265,6 +308,12 @@
         }
         const ord = await postOrder(orderPayload);
         if (!ord.success) throw new Error(ord.error || 'Could not save order');
+        window.dispatchEvent(
+          new CustomEvent('lwb-order-placed', { detail: { orderNumber: ord.orderNumber, method: 'stripe' } })
+        );
+        try {
+          window.LB_CART._showToast('Payment confirmed — saving your order…', 'success');
+        } catch (_) {}
         window.LB_CART.clear();
         window.location.href = `order-confirmation.html?order=${encodeURIComponent(ord.orderNumber)}`;
         return;
@@ -286,5 +335,13 @@
     window.submitPayment = function () {
       return window.lwbCheckoutSubmit();
     };
+    window.addEventListener('lwb-order-event', (ev) => {
+      const d = ev.detail || {};
+      if (d.status === 'paid' && window.LB_CART?._showToast) {
+        try {
+          window.LB_CART._showToast('Payment confirmed — thank you!', 'success');
+        } catch (_) {}
+      }
+    });
   });
 })();

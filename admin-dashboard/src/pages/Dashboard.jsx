@@ -199,7 +199,7 @@ export default function Dashboard() {
         scheduleReload();
       }
     },
-    { enabled: !!user?.id, userId: user?.id }
+    { enabled: !!user }
   );
 
   if (loading) {

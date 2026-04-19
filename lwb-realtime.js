@@ -34,7 +34,11 @@
         if (msg.type === 'inventory:update') {
           window.dispatchEvent(new CustomEvent('lwb-inventory-update', { detail: msg.data || {} }));
         }
-        if (msg.type === 'store:order:new' || msg.type === 'order:updated') {
+        if (
+          msg.type === 'store:order:new' ||
+          msg.type === 'order:new' ||
+          msg.type === 'order:updated'
+        ) {
           window.dispatchEvent(new CustomEvent('lwb-order-event', { detail: msg.data || {} }));
         }
       } catch (_) {}

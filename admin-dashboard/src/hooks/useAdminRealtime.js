@@ -7,15 +7,15 @@ import { resolveRealtimeWsUrl } from '../lib/realtime';
  * Fires `onEvent` for server pushes so dashboards can refetch KPIs.
  *
  * @param {(msg: object) => void} onEvent
- * @param {{ enabled?: boolean, userId?: string | null }} options
+ * @param {{ enabled?: boolean }} options
  */
 export function useAdminRealtime(onEvent, options = {}) {
-  const { enabled = true, userId = null } = options;
+  const { enabled = true } = options;
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
   useEffect(() => {
-    if (!enabled || !userId) return;
+    if (!enabled) return;
     const token = getAccessToken();
     if (!token) return;
 
@@ -76,5 +76,5 @@ export function useAdminRealtime(onEvent, options = {}) {
         if (ws) ws.close();
       } catch (_) {}
     };
-  }, [enabled, userId]);
+  }, [enabled]);
 }

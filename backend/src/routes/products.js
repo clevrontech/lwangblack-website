@@ -5,9 +5,20 @@ const path = require('path');
 const db = require('../db/pool');
 const { cacheFlush, cacheGet, cacheSet } = require('../db/redis');
 const { requireAuth, requireRole, auditLog } = require('../middleware/auth');
-const { broadcast } = require('../ws');
+const { broadcast, broadcastInventoryUpdate } = require('../ws');
 
 const router = express.Router();
+
+/** Resolve available units for a cart line (JSON catalog variants, DB aggregate stock, or Shopify-skip). */
+function availableUnitsForLine(product, variantId) {
+  if (!product) return 0;
+  const variants = product.variants;
+  if (Array.isArray(variants) && variants.length && typeof variants[0] === 'object') {
+    const v = variants.find((vv) => vv.id === variantId);
+    if (v) return Number(v.inventory != null ? v.inventory : v.stock) || 0;
+  }
+  return Math.max(0, parseInt(product.stock, 10) || 0);
+}
 
 function loadJsonCatalogProducts() {
   try {
@@ -77,6 +88,75 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error('[Products] List error:', err);
     res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+// ── POST /api/products/stock-check (public — cart / checkout validation) ─────
+router.post('/stock-check', async (req, res) => {
+  try {
+    const items = req.body?.items;
+    if (!Array.isArray(items) || !items.length) {
+      return res.status(400).json({ ok: false, error: 'items array required' });
+    }
+
+    const jsonCatalog = loadJsonCatalogProducts();
+    const issues = [];
+
+    for (const line of items) {
+      if (line.shopify) continue;
+      const qty = Math.max(1, parseInt(line.qty, 10) || 1);
+      const productId = line.productId;
+      const variantId = line.variantId;
+      let available = -1;
+      let name = '';
+
+      if (jsonCatalog) {
+        const p = jsonCatalog.find((x) => x.id === productId || x.handle === productId);
+        if (!p) {
+          issues.push({ productId, reason: 'not_found' });
+          continue;
+        }
+        name = p.title || productId;
+        available = availableUnitsForLine(p, variantId);
+      } else if (db.isUsingMemory()) {
+        const mem = db.getMemStore();
+        const p = mem.products.find((x) => x.id === productId || x.slug === productId);
+        if (!p) {
+          issues.push({ productId, reason: 'not_found' });
+          continue;
+        }
+        name = p.name || productId;
+        available = availableUnitsForLine(p, variantId);
+      } else {
+        const p = await db.queryOne('SELECT * FROM products WHERE id = $1 OR slug = $1', [productId]);
+        if (!p) {
+          issues.push({ productId, reason: 'not_found' });
+          continue;
+        }
+        name = p.name || productId;
+        let variants = p.variants;
+        if (typeof variants === 'string') {
+          try { variants = JSON.parse(variants); } catch { variants = []; }
+        }
+        available = availableUnitsForLine({ ...p, variants }, variantId);
+      }
+
+      if (qty > available) {
+        issues.push({
+          productId,
+          variantId,
+          name,
+          requested: qty,
+          available,
+          reason: 'insufficient_stock',
+        });
+      }
+    }
+
+    res.json({ ok: issues.length === 0, issues });
+  } catch (err) {
+    console.error('[Products] stock-check error:', err);
+    res.status(500).json({ ok: false, error: 'Stock check failed' });
   }
 });
 
@@ -289,6 +369,12 @@ router.patch('/:id/stock', requireAuth, requireRole('owner', 'manager'), async (
 
     await cacheFlush('products:*');
     broadcast({ type: 'product:stock_updated', data: { productId: req.params.id, stock: newStock } });
+    broadcastInventoryUpdate({
+      productId: req.params.id,
+      stock: newStock,
+      action: 'adjust',
+      source: 'admin',
+    });
 
     // ── Check low-stock / out-of-stock thresholds ─────────────────────────────
     const threshold = product.low_stock_threshold || 10;

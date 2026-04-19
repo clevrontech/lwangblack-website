@@ -24,7 +24,11 @@ export default function Login() {
       // Wrong process on :3001 often returns Zod "email" errors; our Express only needs username + password.
       if (low.includes('email') && (low.includes('required') || low.includes('invalid'))) {
         msg +=
-          ' — The Vite proxy targets this repo’s API on port 3010. Run: npm run backend:dev (from the project root). If another app was on 3001, that was the wrong API.';
+          ' — The dev proxy targets this repo’s API on port 3010. From the project root run: npm run backend:dev (with admin: npm run dev:admin). For static preview use: npm run preview:stack (builds site + API + proxy on 4173).';
+      }
+      if (low.includes('failed to fetch') || low.includes('network')) {
+        msg +=
+          ' — Is the API running on port 3010? Run: npm run backend:dev or npm run preview:stack.';
       }
       setError(msg);
     } finally {

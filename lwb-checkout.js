@@ -8,6 +8,19 @@
     return window.LWB_API_BASE || (typeof location !== 'undefined' ? location.origin.replace(/\/$/, '') + '/api' : '/api');
   }
 
+  /** JSON-store public checkout — same API host, path `/orders` (see server `/orders` mount). */
+  function jsonStoreOrdersUrl() {
+    const raw = (window.LWB_API_BASE || '').replace(/\s/g, '').replace(/\/$/, '') || '';
+    if (raw) {
+      const root = raw.replace(/\/api\/?$/i, '');
+      return `${root}/orders`;
+    }
+    if (typeof location !== 'undefined') {
+      return `${location.origin.replace(/\/$/, '')}/orders`;
+    }
+    return '/orders';
+  }
+
   function mapRegion() {
     const code = window.LB_REGION?.get() || 'NP';
     const m = { AU: 'AU', NP: 'NP', US: 'US', GB: 'GB', EU: 'EU', CA: 'CA', JP: 'JP', NZ: 'NZ', CN: 'NP' };
@@ -80,7 +93,7 @@
   }
 
   async function postOrder(payload) {
-    const res = await fetch(`${apiBase()}/orders`, {
+    const res = await fetch(jsonStoreOrdersUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

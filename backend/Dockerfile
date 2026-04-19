@@ -2,8 +2,9 @@ FROM node:20-alpine AS backend
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+COPY package*.json .npmrc ./
+# --omit=dev replaces deprecated --only=production; skip cache clean --force (avoids npm "protections disabled" noise)
+RUN npm ci --omit=dev --no-audit --no-fund
 
 COPY . .
 

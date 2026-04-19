@@ -162,8 +162,7 @@ app.use('/products', apiLimiter, require('./routes/json-store/products'));
 app.use('/orders', apiLimiter, require('./routes/json-store/orders'));
 
 app.use('/api/auth', authLimiter, require('./routes/auth'));
-// JSON flat-file storefront (must mount BEFORE legacy /api/orders so POST /api/orders is public)
-app.use('/api/orders', apiLimiter, require('./routes/json-store/orders'));
+// Public storefront orders: POST/GET JSON store at `/orders` only (not under /api/orders — that path is DB admin API).
 app.use('/api/contact', apiLimiter, require('./routes/json-store/contact'));
 app.use('/api/subscribe', apiLimiter, require('./routes/json-store/subscribe'));
 app.use('/api/checkout', apiLimiter, require('./routes/json-store/checkout'));

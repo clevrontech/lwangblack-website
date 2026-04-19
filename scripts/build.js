@@ -153,6 +153,9 @@ injectLwbApiBase();
 if (!(process.env.LWB_API_BASE || '').trim() && process.env.VERCEL) {
   console.warn('\n  NOTE: Set LWB_API_BASE in Vercel (e.g. https://YOUR-SERVICE.onrender.com/api) so the storefront hits Render.');
 }
+if (process.env.VERCEL && !(process.env.BACKEND_URL || '').trim()) {
+  console.warn('\n  NOTE: Set BACKEND_URL on Vercel to your Render API origin (e.g. https://YOUR-SERVICE.onrender.com) so /api/* proxies in api/[...path].js.');
+}
 
 // ── Verify ──────────────────────────────────────────────────────────────────
 const total = countFiles(PUBLIC);

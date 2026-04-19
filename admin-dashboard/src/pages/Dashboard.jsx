@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { useAdminRealtime } from '../hooks/useAdminRealtime';
 import { useCurrencyFormatter } from '../lib/currency';
 import {
   ShoppingCart, DollarSign, Package, Users, TrendingUp, TrendingDown,
-  AlertTriangle, ArrowRight, Clock, CheckCircle
+  AlertTriangle, ArrowRight, Clock, CheckCircle, Radio
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -22,11 +23,12 @@ const STATUS_COLORS = {
 };
 
 function StatusBadge({ status }) {
-  const c = STATUS_COLORS[status] || STATUS_COLORS.pending;
+  const s = status || 'pending';
+  const c = STATUS_COLORS[s] || STATUS_COLORS.pending;
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${c.bg} ${c.text}`}>
       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: c.dot }} />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {s.charAt(0).toUpperCase() + s.slice(1)}
     </span>
   );
 }
@@ -59,43 +61,57 @@ const CHART_TOOLTIP_STYLE = {
   cursor: { fill: 'rgba(255,255,255,0.03)' },
 };
 
+function productStockLevel(p) {
+  if (p == null) return 0;
+  if (typeof p.stock === 'number') return p.stock;
+  if (Array.isArray(p.variants)) {
+    return p.variants.reduce((s, v) => s + (Number(v.inventory) || 0), 0);
+  }
+  return 0;
+}
+
+function productDisplayName(p) {
+  return p.name || p.title || p.id || 'Product';
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
-  const { fmtTotal, fmtOrder, currencyLabel } = useCurrencyFormatter(user);
+  const { fmtTotal, currencyLabel } = useCurrencyFormatter(user);
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [livePulse, setLivePulse] = useState(false);
+  const reloadTimer = useRef(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [orderData, productData] = await Promise.all([
-          apiFetch('/orders?limit=200'),
-          apiFetch('/products').catch(() => ({ products: [] })),
-        ]);
+  const loadDashboard = useCallback(async () => {
+    try {
+      const [orderData, productData] = await Promise.all([
+        apiFetch('/orders?limit=200'),
+        apiFetch('/products').catch(() => ({ products: [] })),
+      ]);
 
-        const all = orderData.orders || [];
-        setRecentOrders(all.slice(0, 8));
+      const all = orderData.orders || [];
+      setRecentOrders(all.slice(0, 8));
 
-        const now = new Date();
-        const weekAgo   = new Date(now - 7  * 86400000);
-        const twoWkAgo  = new Date(now - 14 * 86400000);
+      const now = new Date();
+      const weekAgo   = new Date(now - 7  * 86400000);
+      const twoWkAgo  = new Date(now - 14 * 86400000);
 
-        const active    = o => o.status !== 'cancelled' && o.status !== 'refunded';
-        const thisWeek  = all.filter(o => new Date(o.date) >= weekAgo);
-        const prevWeek  = all.filter(o => new Date(o.date) >= twoWkAgo && new Date(o.date) < weekAgo);
+      const active    = o => o.status !== 'cancelled' && o.status !== 'refunded';
+      const thisWeek  = all.filter(o => new Date(o.date) >= weekAgo);
+      const prevWeek  = all.filter(o => new Date(o.date) >= twoWkAgo && new Date(o.date) < weekAgo);
 
-        const revenue     = all.filter(active).reduce((s, o) => s + (o.total || 0), 0);
-        const wkRevenue   = thisWeek.filter(active).reduce((s, o) => s + (o.total || 0), 0);
-        const prevRevenue = prevWeek.filter(active).reduce((s, o) => s + (o.total || 0), 0);
-        const revChange   = prevRevenue > 0 ? (((wkRevenue - prevRevenue) / prevRevenue) * 100).toFixed(1) : null;
+      const revenue     = all.filter(active).reduce((s, o) => s + (o.total || 0), 0);
+      const wkRevenue   = thisWeek.filter(active).reduce((s, o) => s + (o.total || 0), 0);
+      const prevRevenue = prevWeek.filter(active).reduce((s, o) => s + (o.total || 0), 0);
+      const revChange   = prevRevenue > 0 ? (((wkRevenue - prevRevenue) / prevRevenue) * 100).toFixed(1) : null;
 
-        const wkOrders   = thisWeek.length;
-        const prevOrders = prevWeek.length;
-        const ordChange  = prevOrders > 0 ? (((wkOrders - prevOrders) / prevOrders) * 100).toFixed(1) : null;
+      const wkOrders   = thisWeek.length;
+      const prevOrders = prevWeek.length;
+      const ordChange  = prevOrders > 0 ? (((wkOrders - prevOrders) / prevOrders) * 100).toFixed(1) : null;
 
-        const products = productData.products || [];
-        const lowStock = products.filter(p => (p.stock || 0) < 10);
+      const products = productData.products || [];
+      const lowStock = products.filter(p => productStockLevel(p) < 10);
 
         // Daily sales for last 14 days
         const dailyMap = {};
@@ -114,7 +130,10 @@ export default function Dashboard() {
         });
 
         const statusCounts = {};
-        all.forEach(o => { statusCounts[o.status] = (statusCounts[o.status] || 0) + 1; });
+        all.forEach(o => {
+          const st = o.status || 'pending';
+          statusCounts[st] = (statusCounts[st] || 0) + 1;
+        });
 
         // Payment method breakdown
         const pmCounts = {};
@@ -147,14 +166,41 @@ export default function Dashboard() {
             name: name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), value
           })),
         });
-      } catch (err) {
-        console.error('Dashboard load error:', err);
-      } finally {
-        setLoading(false);
-      }
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  const scheduleReload = useCallback(() => {
+    setLivePulse(true);
+    window.setTimeout(() => setLivePulse(false), 600);
+    if (reloadTimer.current) window.clearTimeout(reloadTimer.current);
+    reloadTimer.current = window.setTimeout(() => {
+      loadDashboard();
+    }, 400);
+  }, [loadDashboard]);
+
+  useAdminRealtime(
+    (msg) => {
+      const t = msg?.type;
+      if (
+        t === 'order:new' ||
+        t === 'order:updated' ||
+        t === 'store:order:new' ||
+        t === 'inventory:update' ||
+        t === 'order:payment_failed'
+      ) {
+        scheduleReload();
+      }
+    },
+    { enabled: !!user?.id, userId: user?.id }
+  );
 
   if (loading) {
     return (
@@ -177,9 +223,18 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold">Overview</h1>
-        <span className="text-xs text-zinc-500">Last 7 days</span>
+        <div className="flex items-center gap-3">
+          <span
+            className={`inline-flex items-center gap-1.5 text-xs text-emerald-400/95 transition-opacity ${livePulse ? 'opacity-100' : 'opacity-80'}`}
+            title="Live sync: orders & inventory"
+          >
+            <Radio size={14} className={livePulse ? 'animate-pulse' : ''} />
+            Live
+          </span>
+          <span className="text-xs text-zinc-500">Last 7 days</span>
+        </div>
       </div>
 
       {/* KPI cards */}
@@ -208,7 +263,7 @@ export default function Dashboard() {
             <div className="flex flex-wrap gap-2">
               {stats.lowStock.map(p => (
                 <span key={p.id} className="text-xs bg-white/10 text-amber-300 border border-white/20 px-2 py-0.5 rounded">
-                  {p.name}: {p.stock || 0} left
+                  {productDisplayName(p)}: {productStockLevel(p)} left
                 </span>
               ))}
             </div>

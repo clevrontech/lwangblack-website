@@ -8,7 +8,7 @@
 // REGION SWITCHER
 // ─────────────────────────────────────────────
 function buildRegionSwitcher() {
-  const regionOrder = ['AU', 'NP', 'US', 'GB', 'CA', 'JP', 'NZ'];
+  const regionOrder = ['AU', 'NP', 'US', 'GB', 'EU', 'CA', 'JP', 'NZ'];
 
   const wrapper = document.createElement('div');
   wrapper.className = 'region-switcher';
@@ -26,7 +26,7 @@ function buildRegionSwitcher() {
         const r = REGION_DATA[code];
         if (!r) return '';
         // Use ISO 2-letter code for flagcdn (gb not uk)
-        const flagSlug = code === 'GB' ? 'gb' : r.slug.toLowerCase();
+        const flagSlug = code === 'GB' ? 'gb' : code === 'EU' ? 'eu' : r.slug.toLowerCase();
         return `
           <button class="region-option" data-code="${code}"
             onclick="window.GeoRouter.set('${code}'); document.getElementById('regionDropdown').classList.remove('active'); document.getElementById('regionSwitcherBtn').classList.remove('active');">
@@ -92,7 +92,7 @@ function initRegionUI() {
 
 function updateRegionUI(code, region) {
   // flagcdn uses lowercase ISO code; GB not UK
-  const flagSlug = code === 'GB' ? 'gb' : code.toLowerCase();
+  const flagSlug = code === 'GB' ? 'gb' : code === 'EU' ? 'eu' : code.toLowerCase();
 
   const flagDisplay = document.getElementById('rsFlagDisplay');
   const nameDisplay = document.getElementById('rsNameDisplay');
@@ -228,7 +228,7 @@ function updateHomeProducts(code) {
 }
 
 function getLangCode(code) {
-  const map = { AU:'en-AU', NP:'ne-NP', US:'en-US', GB:'en-GB', JP:'ja-JP', NZ:'en-NZ', CN:'zh-CN', CA:'en-CA' };
+  const map = { AU:'en-AU', NP:'ne-NP', US:'en-US', GB:'en-GB', EU:'en', JP:'ja-JP', NZ:'en-NZ', CN:'zh-CN', CA:'en-CA' };
   return map[code] || 'en';
 }
 
@@ -251,7 +251,7 @@ window.LB_REGION = window.GeoRouter;
 // Sync storefront pricing region (used by /api/store cart + product cards)
 (function syncLwbRegion() {
   function mapCode(code) {
-    const m = { AU: 'AU', NP: 'NP', US: 'US', GB: 'GB', CA: 'CA', JP: 'JP', NZ: 'NZ', CN: 'NP' };
+    const m = { AU: 'AU', NP: 'NP', US: 'US', GB: 'GB', EU: 'EU', CA: 'CA', JP: 'JP', NZ: 'NZ', CN: 'NP' };
     return m[code] || 'NP';
   }
   document.addEventListener('lb:regionChanged', (e) => {

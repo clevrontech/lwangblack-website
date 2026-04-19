@@ -10,7 +10,7 @@
 
   function mapRegion() {
     const code = window.LB_REGION?.get() || 'NP';
-    const m = { AU: 'AU', NP: 'NP', US: 'US', GB: 'GB', CA: 'CA', JP: 'JP', NZ: 'NZ', CN: 'NP' };
+    const m = { AU: 'AU', NP: 'NP', US: 'US', GB: 'GB', EU: 'EU', CA: 'CA', JP: 'JP', NZ: 'NZ', CN: 'NP' };
     return m[code] || 'NP';
   }
 
@@ -132,6 +132,32 @@
     }
 
     try {
+      await (window.__lwbShopifyReady || Promise.resolve());
+      if (window.__LWB_SHOPIFY_ACTIVE__) {
+        const rawLines = window.LB_CART?.load() || [];
+        for (const i of rawLines) {
+          const vid = i.variantId;
+          if (!vid || String(vid).indexOf('gid://shopify/ProductVariant/') !== 0) {
+            showErr('Clear your cart and add items again to use Shopify checkout (stale cart).');
+            resetBtn();
+            return;
+          }
+        }
+        const lines = rawLines.map((i) => ({ merchandiseId: i.variantId, quantity: i.qty }));
+        const res = await fetch(`${apiBase()}/shopify/checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lines }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Shopify checkout failed');
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+        throw new Error('No checkout URL from Shopify');
+      }
+
       if (paymentMethod === 'cod') {
         const data = await postOrder({ ...basePayload, paymentMethod: 'cod' });
         if (!data.success) throw new Error(data.error || 'Order failed');

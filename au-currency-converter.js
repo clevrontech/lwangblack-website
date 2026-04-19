@@ -24,6 +24,7 @@ const REGION_CURRENCIES = {
   AU: { code: 'AUD', symbol: 'A$' },
   US: { code: 'USD', symbol: '$' },
   GB: { code: 'GBP', symbol: '£' },
+  EU: { code: 'EUR', symbol: '€' },
   NP: { code: 'NPR', symbol: 'रू' },
   JP: { code: 'JPY', symbol: '¥' },
   NZ: { code: 'NZD', symbol: 'NZ$' },

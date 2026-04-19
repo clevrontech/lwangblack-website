@@ -10,13 +10,14 @@ const { broadcast } = require('../ws');
 const { sendRefundNotice, sendOrderConfirmation } = require('../services/notifications');
 const { generateInvoice } = require('../services/invoices');
 const dynConfig = require('../services/dynamic-config');
+const { withRetry } = require('../services/retry');
 
 const router = express.Router();
 
 const fetch = require('node-fetch');
 
 const CURRENCY_MAP = {
-  AU: 'aud', US: 'usd', GB: 'gbp', CA: 'cad', NZ: 'nzd', JP: 'jpy', NP: 'npr',
+  AU: 'aud', US: 'usd', GB: 'gbp', EU: 'eur', CA: 'cad', NZ: 'nzd', JP: 'jpy', NP: 'npr',
 };
 
 function getCarrierByCountry(country) {
@@ -26,6 +27,7 @@ function getCarrierByCountry(country) {
   if (c === 'US') return 'USPS';
   if (c === 'NZ') return 'NZ Post';
   if (c === 'JP') return 'Japan Post';
+  if (c === 'EU') return 'Australia Post International';
   return 'Australia Post';
 }
 
@@ -316,6 +318,8 @@ router.post('/checkout', async (req, res) => {
           intent: 'CAPTURE',
           purchase_units: [{
             reference_id: orderId,
+            custom_id: orderId,
+            invoice_id: orderId,
             amount: { currency_code: cur, value: parseFloat(total).toFixed(2) },
             description: `Lwang Black Order ${orderId}`,
           }],
@@ -707,6 +711,8 @@ router.post('/paypal-create', async (req, res) => {
         intent: 'CAPTURE',
         purchase_units: [{
           reference_id: orderId,
+          custom_id: orderId,
+          invoice_id: orderId,
           amount: { currency_code: cur, value: parseFloat(amount).toFixed(2) },
           description: `Lwang Black Order ${orderId}`,
         }],
@@ -1093,6 +1099,85 @@ router.post('/:orderId/cod-confirm', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[Payments] COD confirm error:', err);
     res.status(500).json({ error: 'COD confirmation failed' });
+  }
+});
+
+async function verifyPayPalWebhookEvent(req, eventBody) {
+  const ppCfg = await dynConfig.getGatewayConfig('paypal');
+  const webhookId = ppCfg.webhookId || config.paypal.webhookId;
+  const clientId = ppCfg.clientId || config.paypal.clientId;
+  const clientSecret = ppCfg.clientSecret || config.paypal.clientSecret;
+  const isLive = ppCfg.isLive || config.paypal.isLive;
+  const baseUrl = isLive ? (ppCfg.liveUrl || config.paypal.liveUrl) : (ppCfg.sandboxUrl || config.paypal.sandboxUrl);
+
+  if (!webhookId) {
+    if (config.isProd) return false;
+    return true;
+  }
+
+  const authRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+  });
+  const authData = await authRes.json();
+  if (!authData.access_token) return false;
+
+  const verifyRes = await fetch(`${baseUrl}/v1/notifications/verify-webhook-signature`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${authData.access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      transmission_id: req.get('paypal-transmission-id'),
+      transmission_time: req.get('paypal-transmission-time'),
+      cert_url: req.get('paypal-cert-url'),
+      auth_algo: req.get('paypal-auth-algo'),
+      transmission_sig: req.get('paypal-transmission-sig'),
+      webhook_id: webhookId,
+      webhook_event: eventBody,
+    }),
+  });
+  const vr = await verifyRes.json();
+  return vr.verification_status === 'SUCCESS';
+}
+
+// ── POST /api/payments/paypal-webhook ───────────────────────────────────────
+// Configure the same URL in PayPal Developer → Webhooks. Set PAYPAL_WEBHOOK_ID.
+router.post('/paypal-webhook', async (req, res) => {
+  const eventBody = req.body;
+  try {
+    const verified = await verifyPayPalWebhookEvent(req, eventBody);
+    if (!verified) {
+      console.warn('[Payments] PayPal webhook verification failed');
+      return res.status(401).json({ error: 'Invalid webhook signature' });
+    }
+
+    const eventType = eventBody.event_type;
+    const resource = eventBody.resource || {};
+
+    if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
+      const orderId =
+        resource.custom_id ||
+        resource.invoice_id ||
+        resource.supplementary_data?.related_ids?.order_id;
+      const captureId = resource.id;
+      if (orderId) {
+        await withRetry(
+          async () => {
+            await updateOrderStatus(orderId, 'paid', 'paypal', captureId);
+            broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'paypal', source: 'webhook' } });
+          },
+          { maxAttempts: 5, baseMs: 500 }
+        );
+      }
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error('[Payments] PayPal webhook error:', err);
+    res.status(500).json({ error: 'Webhook processing failed' });
   }
 });
 

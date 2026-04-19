@@ -302,6 +302,12 @@
           <!-- Error display -->
           <div id="co-checkout-error" style="display:none;background:rgba(255,80,80,0.1);border:1px solid rgba(255,80,80,0.3);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.75rem;color:rgba(255,180,180,0.9);white-space:pre-line;"></div>
 
+          <div class="co-trust-strip" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0.6rem 1rem;margin-bottom:1rem;padding:0.75rem 1rem;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:0.62rem;color:rgba(255,255,255,0.45);letter-spacing:0.04em;">🔒 256-bit SSL</span>
+            <span style="font-size:0.62rem;color:rgba(255,255,255,0.45);">Stripe · PayPal · eSewa</span>
+            <span style="font-size:0.62rem;color:rgba(255,255,255,0.45);">Encrypted · PCI-aligned flow</span>
+          </div>
+
           <!-- Complete order button -->
           <button id="co-pay-btn" onclick="submitPayment()"
             style="width:100%;padding:1rem 1.5rem;border-radius:10px;background:#2563eb;color:#fff;border:none;font-size:0.9rem;font-weight:700;letter-spacing:0.5px;cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:center;gap:0.5rem;"
@@ -365,6 +371,8 @@
   <div id="cartToast">Added</div>
 
   <script src="lwb-api.js"></script>
+  <script src="shopify-bridge.js"></script>
+  <script src="lwb-realtime.js" defer></script>
   <script src="i18n.js"></script>
   <script src="pricing.js"></script>
   <script src="geo-router.js"></script>

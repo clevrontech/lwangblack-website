@@ -9,13 +9,16 @@ export function AuthProvider({ children }) {
 
   const verify = useCallback(async () => {
     if (!getAccessToken()) { setLoading(false); return; }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
     try {
-      const data = await apiFetch('/auth/verify');
+      const data = await apiFetch('/auth/verify', { signal: controller.signal });
       setUser(data.user || data);
     } catch {
       clearTokens();
       setUser(null);
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   }, []);

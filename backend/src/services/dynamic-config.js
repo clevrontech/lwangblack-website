@@ -67,6 +67,7 @@ async function getGatewayConfig(gateway) {
       return {
         clientId:     s.paypal_client_id     || env.PAYPAL_CLIENT_ID     || '',
         clientSecret: s.paypal_client_secret || env.PAYPAL_CLIENT_SECRET || '',
+        webhookId:    s.paypal_webhook_id    || env.PAYPAL_WEBHOOK_ID    || '',
         isLive:       (s.paypal_mode || env.PAYPAL_MODE || 'sandbox') === 'live',
         liveUrl:      'https://api-m.paypal.com',
         sandboxUrl:   'https://api-m.sandbox.paypal.com',

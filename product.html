@@ -117,6 +117,7 @@
         
         <div class="pp-price-wrap" id="pp-price-area" style="display:none;">
           <span class="pp-price" id="pp-price">—</span>
+          <p id="pp-stock-live" class="label-micro" style="display:none;margin:0.35rem 0 0;font-size:0.72rem;color:rgba(255,255,255,0.55);"></p>
           <span class="pp-tax-note">Tax included</span>
           <span class="pp-tax-note" id="pp-shipping-estimate" style="display:block; margin-top:0.3rem;"></span>
         </div>
@@ -167,6 +168,8 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="lwb-api.js"></script>
+  <script src="shopify-bridge.js"></script>
+  <script src="lwb-realtime.js" defer></script>
   <script src="i18n.js" defer></script>
   <script src="pricing.js" defer></script>
   <script src="geo-router.js" defer></script>

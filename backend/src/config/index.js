@@ -42,6 +42,7 @@ module.exports = {
   paypal: {
     clientId: process.env.PAYPAL_CLIENT_ID || 'paypal_client_placeholder',
     clientSecret: process.env.PAYPAL_CLIENT_SECRET || 'paypal_secret_placeholder',
+    webhookId: process.env.PAYPAL_WEBHOOK_ID || '',
     // Support both PAYPAL_LIVE (legacy) and PAYPAL_MODE (current) env vars
     isLive: process.env.PAYPAL_LIVE === 'true' || process.env.PAYPAL_MODE === 'live',
     sandboxUrl: 'https://api-m.sandbox.paypal.com',
@@ -95,11 +96,25 @@ module.exports = {
     apiKey: process.env.SHIPPO_API_KEY || '',
   },
 
+  // Shopify — Storefront (headless checkout) + Admin API (orders/inventory) + webhooks
+  // https://shopify.dev/docs/api/storefront  |  https://shopify.dev/docs/api/admin-graphql
+  shopify: {
+    enabled: process.env.SHOPIFY_ENABLED === 'true',
+    storeDomain: (process.env.SHOPIFY_STORE_DOMAIN || '').replace(/^https?:\/\//, '').replace(/\/$/, ''),
+    storefrontAccessToken: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || '',
+    /** Admin API access token (custom app) — read_orders, read_products, read_inventory */
+    adminAccessToken: process.env.SHOPIFY_ADMIN_ACCESS_TOKEN || '',
+    /** Webhook signing — `X-Shopify-Hmac-Sha256` (same as custom app “API secret key” in some UIs) */
+    apiSecret: process.env.SHOPIFY_API_SECRET || '',
+    apiVersion: process.env.SHOPIFY_API_VERSION || '2025-01',
+  },
+
   // Site
   siteUrl: process.env.SITE_URL || 'https://www.lwangblack.co',
   // Browsers on apex + www + local dev must be allowed when the admin calls the API directly (VITE_API_URL).
   corsOrigins: (process.env.CORS_ORIGIN || [
     'http://localhost:3001',
+    'http://localhost:3010',
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',
@@ -113,6 +128,7 @@ module.exports = {
     AU: { code: 'AUD', symbol: 'A$',   rate: 0.63 },
     US: { code: 'USD', symbol: '$',    rate: 1 },
     GB: { code: 'GBP', symbol: '£',    rate: 1.27 },
+    EU: { code: 'EUR', symbol: '€',    rate: 1.08 },
     CA: { code: 'CAD', symbol: 'C$',   rate: 0.74 },
     NZ: { code: 'NZD', symbol: 'NZ$',  rate: 0.60 },
     JP: { code: 'JPY', symbol: '¥',    rate: 0.007 },
@@ -124,6 +140,7 @@ module.exports = {
     AU: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     US: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     GB: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
+    EU: ['paypal', 'stripe', 'apple_pay', 'google_pay', 'card'],
     CA: ['paypal', 'stripe', 'apple_pay', 'google_pay', 'card'],
     NZ: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     JP: ['paypal', 'stripe', 'google_pay', 'card'],

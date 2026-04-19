@@ -827,11 +827,13 @@ window.formatPrice = formatPrice;
 
 // ── API product grid (shop + catalogue) ─────────────────────────────────────
 async function lwbFetchProducts(category) {
+  await (window.__lwbShopifyReady || Promise.resolve());
   const qs = category && category !== 'all' ? `?category=${encodeURIComponent(category)}` : '';
+  const basePath = window.__LWB_SHOPIFY_ACTIVE__ ? '/shopify/products' : '/products';
   const url =
     typeof window.lwbApiUrl === 'function'
-      ? window.lwbApiUrl('/products' + qs)
-      : `${window.LWB_API_BASE}/products${qs}`;
+      ? window.lwbApiUrl(basePath + qs)
+      : `${window.LWB_API_BASE}${basePath}${qs}`;
   try {
     const res = await fetch(url);
     const data = await res.json();
@@ -843,10 +845,12 @@ async function lwbFetchProducts(category) {
 }
 
 async function lwbFetchProduct(handleOrId) {
+  await (window.__lwbShopifyReady || Promise.resolve());
+  const basePath = window.__LWB_SHOPIFY_ACTIVE__ ? '/shopify/products/' : '/products/';
   const url =
     typeof window.lwbApiUrl === 'function'
-      ? window.lwbApiUrl('/products/' + encodeURIComponent(handleOrId))
-      : `${window.LWB_API_BASE}/products/${encodeURIComponent(handleOrId)}`;
+      ? window.lwbApiUrl(basePath + encodeURIComponent(handleOrId))
+      : `${window.LWB_API_BASE}${basePath}${encodeURIComponent(handleOrId)}`;
   try {
     const res = await fetch(url);
     const data = await res.json();
@@ -865,8 +869,10 @@ function lwbRenderStars(rating) {
 
 function lwbRenderProductCard(product) {
   const region = (typeof window.lwbCart !== 'undefined' && window.lwbCart.getRegion) ? window.lwbCart.getRegion() : (localStorage.getItem('lwb_region') || 'NP');
-  const price = window.lwbCart ? window.lwbCart.formatPrice(product.prices[region] ?? product.prices.NP, region) : '';
-  const cmp = product.compareAtPrices && product.compareAtPrices[region];
+  const price = window.lwbCart
+    ? window.lwbCart.formatPrice(product.prices[region] ?? product.prices.EU ?? product.prices.NP, region)
+    : '';
+  const cmp = product.compareAtPrices && (product.compareAtPrices[region] ?? product.compareAtPrices.EU);
   const comparePrice = cmp ? window.lwbCart.formatPrice(cmp, region) : '';
   const hasCompare = !!cmp;
 
@@ -886,9 +892,11 @@ function lwbRenderProductCard(product) {
       <div class="product-info">
         <p class="product-category" style="font-size:10px;letter-spacing:2px;color:var(--text-muted);margin:0">${String(product.category).toUpperCase()}</p>
         <h3 class="product-title" style="margin:6px 0 4px;font-size:clamp(1rem,2vw,1.1rem)">${product.title}</h3>
-        <div class="product-rating" style="color:var(--accent);font-size:12px;margin-bottom:8px">
+        ${(product.reviewCount > 0)
+          ? `<div class="product-rating" style="color:var(--accent);font-size:12px;margin-bottom:8px">
           ${lwbRenderStars(product.rating)} <span style="color:var(--text-muted)">(${product.reviewCount})</span>
-        </div>
+        </div>`
+          : ''}
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
           <span class="product-price" style="font-size:1.35rem;font-family:var(--font-heading)">${price}</span>
           ${comparePrice ? `<span style="text-decoration:line-through;color:var(--text-muted);font-size:0.85rem">${comparePrice}</span>` : ''}

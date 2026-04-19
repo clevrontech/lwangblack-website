@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Save, Eye, EyeOff, CheckCircle, XCircle, AlertTriangle,
   Store, CreditCard, Truck, Bell, Shield, User, Lock, AtSign, RefreshCw, ExternalLink,
-  ChevronDown, ChevronRight
+  ChevronDown, ChevronRight, ShoppingBag
 } from 'lucide-react';
 
 // ── Real brand logo URLs (official sources, no AI icons) ─────────────────────
@@ -30,6 +30,7 @@ const LOGOS = {
 // ── Nav items ──────────────────────────────────────────────────────────────────
 const SECTIONS = [
   { id: 'store',      label: 'Store details',       icon: Store },
+  { id: 'shopify',    label: 'Shopify',             icon: ShoppingBag },
   { id: 'account',    label: 'Account',              icon: User },
   { id: 'payments',   label: 'Payments',             icon: CreditCard },
   { id: 'shipping',   label: 'Shipping & logistics', icon: Truck },
@@ -145,6 +146,135 @@ function GatewayCard({ logo, name, description, status, children, docUrl }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Shopify Admin API (server env: SHOPIFY_ADMIN_ACCESS_TOKEN) ──────────────
+function ShopifyAdminSettings() {
+  const [status, setStatus] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr('');
+    try {
+      const s = await apiFetch('/shopify/admin/status');
+      setStatus(s);
+      if (s.ok && s.configured) {
+        try {
+          const o = await apiFetch('/shopify/admin/orders?first=15');
+          setOrders(o.orders || []);
+        } catch {
+          setOrders([]);
+        }
+      } else {
+        setOrders([]);
+      }
+    } catch (e) {
+      setErr(e.message || 'Failed to load');
+      setStatus(null);
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const adminUrl = status?.shop?.domain
+    ? `https://${status.shop.domain}/admin`
+    : 'https://shopify.dev/docs/api/admin-graphql';
+
+  return (
+    <>
+      <div>
+        <h2 className="text-lg font-semibold mb-1">Shopify Admin API</h2>
+        <p className="text-sm text-white/40">
+          Orders and inventory are read from Shopify via the Admin API. Configure{' '}
+          <code className="text-amber-400/90">SHOPIFY_ADMIN_ACCESS_TOKEN</code> on the API server (custom app: read_orders, read_products, read_inventory).
+        </p>
+      </div>
+
+      <div className="bg-[#111] border border-white/8 rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h3 className="text-sm font-medium text-white/80">Connection</h3>
+          <button
+            type="button"
+            onClick={() => load()}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-zinc-200"
+          >
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
+
+        {loading && <p className="text-sm text-white/40">Checking Admin API…</p>}
+        {err && !loading && (
+          <div className="flex items-center gap-2 text-amber-400/90 text-sm">
+            <AlertTriangle size={14} /> {err}
+          </div>
+        )}
+
+        {!loading && status && (
+          <>
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatusPill active={status.ok && status.configured} />
+              {!status.configured && (
+                <span className="text-xs text-white/45">Admin token not set on server.</span>
+              )}
+            </div>
+            {status.shop && (
+              <div className="text-sm space-y-1 font-mono text-zinc-300">
+                <p><span className="text-white/50">Shop:</span> {status.shop.name}</p>
+                <p><span className="text-white/50">Domain:</span> {status.shop.domain}</p>
+                <p><span className="text-white/50">Currency:</span> {status.shop.currencyCode}</p>
+              </div>
+            )}
+            <a
+              href={adminUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-amber-400/90 hover:text-amber-300"
+            >
+              Open Shopify Admin <ExternalLink size={12} />
+            </a>
+          </>
+        )}
+      </div>
+
+      {status?.ok && orders.length > 0 && (
+        <div className="bg-[#111] border border-white/8 rounded-xl p-5">
+          <h3 className="text-sm font-medium text-white/80 mb-3">Recent orders (Shopify)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-white/45 border-b border-white/10">
+                  <th className="pb-2 pr-3">Order</th>
+                  <th className="pb-2 pr-3">Date</th>
+                  <th className="pb-2 pr-3">Payment</th>
+                  <th className="pb-2 pr-3">Fulfillment</th>
+                  <th className="pb-2 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {orders.map((o) => (
+                  <tr key={o.id} className="text-zinc-300">
+                    <td className="py-2 pr-3 font-mono">{o.name}</td>
+                    <td className="py-2 pr-3 text-white/60">{o.createdAt ? new Date(o.createdAt).toLocaleString() : '—'}</td>
+                    <td className="py-2 pr-3">{o.financialStatus || '—'}</td>
+                    <td className="py-2 pr-3">{o.fulfillmentStatus || '—'}</td>
+                    <td className="py-2 text-right">
+                      {o.currency} {o.total != null ? Number(o.total).toFixed(2) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -293,6 +423,11 @@ export default function SettingsPage() {
               </button>
             </div>
           </>
+        )}
+
+        {/* ── Shopify Admin API ───────────────────────────────────────── */}
+        {section === 'shopify' && (
+          <ShopifyAdminSettings />
         )}
 
         {/* ── Account ─────────────────────────────────────────────────── */}

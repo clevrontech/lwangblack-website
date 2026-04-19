@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { caughtErrorMessage } from '../lib/api';
 import { Navigate } from 'react-router-dom';
 
 export default function Login() {
@@ -18,7 +19,14 @@ export default function Login() {
     try {
       await login(username, password);
     } catch (err) {
-      setError(err.message || 'Login failed');
+      let msg = caughtErrorMessage(err, 'Login failed');
+      const low = String(err?.message || '').toLowerCase();
+      // Wrong process on :3001 often returns Zod "email" errors; our Express only needs username + password.
+      if (low.includes('email') && (low.includes('required') || low.includes('invalid'))) {
+        msg +=
+          ' — The Vite proxy targets this repo’s API on port 3010. Run: npm run backend:dev (from the project root). If another app was on 3001, that was the wrong API.';
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }

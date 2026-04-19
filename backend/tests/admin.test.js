@@ -16,6 +16,15 @@ describe('Admin API', () => {
     managerToken = mgrRes.body.token;
   });
 
+  test('POST /api/auth/login — accepts email field as username alias', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'owner', password: 'lwangblack2024' });
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.username).toBe('owner');
+  });
+
   test('GET /api/health — server health', async () => {
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(200);

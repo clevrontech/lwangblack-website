@@ -1,19 +1,50 @@
-# Render Blueprint — https://render.com/docs/blueprint-spec
-# Connect this repo in Render → New → Blueprint, or create a Web Service with root directory "backend".
-
+# Render Blueprint — deploy backend Web service + Postgres + Redis.
+# Connect your repo in Render → New Blueprint → select this file.
 services:
   - type: web
-    name: lwangblack-api
-    runtime: node
-    plan: free
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: npm start
+    name: lwang-black-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
-      # Set in the Render dashboard (sensitive values):
-      # FRONTEND_URL — production Vercel URL, e.g. https://your-app.vercel.app or custom domain
-      # CORS_ORIGIN — comma list including that URL plus https://www.lwangblack.co if used
-      # DATABASE_URL, STRIPE_SECRET_KEY, JWT_SECRET, etc. — see backend/.env.example
+      - key: PORT
+        value: "3001"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lwang-black-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: lwang-black-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: SITE_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+
+  - type: redis
+    name: lwang-black-redis
+    plan: free
+
+databases:
+  - name: lwang-black-db
+    plan: free
+    databaseName: lwangblack
+    user: lwangblack

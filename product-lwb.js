@@ -7,8 +7,13 @@
   }
 
   function mapGeoToLwb(code) {
-    const m = { AU: 'AU', NP: 'NP', US: 'US', GB: 'GB', CA: 'CA', JP: 'JP', NZ: 'NZ', CN: 'NP' };
+    const m = { AU: 'AU', NP: 'NP', US: 'US', GB: 'GB', EU: 'EU', CA: 'CA', JP: 'JP', NZ: 'NZ', CN: 'NP' };
     return m[code] || 'NP';
+  }
+
+  function variantStockTotal(product) {
+    if (!product?.variants?.length) return null;
+    return product.variants.reduce((s, v) => s + (Number(v.inventory) || 0), 0);
   }
 
   async function load() {
@@ -21,7 +26,7 @@
 
     window.__LWB_API_PRODUCT__ = true;
     const region = localStorage.getItem('lwb_region') || mapGeoToLwb(window.LB_REGION?.get() || 'NP');
-    const price = product.prices[region] ?? product.prices.NP ?? 0;
+    const price = product.prices[region] ?? product.prices.EU ?? product.prices.NP ?? 0;
     const cmp = product.compareAtPrices && product.compareAtPrices[region];
 
     document.title = `${product.title} — Lwang Black`;
@@ -53,6 +58,31 @@
       priceEl.textContent = window.lwbCart.formatPrice(price, region);
     }
     if (priceArea) priceArea.style.display = 'flex';
+
+    const stockEl = document.getElementById('pp-stock-live');
+    const totalStock = variantStockTotal(product);
+    function renderStock() {
+      if (!stockEl) return;
+      if (totalStock == null) {
+        stockEl.style.display = 'none';
+        return;
+      }
+      stockEl.style.display = 'block';
+      stockEl.textContent =
+        totalStock <= 0 ? 'Out of stock' : totalStock < 15 ? `Only ${totalStock} left in stock` : `${totalStock} in stock`;
+    }
+    renderStock();
+    window.addEventListener('lwb-inventory-update', (e) => {
+      if (!e.detail || e.detail.productId !== product.id) return;
+      if (typeof e.detail.totalStock === 'number') {
+        stockEl.textContent =
+          e.detail.totalStock <= 0
+            ? 'Out of stock'
+            : e.detail.totalStock < 15
+              ? `Only ${e.detail.totalStock} left in stock`
+              : `${e.detail.totalStock} in stock`;
+      }
+    });
 
     const unavail = document.getElementById('pp-unavailable-msg');
     const actions = document.getElementById('pp-actions-area');

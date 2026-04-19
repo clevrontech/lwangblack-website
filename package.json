@@ -5,6 +5,9 @@
   "main": "scripts/build.js",
   "scripts": {
     "build": "node scripts/build.js",
+    "preview": "npx --yes serve public -l 4173",
+    "preview:local": "npm run build && npx --yes serve public -l 4173",
+    "dev:local": "npm run build && npx --yes concurrently -n api,site -c blue,magenta \"npm --prefix backend run dev\" \"npx --yes serve public -l 4173\"",
     "dev": "npm --prefix backend run dev",
     "dev:admin": "npm --prefix admin-dashboard run dev -- --host --port 5173",
     "dev:vercel": "vercel dev",

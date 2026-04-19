@@ -10,6 +10,7 @@ const CURRENCY = {
   NP: { symbol: 'रु', code: 'NPR', decimals: 0 },
   AU: { symbol: 'A$', code: 'AUD', decimals: 2 },
   US: { symbol: '$', code: 'USD', decimals: 2 },
+  EU: { symbol: '€', code: 'EUR', decimals: 2 },
   CA: { symbol: 'C$', code: 'CAD', decimals: 2 },
   JP: { symbol: '¥', code: 'JPY', decimals: 0 },
   NZ: { symbol: 'NZ$', code: 'NZD', decimals: 2 },
@@ -106,6 +107,7 @@ function addToCart(product, variantId, qty = 1) {
       image: (product.images && product.images[0]) || '',
       qty,
       region,
+      shopify: product.source === 'shopify',
     });
   }
   saveCartRaw(cart);

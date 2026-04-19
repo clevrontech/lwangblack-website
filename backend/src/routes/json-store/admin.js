@@ -1,8 +1,20 @@
 const express = require('express');
 const fs = require('fs');
 const { file } = require('../../services/json-store-paths');
+const { cacheFlush } = require('../../db/redis');
+const { broadcastInventoryUpdate } = require('../../ws');
 
 const router = express.Router();
+
+async function invalidateProductCache() {
+  await cacheFlush('store:product*').catch(() => {});
+  await cacheFlush('store:products*').catch(() => {});
+}
+
+function totalVariantStock(product) {
+  if (!product || !Array.isArray(product.variants)) return 0;
+  return product.variants.reduce((s, v) => s + (Number(v.inventory) || 0), 0);
+}
 
 function adminAuth(req, res, next) {
   const key = req.headers['x-admin-key'] || req.query.adminKey;
@@ -97,27 +109,38 @@ router.get('/products', (req, res) => {
   res.json({ success: true, products: readFile('products.json') });
 });
 
-router.post('/products', (req, res) => {
+router.post('/products', async (req, res) => {
   const products = readFile('products.json');
   const product = { id: `lwb-${Date.now()}`, ...req.body, createdAt: new Date().toISOString() };
   products.push(product);
   writeFile('products.json', products);
+  await invalidateProductCache();
+  broadcastInventoryUpdate({ action: 'create', productId: product.id, handle: product.handle, totalStock: totalVariantStock(product) });
   res.json({ success: true, product });
 });
 
-router.put('/products/:id', (req, res) => {
+router.put('/products/:id', async (req, res) => {
   const products = readFile('products.json');
   const idx = products.findIndex((p) => p.id === req.params.id || p.handle === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, error: 'Product not found' });
   products[idx] = { ...products[idx], ...req.body, updatedAt: new Date().toISOString() };
   writeFile('products.json', products);
+  await invalidateProductCache();
+  broadcastInventoryUpdate({
+    action: 'update',
+    productId: products[idx].id,
+    handle: products[idx].handle,
+    totalStock: totalVariantStock(products[idx]),
+  });
   res.json({ success: true, product: products[idx] });
 });
 
-router.delete('/products/:id', (req, res) => {
+router.delete('/products/:id', async (req, res) => {
   let products = readFile('products.json');
   products = products.filter((p) => p.id !== req.params.id);
   writeFile('products.json', products);
+  await invalidateProductCache();
+  broadcastInventoryUpdate({ action: 'delete', productId: req.params.id });
   res.json({ success: true });
 });
 

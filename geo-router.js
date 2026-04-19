@@ -57,6 +57,17 @@ const REGION_DATA = {
     practicePriority: ['commercial', 'dispute', 'corporate', 'migration'],
     accent: '#C9A84C',
   },
+  EU: {
+    code: 'EU', slug: 'eu', name: 'Eurozone', flag: '🇪🇺', flagEmoji: '🇪🇺',
+    currency: 'EUR', currencySymbol: '€',
+    phone: '+353 1 568 0000', whatsapp: '+35315680000',
+    address: 'EU-wide shipping — VAT where applicable',
+    heroTitle: 'PREMIUM COFFEE\nACROSS EUROPE.',
+    heroSubtitle: 'Bold flavour, ethical sourcing, and secure EUR checkout with Stripe and PayPal.',
+    heroCtaLabel: 'Shop the range',
+    practicePriority: ['commercial', 'corporate', 'migration', 'property'],
+    accent: '#C9A84C',
+  },
   JP: {
     code: 'JP', slug: 'jp', name: 'Japan', flag: '🇯🇵', flagEmoji: '🇯🇵',
     currency: 'JPY', currencySymbol: '¥',
@@ -113,8 +124,13 @@ const PRACTICE_AREAS = {
   dispute: { id: 'dispute', icon: '🔍', title: 'Dispute Resolution', desc: 'Commercial litigation, mediation, arbitration, and enforcement of judgments globally.' },
 };
 
-const CODE_TO_SLUG = { AU:'au', NP:'np', US:'us', GB:'uk', UK:'uk', JP:'jp', NZ:'nz', CN:'cn', CA:'ca' };
-const SLUG_TO_CODE = { au:'AU', np:'NP', us:'US', uk:'GB', jp:'JP', nz:'NZ', cn:'CN', ca:'CA' };
+const EU_COUNTRY_CODES = new Set([
+  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT',
+  'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'CH',
+]);
+
+const CODE_TO_SLUG = { AU:'au', NP:'np', US:'us', GB:'uk', UK:'uk', EU:'eu', JP:'jp', NZ:'nz', CN:'cn', CA:'ca' };
+const SLUG_TO_CODE = { au:'AU', np:'NP', us:'US', uk:'GB', eu:'EU', jp:'JP', nz:'NZ', cn:'CN', ca:'CA' };
 const SUPPORTED_CODES = Object.keys(REGION_DATA);
 
 // ─────────────────────────────────────────────
@@ -159,6 +175,7 @@ const GeoRouter = {
           const raw = data.country.toUpperCase();
           this.rawCountryCode = raw;
           const code = raw === 'UK' ? 'GB' : raw;
+          if (EU_COUNTRY_CODES.has(code)) return 'EU';
           return SUPPORTED_CODES.includes(code) ? code : 'NP';
         }
       }
@@ -173,6 +190,7 @@ const GeoRouter = {
           const raw = data.country_code.toUpperCase();
           this.rawCountryCode = raw;
           const code = raw === 'UK' ? 'GB' : raw;
+          if (EU_COUNTRY_CODES.has(code)) return 'EU';
           return SUPPORTED_CODES.includes(code) ? code : 'NP';
         }
       }

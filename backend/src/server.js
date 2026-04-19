@@ -27,6 +27,10 @@ const swaggerDoc = require('./swagger.json');
     warnings.push('STRIPE_SECRET_KEY not configured — payments will fail');
   if (!config.email.apiKey && config.nodeEnv === 'production')
     warnings.push('SENDGRID_API_KEY not set — email notifications disabled');
+  if (config.shopify?.enabled && (!config.shopify.storeDomain || !config.shopify.storefrontAccessToken))
+    warnings.push('SHOPIFY_ENABLED is true but SHOPIFY_STORE_DOMAIN or SHOPIFY_STOREFRONT_ACCESS_TOKEN is missing');
+  if (config.shopify?.adminAccessToken && !config.shopify.storeDomain)
+    warnings.push('SHOPIFY_ADMIN_ACCESS_TOKEN is set but SHOPIFY_STORE_DOMAIN is missing');
   if (warnings.length) {
     console.warn('\n[Config] ⚠️  Configuration warnings:');
     warnings.forEach(w => console.warn('   •', w));
@@ -76,11 +80,17 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login attempts' },
 });
 
-// Body parsing (exclude Stripe webhook which needs raw body)
+// Body parsing (exclude Stripe + Shopify webhooks — raw body for signature verification)
 app.use((req, res, next) => {
   if (req.path === '/api/payments/stripe-webhook') return next();
+  if (req.path === '/api/shopify/webhooks' && req.method === 'POST') return next();
   express.json({ limit: '10mb' })(req, res, next);
 });
+app.post(
+  '/api/shopify/webhooks',
+  express.raw({ type: 'application/json', limit: '2mb' }),
+  require('./routes/shopify-webhooks')
+);
 app.use(express.urlencoded({ extended: true }));
 
 // ── API Documentation ───────────────────────────────────────────────────────
@@ -98,6 +108,31 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     wsClients: getClientCount(),
     environment: config.nodeEnv,
+  });
+});
+
+/** Prometheus-friendly JSON metrics (wire Grafana/Prometheus via exporter sidecar in production). */
+app.get('/api/health/metrics', (req, res) => {
+  const m = process.memoryUsage();
+  res.json({
+    process_uptime_seconds: process.uptime(),
+    ws_connected_clients: getClientCount(),
+    heap_used_bytes: m.heapUsed,
+    heap_total_bytes: m.heapTotal,
+    rss_bytes: m.rss,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/** Real-time transport (WebSocket); GraphQL subscriptions not required for storefront sync. */
+app.get('/api/realtime', (req, res) => {
+  const host = req.get('host') || `localhost:${config.port}`;
+  const proto = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'wss' : 'ws';
+  res.json({
+    websocketPath: '/ws',
+    websocketUrl: `${proto}://${host}/ws`,
+    channels: ['inventory', 'orders'],
+    graphqlSubscriptions: false,
   });
 });
 
@@ -121,6 +156,11 @@ app.get('/api/ip-country', (req, res) => {
 });
 
 // ── API Routes ──────────────────────────────────────────────────────────────
+// Service-style paths (same handlers as /api/* — modular monolith / future split)
+app.use('/auth', authLimiter, require('./routes/auth'));
+app.use('/products', apiLimiter, require('./routes/json-store/products'));
+app.use('/orders', apiLimiter, require('./routes/json-store/orders'));
+
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 // JSON flat-file storefront (must mount BEFORE legacy /api/orders so POST /api/orders is public)
 app.use('/api/orders', apiLimiter, require('./routes/json-store/orders'));
@@ -145,6 +185,8 @@ app.use('/api/social', apiLimiter, require('./routes/social'));
 app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
 app.use('/api/cart', apiLimiter, require('./routes/cart'));
 app.use('/api/upload', apiLimiter, require('./routes/upload'));
+app.use('/api/shopify/admin', apiLimiter, require('./routes/shopify-admin'));
+app.use('/api/shopify', apiLimiter, require('./routes/shopify'));
 
 // ── JSON flat-file store (products, orders, checkout, admin) ──────────────
 app.use('/api/store', apiLimiter, require('./routes/json-store'));

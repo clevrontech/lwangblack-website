@@ -1,7 +1,7 @@
 import { NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
-import { apiFetch } from '../lib/api';
+import { apiFetch, caughtErrorMessage } from '../lib/api';
 
 // ── Pixel-perfect SVG icons ───────────────────────────────────────────────────
 const I = {
@@ -88,7 +88,7 @@ export default function Layout() {
       apiFetch(`/subscription/verify?session_id=${encodeURIComponent(subSession)}`)
         .then(data => { setSubStatus({ active: true, ...data }); setSubLoading(false); })
         .catch(err => {
-          setSubError(err.message || 'Payment verification failed. Please contact the owner.');
+          setSubError(caughtErrorMessage(err, 'Payment verification failed. Please contact the owner.'));
           setSubStatus({ active: false });
           setSubLoading(false);
         });
@@ -110,11 +110,12 @@ export default function Layout() {
       if (data.url) {
         window.location.href = data.url; // redirect to Stripe Checkout
       } else {
-        setSubError(data.error || 'Failed to create checkout session.');
+        const e = data.error;
+        setSubError(typeof e === 'string' ? e : 'Failed to create checkout session.');
         setSubscribing(false);
       }
     } catch (err) {
-      setSubError(err.message || 'Failed to start checkout. Please try again.');
+      setSubError(caughtErrorMessage(err, 'Failed to start checkout. Please try again.'));
       setSubscribing(false);
     }
   };
@@ -306,7 +307,7 @@ function SubscriptionPaywall({ user, onSubscribe, subscribing, error, onLogout }
           {error && (
             <div className="px-6 pt-4">
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-xs text-red-400">
-                {error}
+                {typeof error === 'string' ? error : caughtErrorMessage(error, 'Something went wrong')}
               </div>
             </div>
           )}

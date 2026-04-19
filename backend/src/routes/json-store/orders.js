@@ -3,6 +3,7 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const emailService = require('../../services/json-store-email');
 const { file } = require('../../services/json-store-paths');
+const { broadcastStoreEvent } = require('../../ws');
 
 const router = express.Router();
 const ORDERS_FILE = file('orders.json');
@@ -77,6 +78,17 @@ router.post('/', async (req, res) => {
     saveOrders(orders);
 
     emailService.sendOrderConfirmation(order).catch(console.error);
+
+    broadcastStoreEvent({
+      type: 'store:order:new',
+      data: {
+        orderNumber: order.orderNumber,
+        orderId: order.id,
+        region: order.region,
+        totalAmount: order.totalAmount,
+        financialStatus: order.financialStatus,
+      },
+    });
 
     res.json({ success: true, orderNumber: order.orderNumber, orderId: order.id });
   } catch (err) {

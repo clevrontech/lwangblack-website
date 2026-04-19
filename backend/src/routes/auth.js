@@ -13,14 +13,19 @@ const router = express.Router();
 // ── POST /api/auth/login ────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body || {};
-    if (!username || !password) {
+    const body = req.body || {};
+    const password = body.password;
+    // Accept username or email (admin UI uses "username"; some gateways expect "email")
+    const loginId = String(body.username || body.email || '')
+      .toLowerCase()
+      .trim();
+    if (!loginId || !password) {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
     const user = await db.queryOne(
       'SELECT * FROM admin_users WHERE username = $1 AND is_active = TRUE',
-      [username.toLowerCase().trim()]
+      [loginId]
     );
 
     if (!user) {

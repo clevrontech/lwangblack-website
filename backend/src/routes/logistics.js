@@ -17,6 +17,22 @@ const pathaoService = require('../services/pathao');
 
 const router = express.Router();
 
+/** AusPost (and similar APIs) need ISO 3166-1 alpha-2 — `EU` is not valid for rate quotes. */
+const EU_RATE_QUOTE_FALLBACK = 'DE';
+
+function resolveInternationalRateCountry(rawCountry, body = {}) {
+  const c = (rawCountry || '').toUpperCase();
+  if (c !== 'EU') return { rateCountry: c, euQuoteNote: null };
+  const hint = String(body.euDestinationCountry || body.destinationCountry || '').toUpperCase().slice(0, 2);
+  if (hint && hint !== 'EU' && /^[A-Z]{2}$/.test(hint)) {
+    return { rateCountry: hint, euQuoteNote: null };
+  }
+  return {
+    rateCountry: EU_RATE_QUOTE_FALLBACK,
+    euQuoteNote: 'EU rate quote uses DE by default — pass euDestinationCountry (ISO code) for a specific member state.',
+  };
+}
+
 // ── Public rate-quote endpoints (used by storefront checkout for live rates)
 // Must be declared BEFORE router.use(requireAuth) so they don't need a JWT.
 router.post('/usps/rates/public', async (req, res) => {
@@ -205,49 +221,61 @@ router.post('/shipping-cost', async (req, res) => {
 // Return carrier rate(s) for a country using live carrier APIs.
 router.post('/rates', async (req, res) => {
   try {
-    const country   = (req.body.toCountry || '').toUpperCase();
+    const toCountryRaw = (req.body.toCountry || '').toUpperCase();
+    const { rateCountry, euQuoteNote } = resolveInternationalRateCountry(toCountryRaw, req.body);
     const toZip     = req.body.toZip     || '';
     const weightLbs = parseFloat(req.body.weightLbs) || 1;
     const weightOz  = parseFloat(req.body.weightOz)  || 0;
     const weightKg  = parseFloat(req.body.weightKg)  || (weightLbs * 0.4536);
     const weightGrams = parseFloat(req.body.weightGrams) || Math.round(weightKg * 1000);
-    const carrierId = getPreferredCarrierId(country);
+    const carrierId = getPreferredCarrierId(toCountryRaw);
 
     let rates;
     switch (carrierId) {
       case 'usps':
         rates = await uspsService.getRates({ toZip: toZip || '90210', weightLbs, weightOz });
-        return res.json({ rates, source: 'usps', carrier: 'USPS', to: country });
+        return res.json({ rates, source: 'usps', carrier: 'USPS', to: toCountryRaw });
 
       case 'auspost':
-        rates = await auspostService.getRates({ toPostcode: toZip, toCountry: country !== 'AU' ? country : undefined, weightKg });
-        return res.json({ rates, source: 'auspost', carrier: 'Australia Post', to: country });
+        rates = await auspostService.getRates({
+          toPostcode: toZip,
+          toCountry: rateCountry !== 'AU' ? rateCountry : undefined,
+          weightKg,
+        });
+        return res.json({
+          rates,
+          source: 'auspost',
+          carrier: 'Australia Post International',
+          to: toCountryRaw,
+          rateCountry,
+          ...(euQuoteNote ? { note: euQuoteNote } : {}),
+        });
 
       case 'japanpost':
-        rates = await japanpostService.getRates({ toCountry: country !== 'JP' ? country : 'AU', weightGrams });
-        return res.json({ rates, source: 'japanpost', carrier: 'Japan Post', to: country });
+        rates = await japanpostService.getRates({ toCountry: rateCountry !== 'JP' ? rateCountry : 'AU', weightGrams });
+        return res.json({ rates, source: 'japanpost', carrier: 'Japan Post', to: toCountryRaw, rateCountry });
 
       case 'nzpost':
-        rates = await nzpostService.getRates({ toCountry: country !== 'NZ' ? country : undefined, toPostcode: toZip, weightKg });
-        return res.json({ rates, source: 'nzpost', carrier: 'NZ Post', to: country });
+        rates = await nzpostService.getRates({ toCountry: rateCountry !== 'NZ' ? rateCountry : undefined, toPostcode: toZip, weightKg });
+        return res.json({ rates, source: 'nzpost', carrier: 'NZ Post', to: toCountryRaw, rateCountry });
 
       case 'chitchats':
-        rates = await chitchatsService.getRates({ toCountry: country !== 'CA' ? country : 'US', toPostalCode: toZip, weightGrams });
-        return res.json({ rates, source: 'chitchats', carrier: 'Chit Chats', to: country });
+        rates = await chitchatsService.getRates({ toCountry: rateCountry !== 'CA' ? rateCountry : 'US', toPostalCode: toZip, weightGrams });
+        return res.json({ rates, source: 'chitchats', carrier: 'Chit Chats', to: toCountryRaw, rateCountry });
 
       case 'pathao':
         rates = await pathaoService.getRates({ recipientCity: req.body.recipientCity, recipientZone: req.body.recipientZone, itemWeight: weightKg });
-        return res.json({ rates, source: 'pathao', carrier: 'Pathao', to: country });
+        return res.json({ rates, source: 'pathao', carrier: 'Pathao', to: toCountryRaw });
 
       default: {
         // Fallback: zone-based flat rate
         let zones;
         if (db.isUsingMemory()) {
-          zones = (db.getMemStore().delivery_zones || getDefaultZones()).filter(z => z.country === country);
+          zones = (db.getMemStore().delivery_zones || getDefaultZones()).filter(z => z.country === toCountryRaw);
         } else {
-          zones = await db.queryAll('SELECT * FROM delivery_zones WHERE country = $1 AND is_active = true', [country || 'AU']);
+          zones = await db.queryAll('SELECT * FROM delivery_zones WHERE country = $1 AND is_active = true', [toCountryRaw || 'AU']);
         }
-        if (!zones.length) zones = getDefaultZones().filter(z => z.country === (country || 'AU'));
+        if (!zones.length) zones = getDefaultZones().filter(z => z.country === (toCountryRaw || 'AU'));
         const zone = zones[0];
         const basePrice = zone ? parseFloat(zone.shipping_cost) : 15;
         rates = [{
@@ -258,7 +286,7 @@ router.post('/rates', async (req, res) => {
           price: basePrice,
           currency: zone?.currency || 'USD',
         }];
-        return res.json({ rates, source: 'zone-fallback', to: country });
+        return res.json({ rates, source: 'zone-fallback', to: toCountryRaw });
       }
     }
   } catch (err) {
@@ -677,7 +705,10 @@ function getPreferredCarrierId(country) {
   if (c === 'US') return 'usps';
   if (c === 'NZ') return 'nzpost';
   if (c === 'JP') return 'japanpost';
-  return 'auspost'; // AU + all remaining international countries
+  if (c === 'AU') return 'auspost';
+  // Eurozone storefront region — Australia Post international from AU origin
+  if (c === 'EU') return 'auspost';
+  return 'auspost'; // GB + other international (quotes may still use destination ISO where required)
 }
 
 // ── Default Zones (fallback when DB empty) ──────────────────────────────────
@@ -688,6 +719,7 @@ function getDefaultZones() {
     { id: 'z-np-oth', name: 'Nepal - Outside Valley',  country: 'NP', region: 'Other',      shipping_cost: 200,   currency: 'NPR', free_above: 5000, estimated_days: '3-5 days', is_active: true },
     { id: 'z-au',     name: 'Australia',                country: 'AU', region: null,          shipping_cost: 14.99, currency: 'AUD', free_above: 75,   estimated_days: '5-8 days', is_active: true },
     { id: 'z-us',     name: 'United States (USPS)',      country: 'US', region: null,          shipping_cost: 8.70,  currency: 'USD', free_above: 60,   estimated_days: '2-3 days (USPS Priority)', is_active: true },
+    { id: 'z-eu',     name: 'Eurozone (EU)',            country: 'EU', region: null,          shipping_cost: 18.99, currency: 'EUR', free_above: 65,   estimated_days: '6-14 days (AU Post Intl)', is_active: true },
     { id: 'z-gb',     name: 'United Kingdom',           country: 'GB', region: null,          shipping_cost: 11.99, currency: 'GBP', free_above: 50,   estimated_days: '5-10 days', is_active: true },
     { id: 'z-ca',     name: 'Canada',                   country: 'CA', region: null,          shipping_cost: 15.99, currency: 'CAD', free_above: 60,   estimated_days: '5-10 days', is_active: true },
     { id: 'z-nz',     name: 'New Zealand',              country: 'NZ', region: null,          shipping_cost: 12.99, currency: 'NZD', free_above: 60,   estimated_days: '5-10 days', is_active: true },

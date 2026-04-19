@@ -6,6 +6,8 @@ const { isSessionValid } = require('../db/redis');
 
 let wss = null;
 const clients = new Map(); // userId => Set<WebSocket>
+/** @type {Map<string, Set<import('ws')>>} channel name → subscribers (public real-time: inventory, storefront) */
+const channelClients = new Map();
 
 /**
  * Initialize WebSocket server on an existing HTTP server
@@ -46,10 +48,25 @@ function initWebSocket(server) {
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
 
+    ws.channels = new Set();
+
     ws.on('message', (message) => {
       try {
         const msg = JSON.parse(message);
         if (msg.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+        if (msg.type === 'subscribe' && typeof msg.channel === 'string') {
+          const ch = msg.channel.slice(0, 64);
+          if (!channelClients.has(ch)) channelClients.set(ch, new Set());
+          channelClients.get(ch).add(ws);
+          ws.channels.add(ch);
+          ws.send(JSON.stringify({ type: 'subscribed', channel: ch }));
+        }
+        if (msg.type === 'unsubscribe' && typeof msg.channel === 'string') {
+          const ch = msg.channel.slice(0, 64);
+          const set = channelClients.get(ch);
+          if (set) set.delete(ws);
+          ws.channels.delete(ch);
+        }
       } catch { /* ignore invalid messages */ }
     });
 
@@ -57,6 +74,16 @@ function initWebSocket(server) {
       if (ws.userId && clients.has(ws.userId)) {
         clients.get(ws.userId).delete(ws);
         if (clients.get(ws.userId).size === 0) clients.delete(ws.userId);
+      }
+      if (ws.channels && ws.channels.size) {
+        ws.channels.forEach((ch) => {
+          const set = channelClients.get(ch);
+          if (set) {
+            set.delete(ws);
+            if (set.size === 0) channelClients.delete(ch);
+          }
+        });
+        ws.channels.clear();
       }
     });
 
@@ -127,6 +154,33 @@ function getClientCount() {
 }
 
 /**
+ * Real-time layer (GraphQL subscriptions are not required when clients use this WebSocket).
+ * Broadcast to subscribers of a named channel (e.g. inventory, cart hints).
+ */
+function broadcastChannel(channel, message) {
+  const set = channelClients.get(channel);
+  if (!set || !set.size) return;
+  const data = JSON.stringify(message);
+  set.forEach((clientWs) => {
+    if (clientWs.readyState !== WebSocket.OPEN) return;
+    try { clientWs.send(data); } catch { /* ignore */ }
+  });
+}
+
+function broadcastInventoryUpdate(payload) {
+  broadcastChannel('inventory', {
+    type: 'inventory:update',
+    data: payload,
+    ts: new Date().toISOString(),
+  });
+}
+
+/** Storefront listeners subscribe to WebSocket channel `orders` (no JWT required). */
+function broadcastStoreEvent(message) {
+  broadcastChannel('orders', message);
+}
+
+/**
  * Gracefully shut down the WebSocket server — clears heartbeat interval.
  * Call this in test afterAll or process cleanup.
  */
@@ -138,4 +192,13 @@ function closeWebSocket() {
   clients.clear();
 }
 
-module.exports = { initWebSocket, broadcast, sendToUser, getClientCount, closeWebSocket };
+module.exports = {
+  initWebSocket,
+  broadcast,
+  sendToUser,
+  getClientCount,
+  closeWebSocket,
+  broadcastChannel,
+  broadcastInventoryUpdate,
+  broadcastStoreEvent,
+};

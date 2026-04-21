@@ -133,6 +133,21 @@ app.get('/api/realtime', (req, res) => {
     websocketUrl: `${proto}://${host}/ws`,
     channels: ['inventory', 'orders'],
     graphqlSubscriptions: false,
+    eventTypes: [
+      'order:new',
+      'order:updated',
+      'order:payment_failed',
+      'product:created',
+      'product:updated',
+      'product:stock_updated',
+      'inventory:update',
+      'store:order:new',
+    ],
+    guarantees: {
+      delivery: 'at-most-once',
+      durability: 'in-memory-per-instance',
+      recommendation: 'Reconnect websocket and refresh authoritative REST resources after reconnect',
+    },
   });
 });
 

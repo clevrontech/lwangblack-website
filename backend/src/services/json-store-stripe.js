@@ -1,4 +1,5 @@
 const config = require('../config');
+const dynConfig = require('./dynamic-config');
 
 function amountToStripeMinorUnits(amount, currency) {
   const c = (currency || 'usd').toLowerCase();
@@ -8,7 +9,8 @@ function amountToStripeMinorUnits(amount, currency) {
 }
 
 async function createPaymentIntent(amount, currency, metadata = {}) {
-  const secret = config.stripe.secretKey;
+  const stripeCfg = await dynConfig.getGatewayConfig('stripe');
+  const secret = stripeCfg.secretKey || config.stripe.secretKey;
   if (!secret || secret === 'sk_test_placeholder') {
     throw new Error('Stripe is not configured (STRIPE_SECRET_KEY)');
   }

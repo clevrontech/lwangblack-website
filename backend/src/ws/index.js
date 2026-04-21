@@ -1,19 +1,133 @@
 // ── WebSocket Server — Real-time updates ────────────────────────────────────
 const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
+const Redis = require('ioredis');
 const config = require('../config');
 const { isSessionValid } = require('../db/redis');
 
 let wss = null;
+let redisPub = null;
+let redisSub = null;
+let redisFanoutEnabled = false;
+const wsInstanceId = `${process.pid}-${Math.random().toString(36).slice(2, 10)}`;
+const REDIS_FANOUT_CHANNEL = 'lwb:ws:broadcast';
 const clients = new Map(); // userId => Set<WebSocket>
 /** @type {Map<string, Set<import('ws')>>} channel name → subscribers (public real-time: inventory, storefront) */
 const channelClients = new Map();
+
+function broadcastLocal(message) {
+  if (!wss) return;
+  const data = JSON.stringify(message);
+  let delivered = 0;
+  let failed = 0;
+
+  wss.clients.forEach(ws => {
+    if (ws.readyState !== WebSocket.OPEN) return;
+    if (!ws.isAuthenticated) return;
+
+    if (ws.userRole === 'manager' && ws.userCountry) {
+      const eventCountry = message.data?.country;
+      if (eventCountry && eventCountry !== ws.userCountry) return;
+    }
+
+    try {
+      ws.send(data);
+      delivered += 1;
+    } catch (err) {
+      failed += 1;
+      console.error('[WS] Broadcast send failed:', err.message);
+    }
+  });
+
+  if (failed > 0) {
+    console.warn(`[WS] Broadcast partial failure (${message.type}): delivered=${delivered} failed=${failed}`);
+  }
+}
+
+function broadcastChannelLocal(channel, message) {
+  const set = channelClients.get(channel);
+  if (!set || !set.size) return;
+  const data = JSON.stringify(message);
+  let delivered = 0;
+  let failed = 0;
+  set.forEach((clientWs) => {
+    if (clientWs.readyState !== WebSocket.OPEN) return;
+    try {
+      clientWs.send(data);
+      delivered += 1;
+    } catch (err) {
+      failed += 1;
+      console.error(`[WS] Channel broadcast failed (${channel}):`, err.message);
+    }
+  });
+  if (failed > 0) {
+    console.warn(`[WS] Channel broadcast partial failure (${channel}/${message.type}): delivered=${delivered} failed=${failed}`);
+  }
+}
+
+async function publishFanout(payload) {
+  if (!redisFanoutEnabled || !redisPub) return;
+  try {
+    await redisPub.publish(REDIS_FANOUT_CHANNEL, JSON.stringify({
+      source: wsInstanceId,
+      ...payload,
+    }));
+  } catch (err) {
+    console.error('[WS] Redis fanout publish failed:', err.message);
+  }
+}
+
+function initRedisFanout() {
+  const redisUrl = config.redis?.url;
+  if (!redisUrl) {
+    console.warn('[WS] Redis fanout disabled: REDIS_URL is not configured');
+    return;
+  }
+
+  redisPub = new Redis(redisUrl, { maxRetriesPerRequest: 3 });
+  redisSub = new Redis(redisUrl, { maxRetriesPerRequest: 3 });
+
+  redisPub.on('error', (err) => {
+    console.error('[WS] Redis publisher error:', err.message);
+    redisFanoutEnabled = false;
+  });
+  redisSub.on('error', (err) => {
+    console.error('[WS] Redis subscriber error:', err.message);
+    redisFanoutEnabled = false;
+  });
+
+  redisSub.on('message', (channel, raw) => {
+    if (channel !== REDIS_FANOUT_CHANNEL) return;
+    try {
+      const event = JSON.parse(raw);
+      if (!event || event.source === wsInstanceId) return;
+      if (event.kind === 'auth_broadcast') {
+        broadcastLocal(event.message);
+      } else if (event.kind === 'channel_broadcast' && typeof event.channel === 'string') {
+        broadcastChannelLocal(event.channel, event.message);
+      }
+    } catch (err) {
+      console.error('[WS] Redis fanout message parse failed:', err.message);
+    }
+  });
+
+  redisSub.subscribe(REDIS_FANOUT_CHANNEL)
+    .then(() => {
+      redisFanoutEnabled = true;
+      console.log('[WS] Redis fanout enabled');
+    })
+    .catch((err) => {
+      redisFanoutEnabled = false;
+      console.error('[WS] Redis fanout subscribe failed:', err.message);
+    });
+}
 
 /**
  * Initialize WebSocket server on an existing HTTP server
  */
 function initWebSocket(server) {
   wss = new WebSocket.Server({ server, path: '/ws' });
+  initRedisFanout();
 
   wss.on('connection', async (ws, req) => {
     // Authenticate via query param or first message
@@ -113,22 +227,8 @@ function initWebSocket(server) {
  * Managers only receive events for their country
  */
 function broadcast(message) {
-  if (!wss) return;
-
-  const data = JSON.stringify(message);
-
-  wss.clients.forEach(ws => {
-    if (ws.readyState !== WebSocket.OPEN) return;
-    if (!ws.isAuthenticated) return;
-
-    // Country-filter for managers
-    if (ws.userRole === 'manager' && ws.userCountry) {
-      const eventCountry = message.data?.country;
-      if (eventCountry && eventCountry !== ws.userCountry) return;
-    }
-
-    try { ws.send(data); } catch { /* ignore */ }
-  });
+  broadcastLocal(message);
+  publishFanout({ kind: 'auth_broadcast', message });
 }
 
 /**
@@ -158,13 +258,8 @@ function getClientCount() {
  * Broadcast to subscribers of a named channel (e.g. inventory, cart hints).
  */
 function broadcastChannel(channel, message) {
-  const set = channelClients.get(channel);
-  if (!set || !set.size) return;
-  const data = JSON.stringify(message);
-  set.forEach((clientWs) => {
-    if (clientWs.readyState !== WebSocket.OPEN) return;
-    try { clientWs.send(data); } catch { /* ignore */ }
-  });
+  broadcastChannelLocal(channel, message);
+  publishFanout({ kind: 'channel_broadcast', channel, message });
 }
 
 function broadcastInventoryUpdate(payload) {
@@ -189,6 +284,15 @@ function closeWebSocket() {
     wss.close();
     wss = null;
   }
+  if (redisSub) {
+    redisSub.quit().catch(() => {});
+    redisSub = null;
+  }
+  if (redisPub) {
+    redisPub.quit().catch(() => {});
+    redisPub = null;
+  }
+  redisFanoutEnabled = false;
   clients.clear();
 }
 

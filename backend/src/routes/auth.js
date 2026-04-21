@@ -23,10 +23,17 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    const user = await db.queryOne(
+    let user = await db.queryOne(
       'SELECT * FROM admin_users WHERE username = $1 AND is_active = TRUE',
       [loginId]
     );
+
+    if (!user) {
+      user = await db.queryOne(
+        'SELECT * FROM admin_users WHERE email = $1 AND is_active = TRUE',
+        [loginId]
+      );
+    }
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });

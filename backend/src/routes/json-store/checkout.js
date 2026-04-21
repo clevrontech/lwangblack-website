@@ -11,7 +11,9 @@ router.post('/stripe-intent', async (req, res) => {
     const intent = await stripeService.createPaymentIntent(amount, currency, { orderId: orderId || '', region: region || '' });
     res.json({ success: true, clientSecret: intent.client_secret, intentId: intent.id });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    const msg = err.message || 'Stripe payment intent failed';
+    const status = /not configured/i.test(msg) ? 503 : 500;
+    res.status(status).json({ success: false, error: msg });
   }
 });
 
@@ -41,7 +43,9 @@ router.post('/khalti/initiate', async (req, res) => {
     const result = await khaltiService.initiatePayment(amount, orderId, customerInfo);
     res.json({ success: true, payment_url: result.payment_url, pidx: result.pidx });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    const msg = err.message || 'Khalti initiation failed';
+    const status = /not configured/i.test(msg) ? 503 : 500;
+    res.status(status).json({ success: false, error: msg });
   }
 });
 

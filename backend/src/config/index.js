@@ -1,6 +1,13 @@
 // ── Lwang Black Backend — Configuration ─────────────────────────────────────
 require('dotenv').config();
 
+const shopifyStoreDomain = (process.env.SHOPIFY_STORE_DOMAIN || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+const shopifyStorefrontAccessToken = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || '';
+const shopifyAdminAccessToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN || '';
+const shopifyEnabled =
+  process.env.SHOPIFY_ENABLED === 'true' ||
+  (!!shopifyStoreDomain && !!shopifyStorefrontAccessToken);
+
 module.exports = {
   port: parseInt(process.env.PORT) || 3001,
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -99,11 +106,11 @@ module.exports = {
   // Shopify — Storefront (headless checkout) + Admin API (orders/inventory) + webhooks
   // https://shopify.dev/docs/api/storefront  |  https://shopify.dev/docs/api/admin-graphql
   shopify: {
-    enabled: process.env.SHOPIFY_ENABLED === 'true',
-    storeDomain: (process.env.SHOPIFY_STORE_DOMAIN || '').replace(/^https?:\/\//, '').replace(/\/$/, ''),
-    storefrontAccessToken: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || '',
+    enabled: shopifyEnabled,
+    storeDomain: shopifyStoreDomain,
+    storefrontAccessToken: shopifyStorefrontAccessToken,
     /** Admin API access token (custom app) — read_orders, read_products, read_inventory */
-    adminAccessToken: process.env.SHOPIFY_ADMIN_ACCESS_TOKEN || '',
+    adminAccessToken: shopifyAdminAccessToken,
     /** Webhook signing — `X-Shopify-Hmac-Sha256` (same as custom app “API secret key” in some UIs) */
     apiSecret: process.env.SHOPIFY_API_SECRET || '',
     apiVersion: process.env.SHOPIFY_API_VERSION || '2025-01',

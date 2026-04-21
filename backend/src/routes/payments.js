@@ -21,6 +21,15 @@ const CURRENCY_MAP = {
   AU: 'aud', US: 'usd', GB: 'gbp', EU: 'eur', CA: 'cad', NZ: 'nzd', JP: 'jpy', NP: 'npr',
 };
 
+const processedStripeEvents = new Map(); // eventId -> timestamp ms
+const STRIPE_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
+
+function pruneProcessedStripeEvents(now = Date.now()) {
+  for (const [eventId, ts] of processedStripeEvents.entries()) {
+    if (now - ts > STRIPE_EVENT_TTL_MS) processedStripeEvents.delete(eventId);
+  }
+}
+
 function getCarrierByCountry(country) {
   const c = (country || '').toUpperCase();
   if (c === 'NP') return 'Pathao';
@@ -145,10 +154,10 @@ async function updateOrderStatus(orderId, status, method, reference) {
     if (db.isUsingMemory()) {
       const mem = db.getMemStore();
       const o = mem.orders.find((x) => x.id === orderId);
-      if (o?.status === 'paid') return;
+      if (o?.status === 'paid') return false;
     } else {
       const row = await db.queryOne('SELECT status FROM orders WHERE id = $1', [orderId]);
-      if (row?.status === 'paid') return;
+      if (row?.status === 'paid') return false;
     }
   }
 
@@ -198,6 +207,8 @@ async function updateOrderStatus(orderId, status, method, reference) {
       } catch (e) { console.error('[Payments] Invoice generation error:', e.message); }
     })();
   }
+
+  return true;
 }
 
 // ── GET /api/payments/methods?country=XX ─────────────────────────────────────
@@ -540,8 +551,10 @@ router.get('/stripe-session-verify', async (req, res) => {
     const session = await stripe.checkout.sessions.retrieve(session_id);
 
     if (session.payment_status === 'paid' && session.metadata?.orderId === order_id) {
-      await updateOrderStatus(order_id, 'paid', session.metadata?.paymentType || 'stripe', session.payment_intent);
-      broadcast({ type: 'order:updated', data: { orderId: order_id, status: 'paid' } });
+      const updated = await updateOrderStatus(order_id, 'paid', session.metadata?.paymentType || 'stripe', session.payment_intent);
+      if (updated) {
+        broadcast({ type: 'order:updated', data: { orderId: order_id, status: 'paid', source: 'stripe_verify' } });
+      }
     }
 
     let currentStatus = 'pending';
@@ -651,9 +664,19 @@ router.post('/stripe-webhook', express.raw({ type: 'application/json' }), async 
 
     const evtId = event.id;
     if (evtId) {
-      const dup = await cacheGet(`stripe:evt:${evtId}`);
-      if (dup) return res.json({ received: true, duplicate: true });
-      await cacheSet(`stripe:evt:${evtId}`, { at: Date.now() }, 86400);
+      pruneProcessedStripeEvents();
+      if (processedStripeEvents.has(evtId)) {
+        return res.json({ received: true, duplicate: true });
+      }
+      processedStripeEvents.set(evtId, Date.now());
+
+      try {
+        const dup = await cacheGet(`stripe:evt:${evtId}`);
+        if (dup) return res.json({ received: true, duplicate: true });
+        await cacheSet(`stripe:evt:${evtId}`, { at: Date.now() }, 86400);
+      } catch (redisErr) {
+        console.warn('[Payments] Stripe webhook Redis dedup unavailable:', redisErr.message);
+      }
     }
 
     if (event.type === 'checkout.session.completed') {
@@ -663,9 +686,11 @@ router.post('/stripe-webhook', express.raw({ type: 'application/json' }), async 
       if (orderId && orderId !== 'unknown') {
         await withRetry(
           async () => {
-            await updateOrderStatus(orderId, 'paid', paymentType, session.payment_intent);
-            broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: paymentType, source: 'stripe_webhook' } });
-            broadcast({ type: 'store:order:new', data: { orderId, status: 'paid', method: paymentType } });
+            const updated = await updateOrderStatus(orderId, 'paid', paymentType, session.payment_intent);
+            if (updated) {
+              broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: paymentType, source: 'stripe_webhook' } });
+              broadcast({ type: 'store:order:new', data: { orderId, status: 'paid', method: paymentType } });
+            }
           },
           { maxAttempts: 5, baseMs: 400 }
         );
@@ -679,9 +704,11 @@ router.post('/stripe-webhook', express.raw({ type: 'application/json' }), async 
       if (orderId) {
         await withRetry(
           async () => {
-            await updateOrderStatus(orderId, 'paid', 'card', pi.id);
-            broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'card', source: 'stripe_webhook' } });
-            broadcast({ type: 'store:order:new', data: { orderId, status: 'paid', method: 'card' } });
+            const updated = await updateOrderStatus(orderId, 'paid', 'card', pi.id);
+            if (updated) {
+              broadcast({ type: 'order:updated', data: { orderId, status: 'paid', method: 'card', source: 'stripe_webhook' } });
+              broadcast({ type: 'store:order:new', data: { orderId, status: 'paid', method: 'card' } });
+            }
           },
           { maxAttempts: 5, baseMs: 400 }
         );

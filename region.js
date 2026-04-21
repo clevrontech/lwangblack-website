@@ -4,11 +4,36 @@
  * Depends on: geo-router.js (must load first)
  */
 
+function getRegionMap() {
+  return window.REGION_DATA || {};
+}
+
+function getGeoRouterSafe() {
+  return (window.GeoRouter && typeof window.GeoRouter.get === 'function')
+    ? window.GeoRouter
+    : null;
+}
+
+function getRegionSafe(code) {
+  const map = getRegionMap();
+  if (code && map[code]) return map[code];
+  return map.NP || {
+    code: 'NP',
+    slug: 'np',
+    name: 'Nepal',
+    flagEmoji: '🇳🇵',
+    phone: '+977 1 5970 800',
+    whatsapp: '+97715970800',
+    address: 'Kathmandu, Nepal',
+  };
+}
+
 // ─────────────────────────────────────────────
 // REGION SWITCHER
 // ─────────────────────────────────────────────
 function buildRegionSwitcher() {
   const regionOrder = ['AU', 'NP', 'US', 'GB', 'EU', 'CA', 'JP', 'NZ'];
+  const regionMap = getRegionMap();
 
   const wrapper = document.createElement('div');
   wrapper.className = 'region-switcher';
@@ -23,13 +48,13 @@ function buildRegionSwitcher() {
     <div class="region-dropdown" id="regionDropdown">
       <div class="rd-header">Select Region</div>
       ${regionOrder.map(code => {
-        const r = REGION_DATA[code];
+        const r = regionMap[code];
         if (!r) return '';
         // Use ISO 2-letter code for flagcdn (gb not uk)
-        const flagSlug = code === 'GB' ? 'gb' : code === 'EU' ? 'eu' : r.slug.toLowerCase();
+        const slug = typeof r.slug === 'string' && r.slug ? r.slug.toLowerCase() : code.toLowerCase();
+        const flagSlug = code === 'GB' ? 'gb' : code === 'EU' ? 'eu' : slug;
         return `
-          <button class="region-option" data-code="${code}"
-            onclick="window.GeoRouter.set('${code}'); document.getElementById('regionDropdown').classList.remove('active'); document.getElementById('regionSwitcherBtn').classList.remove('active');">
+          <button class="region-option" data-code="${code}" type="button">
             <img src="https://flagcdn.com/${flagSlug}.svg" alt="${r.name}" width="18" height="13" />
             <span>${r.name}</span>
           </button>
@@ -42,6 +67,19 @@ function buildRegionSwitcher() {
   wrapper.addEventListener('click', (e) => {
     const btn = document.getElementById('regionSwitcherBtn');
     const drop = document.getElementById('regionDropdown');
+    const optionBtn = e.target && e.target.closest ? e.target.closest('.region-option') : null;
+
+    if (optionBtn) {
+      const nextCode = optionBtn.getAttribute('data-code');
+      const router = getGeoRouterSafe();
+      if (router && typeof router.set === 'function' && nextCode) {
+        router.set(nextCode);
+      }
+      if (drop) drop.classList.remove('active');
+      if (btn) btn.classList.remove('active');
+      return;
+    }
+
     if (btn && drop && (btn.contains(e.target) || btn === e.target)) {
       e.stopPropagation();
       const open = drop.classList.toggle('active');
@@ -71,9 +109,12 @@ function initRegionUI() {
 
   // Listen to region changes (fired by GeoRouter after init / manual set)
   document.addEventListener('lb:regionChanged', (e) => {
-    const { code, region } = e.detail;
+    const detail = e && e.detail ? e.detail : {};
+    const code = (detail.code || 'NP').toUpperCase();
+    const region = detail.region || getRegionSafe(code);
     updateRegionUI(code, region);
     updateContactSection(code, region);
+    updatePracticeAreas(code, region);
     updateFlagsGrid(code);
     updateSchemaContact(region);
     updateHomeProducts(code);
@@ -81,7 +122,8 @@ function initRegionUI() {
 
   // When currency converter changes, re-render product prices
   document.addEventListener('lb:currencyConverted', () => {
-    const code = window.GeoRouter.get();
+    const router = getGeoRouterSafe();
+    const code = router ? router.get() : 'NP';
     updateHomeProducts(code);
   });
 }
@@ -91,51 +133,60 @@ function initRegionUI() {
 // ─────────────────────────────────────────────
 
 function updateRegionUI(code, region) {
+  const safeRegion = region || getRegionSafe(code);
+  const safeCode = (code || safeRegion.code || 'NP').toUpperCase();
   // flagcdn uses lowercase ISO code; GB not UK
-  const flagSlug = code === 'GB' ? 'gb' : code === 'EU' ? 'eu' : code.toLowerCase();
+  const flagSlug = safeCode === 'GB' ? 'gb' : safeCode === 'EU' ? 'eu' : safeCode.toLowerCase();
 
   const flagDisplay = document.getElementById('rsFlagDisplay');
   const nameDisplay = document.getElementById('rsNameDisplay');
-  if (flagDisplay) { flagDisplay.src = `https://flagcdn.com/${flagSlug}.svg`; flagDisplay.alt = region.name; }
-  if (nameDisplay) nameDisplay.textContent = region.name;
+  if (flagDisplay) { flagDisplay.src = `https://flagcdn.com/${flagSlug}.svg`; flagDisplay.alt = safeRegion.name; }
+  if (nameDisplay) nameDisplay.textContent = safeRegion.name;
 
   const heroFlag = document.getElementById('heroRegionFlag');
   const heroBadge = document.getElementById('heroRegionBadge');
-  if (heroFlag) { heroFlag.src = `https://flagcdn.com/${flagSlug}.svg`; heroFlag.alt = region.name; }
-  if (heroBadge) heroBadge.textContent = region.name;
+  if (heroFlag) { heroFlag.src = `https://flagcdn.com/${flagSlug}.svg`; heroFlag.alt = safeRegion.name; }
+  if (heroBadge) heroBadge.textContent = safeRegion.name;
 
   document.querySelectorAll('.region-option').forEach(opt => {
-    opt.classList.toggle('active', opt.dataset.code === code);
+    opt.classList.toggle('active', opt.dataset.code === safeCode);
   });
 
-  document.documentElement.lang = getLangCode(code);
+  document.documentElement.lang = getLangCode(safeCode);
 }
 
 function updateContactSection(code, region) {
+  const safeRegion = region || getRegionSafe(code);
   const elPhone   = document.getElementById('contactPhone');
   const elAddr    = document.getElementById('contactAddress');
   const elWa      = document.getElementById('contactWhatsapp');
   const elName    = document.getElementById('contactRegionName');
   const elFlag    = document.getElementById('contactFlag');
 
-  if (elPhone)  elPhone.textContent = region.phone;
-  if (elAddr)   elAddr.textContent  = region.address;
-  if (elName)   elName.textContent  = region.name;
-  if (elFlag)   elFlag.textContent  = region.flagEmoji;
+  if (elPhone)  elPhone.textContent = safeRegion.phone || '';
+  if (elAddr)   elAddr.textContent  = safeRegion.address || '';
+  if (elName)   elName.textContent  = safeRegion.name || '';
+  if (elFlag)   elFlag.textContent  = safeRegion.flagEmoji || '';
   if (elWa) {
-    const msg = encodeURIComponent(`Hi Lwang Black ${region.name} office, I'd like a consultation.`);
-    elWa.href = `https://wa.me/${region.whatsapp.replace(/[\s+]/g, '')}?text=${msg}`;
+    const msg = encodeURIComponent(`Hi Lwang Black ${safeRegion.name || ''} office, I'd like a consultation.`);
+    const waNumber = String(safeRegion.whatsapp || '').replace(/[\s+]/g, '');
+    if (waNumber) {
+      elWa.href = `https://wa.me/${waNumber}?text=${msg}`;
+    }
   }
 }
 
 function updatePracticeAreas(code, region) {
   const grid = document.getElementById('practiceAreasGrid');
   if (!grid) return;
+  const areas = window.PRACTICE_AREAS;
+  if (!areas || typeof areas !== 'object') return;
 
-  const priority = region.practicePriority || ['commercial', 'migration', 'corporate', 'property'];
+  const safeRegion = region || getRegionSafe(code);
+  const priority = safeRegion.practicePriority || ['commercial', 'migration', 'corporate', 'property'];
   const ordered = [
-    ...priority.map(id => PRACTICE_AREAS[id]).filter(Boolean),
-    ...Object.values(PRACTICE_AREAS).filter(a => !priority.includes(a.id))
+    ...priority.map(id => areas[id]).filter(Boolean),
+    ...Object.values(areas).filter(a => !priority.includes(a.id))
   ].slice(0, 6);
 
   grid.innerHTML = ordered.map((area, i) => `
@@ -143,7 +194,7 @@ function updatePracticeAreas(code, region) {
       <div class="practice-card-icon">${area.icon}</div>
       <h3 class="practice-card-title">${area.title}</h3>
       <p class="practice-card-desc">${area.desc}</p>
-      ${i === 0 ? `<span class="practice-featured-label">PRIORITY SERVICE · ${region.name.toUpperCase()}</span>` : ''}
+      ${i === 0 ? `<span class="practice-featured-label">PRIORITY SERVICE · ${(safeRegion.name || '').toUpperCase()}</span>` : ''}
     </div>
   `).join('');
 }
@@ -155,18 +206,23 @@ function updateFlagsGrid(activeCode) {
 }
 
 function updateSchemaContact(region) {
+  const safeRegion = region || getRegionSafe('NP');
   const schema = document.getElementById('schemaOrg');
   if (!schema) return;
   try {
     const data = JSON.parse(schema.textContent);
-    if (data.contactPoint) data.contactPoint.telephone = region.phone;
+    if (data.contactPoint) data.contactPoint.telephone = safeRegion.phone;
     schema.textContent = JSON.stringify(data, null, 2);
-  } catch(e) {}
+  } catch (e) {
+    console.warn('[region.js] Failed to update schema contact:', e.message);
+  }
 }
 
 function updateHomeProducts(code) {
   const grid = document.querySelector('.product-grid');
-  if (!grid || !window.LB_PRODUCTS) return;
+  const products = window.LB_PRODUCTS;
+  if (!grid || !products || typeof products !== 'object') return;
+  const safeCode = (code || 'NP').toUpperCase();
 
   const showcaseIds = [
     'lb-pot-and-press-gift-set',
@@ -178,21 +234,21 @@ function updateHomeProducts(code) {
   let html = '';
 
   showcaseIds.forEach(id => {
-    const prod = window.LB_PRODUCTS[id];
+    const prod = products[id];
     if (!prod) return;
 
     if (prod.allowed_regions !== 'ALL' &&
         Array.isArray(prod.allowed_regions) &&
-        !prod.allowed_regions.includes(code)) return;
+        !prod.allowed_regions.includes(safeCode)) return;
 
     let priceData = window.getProductPrice
-      ? window.getProductPrice(id, code)
-      : (prod.prices[code] || prod.prices.DEFAULT);
-    if (!priceData) priceData = prod.prices.DEFAULT;
+      ? window.getProductPrice(id, safeCode)
+      : (prod.prices && (prod.prices[safeCode] || prod.prices.DEFAULT));
+    if (!priceData && prod.prices) priceData = prod.prices.DEFAULT;
 
     // Currency conversion
     let priceDisplay = priceData ? priceData.display : '';
-    if (window.AUCurrencyState && window.AUCurrencyState.active && priceData && priceData.amount) {
+    if (window.AUCurrencyState && window.AUCurrencyState.active && priceData && typeof priceData.amount !== 'undefined') {
       const converted = window.LBConvertPrice
         ? window.LBConvertPrice(priceData.amount)
         : (priceData.amount * window.AUCurrencyState.rate).toFixed(2);
@@ -238,15 +294,16 @@ function getLangCode(code) {
 document.addEventListener('DOMContentLoaded', () => {
   initRegionUI();
   // window.GeoRouter.init() dispatches lb:regionChanged once the region is resolved
-  if (window.GeoRouter) {
-    window.GeoRouter.init();
+  const router = getGeoRouterSafe();
+  if (router && typeof router.init === 'function') {
+    router.init();
   } else {
     console.error('[region.js] GeoRouter not found — is geo-router.js loaded first?');
   }
 });
 
 // Backward-compat alias — set after DOMContentLoaded so GeoRouter is guaranteed available
-window.LB_REGION = window.GeoRouter;
+window.LB_REGION = getGeoRouterSafe();
 
 // Sync storefront pricing region (used by /api/store cart + product cards)
 (function syncLwbRegion() {
@@ -258,6 +315,8 @@ window.LB_REGION = window.GeoRouter;
     try {
       const code = e.detail && e.detail.code;
       if (code) localStorage.setItem('lwb_region', mapCode(code));
-    } catch (_) {}
+    } catch (err) {
+      console.warn('[region.js] Failed to persist lwb_region:', err.message);
+    }
   });
 })();

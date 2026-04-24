@@ -2,8 +2,33 @@
 const express = require('express');
 const db = require('../db/pool');
 const { requireAuth, requireRole, auditLog } = require('../middleware/auth');
+const { sendEmail } = require('../services/notifications');
 
 const router = express.Router();
+
+// Fan-out helper: deliver campaign to a list of subscribers without blocking the
+// HTTP response. Errors per-recipient are logged but don't fail the batch.
+async function dispatchCampaignEmails(campaignId, subject, body, subscribers) {
+  let ok = 0, fail = 0;
+  for (const sub of subscribers) {
+    if (!sub?.email) continue;
+    try {
+      const result = await sendEmail({
+        to: sub.email,
+        subject,
+        html: body,
+        text: body.replace(/<[^>]+>/g, ' '),
+        template: `campaign_${campaignId || 'adhoc'}`,
+      });
+      if (result?.success) ok++; else fail++;
+    } catch (err) {
+      fail++;
+      console.error(`[Marketing] Campaign send failed for ${sub.email}:`, err.message);
+    }
+  }
+  console.log(`[Marketing] Campaign ${campaignId || '(adhoc)'} dispatched: ${ok} sent, ${fail} failed`);
+  return { ok, fail };
+}
 
 // ── POST /api/marketing/subscribe (public) ──────────────────────────────────
 router.post('/subscribe', async (req, res) => {
@@ -140,6 +165,11 @@ router.post('/campaign', requireAuth, requireRole('owner', 'manager'), async (re
       };
       mem.campaigns.push(campaign);
 
+      // Fire-and-forget real email dispatch (SendGrid when configured, dry-run otherwise)
+      dispatchCampaignEmails(campaign.id, subject, body, subs).catch(e =>
+        console.error('[Marketing] Dispatch error:', e.message)
+      );
+
       return res.json({
         message: `Campaign "${name}" queued for ${sentCount} subscribers`,
         campaign,
@@ -159,12 +189,37 @@ router.post('/campaign', requireAuth, requireRole('owner', 'manager'), async (re
     );
     sentCount = parseInt(countResult?.count) || 0;
 
-    // TODO: Integrate SendGrid / Mailgun for real email sending
     const campaign = await db.queryOne(
       `INSERT INTO campaigns (name, subject, body, target_region, sent_count, status, sent_by)
        VALUES ($1, $2, $3, $4, $5, 'sent', $6) RETURNING *`,
       [name, subject, body, target_region || null, sentCount, req.user.id]
     );
+
+    // Fan-out sending via SendGrid (dry-run when SENDGRID_API_KEY is absent).
+    // Chunked to avoid memory spikes on very large lists.
+    (async () => {
+      try {
+        const CHUNK = 200;
+        let offset = 0;
+        while (true) {
+          const chunkParams = [...params, CHUNK, offset];
+          const idx = params.length;
+          const rows = await db.queryAll(
+            `SELECT email, name FROM subscribers
+             WHERE ${countWhere}
+             ORDER BY subscribed_at ASC
+             LIMIT $${idx + 1} OFFSET $${idx + 2}`,
+            chunkParams
+          );
+          if (!rows || rows.length === 0) break;
+          await dispatchCampaignEmails(campaign?.id, subject, body, rows);
+          if (rows.length < CHUNK) break;
+          offset += CHUNK;
+        }
+      } catch (e) {
+        console.error('[Marketing] Campaign fan-out error:', e.message);
+      }
+    })();
 
     await auditLog(db, {
       userId: req.user.id, username: req.user.username,

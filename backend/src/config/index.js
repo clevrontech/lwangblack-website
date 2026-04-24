@@ -144,7 +144,10 @@ module.exports = {
 
   // Payment methods per country — only include methods that are implemented in /api/payments/checkout
   paymentMethods: {
-    NP: ['card', 'khalti', 'esewa', 'nabil', 'cod'],
+    // Nepal storefront offers: Nabil-backed card payments, eSewa wallet, and
+    // Cash-on-Delivery. Khalti and Nabil are wired in the backend for future
+    // campaigns/opt-in but intentionally not advertised by default.
+    NP: ['card', 'esewa', 'cod'],
     AU: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     US: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     GB: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],

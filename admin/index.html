@@ -1,38 +1,14 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lwang Black Admin — Redirecting…</title>
-  <meta name="robots" content="noindex, nofollow" />
-  <!-- Single-source admin: this legacy bundle is superseded by the React app at /admin-dashboard/. -->
-  <meta http-equiv="refresh" content="0; url=/admin-dashboard/" />
-  <link rel="icon" type="image/svg+xml" href="/admin/favicon.svg" />
-  <style>
-    html, body { margin:0; height:100%; background:#0a0a0a; color:#e7e7e7;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .wrap { height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:.75rem; }
-    .spinner { width:24px; height:24px; border:2px solid rgba(255,255,255,.15); border-top-color:#f5b942; border-radius:50%;
-      animation: spin .9s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    a { color:#f5b942; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    small { opacity:.5; }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="spinner" aria-hidden="true"></div>
-    <div>Redirecting to the Lwang Black admin dashboard…</div>
-    <small>If you are not redirected automatically, <a href="/admin-dashboard/">click here</a>.</small>
-  </div>
-  <script>
-    // Preserve any query string or hash fragment across the redirect so deep
-    // links (e.g. /admin?tab=orders -> /admin-dashboard/?tab=orders) still work.
-    (function () {
-      var target = '/admin-dashboard/' + (location.search || '') + (location.hash || '');
-      location.replace(target);
-    })();
-  </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/admin/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>admin-dashboard</title>
+    <script type="module" crossorigin src="/admin/assets/index-BRQdB_5H.js"></script>
+    <link rel="stylesheet" crossorigin href="/admin/assets/index-Utw2Rodg.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>

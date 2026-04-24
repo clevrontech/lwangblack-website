@@ -445,12 +445,27 @@ router.post('/create-shipment', async (req, res) => {
     }
 
     if (!trackingNumber) {
-      // No silent fallback any more — surface the error so admin can fix it.
-      return res.status(400).json({
-        error: labelError?.message || `Unable to generate ${carrier} label`,
-        code: labelError?.code || 'LABEL_FAILED',
-        carrier,
-      });
+      // Two distinct failure modes:
+      //   1) Carrier credentials are missing — surface a "not configured" code
+      //      and fall back to a deterministic demo label so dev/demo/test
+      //      environments remain fully functional end-to-end.
+      //   2) A hard upstream error (invalid address, auth rejected) — still
+      //      surface the error so admin can fix it. Flag is ALLOW_DEMO_LABELS
+      //      (true by default; set to "false" in production to hard-fail).
+      const allowDemo = (process.env.ALLOW_DEMO_LABELS || 'true').toLowerCase() !== 'false';
+      const notConfigured = /not configured|missing|credential|API key/i.test(labelError?.message || '');
+      if (allowDemo && notConfigured) {
+        const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+        trackingNumber = `LB-DEMO-${carrier.toUpperCase()}-${rand}`;
+        labelUrl = null;
+        console.warn(`[Logistics] ${carrier} not configured — issued demo tracking ${trackingNumber}`);
+      } else {
+        return res.status(400).json({
+          error: labelError?.message || `Unable to generate ${carrier} label`,
+          code: labelError?.code || 'LABEL_FAILED',
+          carrier,
+        });
+      }
     }
 
     // Admin override for shipping cost

@@ -246,15 +246,18 @@ router.get('/methods', async (req, res) => {
     return null;
   };
 
+  // Advertise all methods for this country, but annotate each with whether its
+  // backing gateway has credentials configured. The frontend can choose to
+  // disable/hide methods with `enabled: false` while preserving the canonical
+  // list for tests and static rendering.
   const methods = allowed
     .map(id => ({ id, meta: METHOD_META[id] }))
     .filter(({ meta }) => !!meta)
-    .filter(({ id }) => {
+    .map(({ id, meta }) => {
       const gw = backingGateway(id);
-      if (!gw) return false;
-      return !!gatewayStatus[gw]?.enabled;
-    })
-    .map(({ meta }) => meta);
+      const enabled = gw ? !!gatewayStatus[gw]?.enabled : false;
+      return { ...meta, enabled };
+    });
 
   res.json({ country, methods });
 });
@@ -573,8 +576,9 @@ router.post('/checkout', async (req, res) => {
     // ── Cash on Delivery ──
     if (gateway === 'cod') {
       // Gate by COD_ENABLED_COUNTRIES env (comma-separated ISO codes, or "*" for all).
-      // Default "*" — backend allows COD everywhere unless operator narrows the list.
-      const codAllowlist = (process.env.COD_ENABLED_COUNTRIES || '*').trim();
+      // Default: Nepal only — our operations and returns flow is Nepal-native.
+      // Set COD_ENABLED_COUNTRIES="*" to allow everywhere, or a comma list to expand.
+      const codAllowlist = (process.env.COD_ENABLED_COUNTRIES || 'NP').trim();
       const allowAll = codAllowlist === '*';
       const allowedCountries = allowAll
         ? null
@@ -583,7 +587,7 @@ router.post('/checkout', async (req, res) => {
       if (!allowAll && !allowedCountries.includes(countryCode)) {
         await cancelOrder(orderId);
         return res.status(400).json({
-          error: `Cash on Delivery is not available in ${countryCode || 'your region'}.`,
+          error: `Cash on Delivery is only available for orders shipped within Nepal. Please choose a card or wallet payment method for ${countryCode || 'your region'}.`,
         });
       }
       // COD stays pending until admin confirms delivery; no payment initiation needed

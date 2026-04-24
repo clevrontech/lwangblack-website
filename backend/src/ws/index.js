@@ -80,21 +80,41 @@ async function publishFanout(payload) {
 function initRedisFanout() {
   const redisUrl = config.redis?.url;
   if (!redisUrl) {
-    console.warn('[WS] Redis fanout disabled: REDIS_URL is not configured');
+    // Single-instance mode — broadcasts stay local; no cross-process fanout. This is fine for dev/demo.
+    console.log('[WS] Redis fanout disabled (REDIS_URL not set) — single-instance broadcast only');
     return;
   }
 
-  redisPub = new Redis(redisUrl, { maxRetriesPerRequest: 3 });
-  redisSub = new Redis(redisUrl, { maxRetriesPerRequest: 3 });
+  const redisOpts = {
+    maxRetriesPerRequest: 2,
+    retryStrategy: (times) => {
+      if (times > 3) return null; // give up
+      return Math.min(times * 200, 2000);
+    },
+    reconnectOnError: () => false,
+    lazyConnect: true,
+  };
+  redisPub = new Redis(redisUrl, redisOpts);
+  redisSub = new Redis(redisUrl, redisOpts);
 
+  let pubErrLogged = false;
+  let subErrLogged = false;
   redisPub.on('error', (err) => {
-    console.error('[WS] Redis publisher error:', err.message);
+    if (!pubErrLogged) {
+      console.warn('[WS] Redis publisher unavailable:', err.message || err.code);
+      pubErrLogged = true;
+    }
     redisFanoutEnabled = false;
   });
   redisSub.on('error', (err) => {
-    console.error('[WS] Redis subscriber error:', err.message);
+    if (!subErrLogged) {
+      console.warn('[WS] Redis subscriber unavailable:', err.message || err.code);
+      subErrLogged = true;
+    }
     redisFanoutEnabled = false;
   });
+  redisPub.on('end', () => { redisFanoutEnabled = false; });
+  redisSub.on('end', () => { redisFanoutEnabled = false; });
 
   redisSub.on('message', (channel, raw) => {
     if (channel !== REDIS_FANOUT_CHANNEL) return;
@@ -111,14 +131,19 @@ function initRedisFanout() {
     }
   });
 
-  redisSub.subscribe(REDIS_FANOUT_CHANNEL)
+  Promise.all([redisPub.connect(), redisSub.connect()])
+    .then(() => redisSub.subscribe(REDIS_FANOUT_CHANNEL))
     .then(() => {
       redisFanoutEnabled = true;
       console.log('[WS] Redis fanout enabled');
     })
     .catch((err) => {
       redisFanoutEnabled = false;
-      console.error('[WS] Redis fanout subscribe failed:', err.message);
+      // error handler above already logged once; just disable quietly.
+      try { redisPub?.disconnect(); } catch {}
+      try { redisSub?.disconnect(); } catch {}
+      redisPub = null;
+      redisSub = null;
     });
 }
 

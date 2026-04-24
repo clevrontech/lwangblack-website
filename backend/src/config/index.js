@@ -26,9 +26,10 @@ module.exports = {
     connectionTimeoutMillis: 5000,
   },
 
-  // Redis
+  // Redis (optional — only attempted when REDIS_URL is explicitly set).
+  // In dev/demo mode with no Redis server, leaving this unset avoids noisy reconnect loops.
   redis: {
-    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    url: process.env.REDIS_URL || '',
   },
 
   // JWT

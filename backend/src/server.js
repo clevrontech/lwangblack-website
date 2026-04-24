@@ -236,13 +236,23 @@ app.use('/invoices', express.static(path.join(__dirname, '..', 'invoices')));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // ── Serve React Admin Dashboard ─────────────────────────────────────────────
-const adminPath = path.resolve(__dirname, '..', '..', 'admin-dashboard', 'dist');
+// Vite is configured with `build.outDir = '../admin'` in admin-dashboard/vite.config.js,
+// so the compiled SPA lives at <project>/admin/, not admin-dashboard/dist.
+// Fallback to the legacy `admin-dashboard/dist` location if someone rebuilds with the old config.
+const fs = require('fs');
+const adminCandidates = [
+  path.resolve(__dirname, '..', '..', 'admin'),
+  path.resolve(__dirname, '..', '..', 'admin-dashboard', 'dist'),
+];
+const adminPath = adminCandidates.find(p => fs.existsSync(path.join(p, 'index.html'))) || adminCandidates[0];
 app.use('/admin', express.static(adminPath));
 app.get('/admin.html', (req, res) => {
   res.redirect(301, '/admin/');
 });
 app.get('/admin/*', (req, res) => {
-  res.sendFile(path.join(adminPath, 'index.html'));
+  res.sendFile(path.join(adminPath, 'index.html'), err => {
+    if (err) res.status(503).send('Admin dashboard not built yet. Run: npm --prefix admin-dashboard run build');
+  });
 });
 
 // ── Serve Frontend Static Files ─────────────────────────────────────────────

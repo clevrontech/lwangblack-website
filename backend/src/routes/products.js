@@ -20,13 +20,33 @@ function availableUnitsForLine(product, variantId) {
   return Math.max(0, parseInt(product.stock, 10) || 0);
 }
 
+/** Aggregate variant-level inventory into a top-level `stock` field so the admin UI
+ *  (which reads `p.stock`) works regardless of the storage shape. Also back-fills
+ *  `name` (admin expects `name`; catalog stores `title`). */
+function normalizeCatalogProduct(p) {
+  if (!p) return p;
+  const variants = Array.isArray(p.variants) ? p.variants : [];
+  const aggregateStock = variants.reduce((sum, v) => {
+    const qty = Number(v?.inventory ?? v?.stock ?? 0);
+    return sum + (Number.isFinite(qty) ? qty : 0);
+  }, 0);
+  return {
+    ...p,
+    name: p.name || p.title || '',
+    stock: Number.isFinite(Number(p.stock)) && Number(p.stock) > 0
+      ? Number(p.stock)
+      : aggregateStock,
+    low_stock_threshold: p.low_stock_threshold ?? 10,
+  };
+}
+
 function loadJsonCatalogProducts() {
   try {
     const p = path.join(__dirname, '..', '..', 'data', 'products.json');
     if (!fs.existsSync(p)) return null;
     const arr = JSON.parse(fs.readFileSync(p, 'utf8'));
     if (!Array.isArray(arr) || !arr.length) return null;
-    return arr.filter((x) => x && x.status === 'active');
+    return arr.filter((x) => x && x.status === 'active').map(normalizeCatalogProduct);
   } catch {
     return null;
   }
@@ -401,36 +421,64 @@ router.patch('/:id/stock', requireAuth, requireRole('owner', 'manager'), async (
 });
 
 // ── GET /api/products/inventory/alerts ───────────────────────────────────────
+// Algorithm: union of (a) persisted inventory_alerts in the DB, and (b) live scan
+// across every known product source (JSON catalog, in-memory seed) so the admin
+// surface is always consistent with the catalog the storefront serves.
 router.get('/inventory/alerts', requireAuth, requireRole('owner', 'manager'), async (req, res) => {
   try {
-    let alerts = [];
+    const alerts = [];
+    const seen = new Set();
+
+    // 1. Persisted alerts (only when a real DB is wired)
     if (!db.isUsingMemory()) {
-      alerts = await db.queryAll(
+      const dbAlerts = await db.queryAll(
         `SELECT ia.*, p.name as product_name, p.stock as current_stock
          FROM inventory_alerts ia
          LEFT JOIN products p ON ia.product_id = p.id
          WHERE ia.is_resolved = false
          ORDER BY ia.created_at DESC LIMIT 100`
       ).catch(() => []);
+      for (const a of dbAlerts) {
+        if (a.product_id && !seen.has(a.product_id)) {
+          seen.add(a.product_id);
+          alerts.push(a);
+        }
+      }
     }
 
-    // Fallback: scan in-memory products for low stock
-    if (db.isUsingMemory() || !alerts.length) {
-      const mem = db.getMemStore();
-      const products = (mem.products || []).filter(p => p.status !== 'archived');
-      alerts = products
-        .filter(p => (p.stock || 0) < (p.low_stock_threshold || 10))
-        .map(p => ({
+    // 2. Live scan of every catalog source
+    const scannable = [];
+    const jsonCatalog = loadJsonCatalogProducts();
+    if (jsonCatalog) scannable.push(...jsonCatalog);
+    const mem = db.getMemStore ? db.getMemStore() : null;
+    if (mem?.products) {
+      scannable.push(...mem.products.filter(p => p.status !== 'archived'));
+    }
+
+    for (const p of scannable) {
+      if (!p || seen.has(p.id)) continue;
+      const stock = Number(p.stock) || 0;
+      const threshold = Number(p.low_stock_threshold) || 10;
+      if (stock < threshold) {
+        seen.add(p.id);
+        alerts.push({
           id:           p.id,
           product_id:   p.id,
-          product_name: p.name,
-          alert_type:   (p.stock || 0) <= 0 ? 'out_of_stock' : 'low_stock',
-          threshold:    p.low_stock_threshold || 10,
-          current_qty:  p.stock || 0,
+          product_name: p.name || p.title || p.id,
+          alert_type:   stock <= 0 ? 'out_of_stock' : 'low_stock',
+          threshold,
+          current_qty:  stock,
           is_resolved:  false,
           created_at:   p.updated_at || new Date().toISOString(),
-        }));
+        });
+      }
     }
+
+    // Sort: out_of_stock first, then lowest stock
+    alerts.sort((a, b) => {
+      if (a.alert_type !== b.alert_type) return a.alert_type === 'out_of_stock' ? -1 : 1;
+      return (a.current_qty || 0) - (b.current_qty || 0);
+    });
 
     res.json({ alerts, count: alerts.length });
   } catch (err) {

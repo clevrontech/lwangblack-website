@@ -4,43 +4,70 @@ const config = require('../config');
 
 let redis = null;
 let isConnected = false;
+let redisDisabled = false;
+let errorLogged = false;
 
 function getRedis() {
-  if (redis) return redis;
+  if (redis || redisDisabled) return redis;
+
+  // Skip entirely when REDIS_URL is not configured — avoids noisy retry loop in dev/demo mode.
+  if (!config.redis.url) {
+    redisDisabled = true;
+    console.log('[Redis] REDIS_URL not set — running without cache (JWT-only auth, no session revocation)');
+    return null;
+  }
 
   try {
     redis = new Redis(config.redis.url, {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: 2,
       retryStrategy: (times) => {
-        if (times > 5) return null; // Stop retrying after 5 attempts
+        if (times > 3) {
+          if (!redisDisabled) console.warn('[Redis] Giving up after 3 retries — running without cache');
+          redisDisabled = true;
+          return null; // Stop retrying
+        }
         return Math.min(times * 200, 2000);
       },
+      reconnectOnError: () => false,
       lazyConnect: true,
     });
 
     redis.on('connect', () => {
       isConnected = true;
+      errorLogged = false;
       console.log('[Redis] Connected');
     });
 
     redis.on('error', (err) => {
       isConnected = false;
-      console.error('[Redis] Error:', err.message);
+      // Log once, not per-retry — ioredis emits `error` continuously while reconnecting.
+      if (!errorLogged) {
+        console.warn('[Redis] Error:', err.message || err.code || 'connection failed');
+        errorLogged = true;
+      }
     });
 
     redis.on('close', () => {
       isConnected = false;
     });
 
+    redis.on('end', () => {
+      isConnected = false;
+      redisDisabled = true;
+    });
+
     redis.connect().catch(() => {
-      console.warn('[Redis] Could not connect — running without cache');
+      // handled via retryStrategy
     });
   } catch (err) {
     console.warn('[Redis] Init failed:', err.message);
+    redisDisabled = true;
   }
 
   return redis;
 }
+
+function isRedisDisabled() { return redisDisabled; }
 
 // Cache helpers with graceful fallback
 async function cacheGet(key) {
@@ -113,6 +140,7 @@ async function revokeAllSessions(userId) {
 }
 
 module.exports = {
-  getRedis, cacheGet, cacheSet, cacheDel, cacheFlush,
+  getRedis, isRedisDisabled,
+  cacheGet, cacheSet, cacheDel, cacheFlush,
   setSession, isSessionValid, revokeSession, revokeAllSessions,
 };

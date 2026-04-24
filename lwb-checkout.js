@@ -158,6 +158,14 @@
       total: totalDisplay,
       discountCode: window.appliedDiscount?.code || null,
       tip: typeof window.tipAmount === 'number' ? window.tipAmount : 0,
+      // ── Logistics fields — persist to the order so admin/labels/finance can see them.
+      subtotal,
+      shippingCost: shipPrice,
+      shippingMethod: sel,
+      shippingLabel: rate.label || null,
+      serviceCode: rate.serviceCode || null,
+      carrier: rate.carrier || null,
+      carrierId: rate.carrierId || null,
     };
 
     const payBtn = document.getElementById('co-pay-btn');

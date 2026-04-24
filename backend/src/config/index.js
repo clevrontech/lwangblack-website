@@ -144,7 +144,7 @@ module.exports = {
 
   // Payment methods per country — only include methods that are implemented in /api/payments/checkout
   paymentMethods: {
-    NP: ['card', 'esewa', 'cod'],
+    NP: ['card', 'khalti', 'esewa', 'nabil', 'cod'],
     AU: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     US: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],
     GB: ['paypal', 'stripe', 'apple_pay', 'afterpay', 'google_pay', 'card'],

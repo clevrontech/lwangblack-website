@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { apiFetch } from '../lib/api';
+import { apiFetch, caughtErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCurrencyFormatter } from '../lib/currency';
-import { DollarSign, TrendingUp, TrendingDown, Download, CreditCard, RefreshCw } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Download, CreditCard, RefreshCw, Undo2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const TOOLTIP = {

@@ -146,9 +146,17 @@ services:
   - type: redis
     name: lwang-black-redis
     plan: free
+    # Empty ipAllowList = internal-only: only the lwang-black-api and
+    # lwang-black-worker services (same Render account/region) can connect.
+    # No public internet access. Add entries like `- source: 0.0.0.0/0` if you
+    # ever need to reach Redis from outside Render.
+    ipAllowList: []
 
 databases:
   - name: lwang-black-db
     plan: free
     databaseName: lwangblack
     user: lwangblack
+    # Internal-only Postgres. Render's managed services in the same region
+    # connect over the private network automatically.
+    ipAllowList: []

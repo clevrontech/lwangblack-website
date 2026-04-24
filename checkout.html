@@ -519,6 +519,34 @@
       const rates = window.getShippingRates(countryCode);
       shippingRates = rates;
 
+      // Always consult backend /api/logistics/shipping-cost so admin zone edits take effect.
+      // If the backend returns a valid zone cost, it overrides the `standard` tier price.
+      try {
+        const apiBase = window.LB_API_BASE || '/api';
+        const orderTotal = (window.LB_CART?.getTotals?.().subtotal) || 0;
+        const zoneResp = await fetch(`${apiBase}/logistics/shipping-cost`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ country: countryCode, orderTotal }),
+        });
+        if (zoneResp.ok) {
+          const zone = await zoneResp.json();
+          if (zone && zone.shipping != null && shippingRates && shippingRates.standard) {
+            shippingRates = {
+              ...shippingRates,
+              standard: {
+                ...shippingRates.standard,
+                price: Number(zone.shipping) || 0,
+                label: shippingRates.standard.label || `Standard (${zone.estimated_days || 'Standard'})`,
+                carrierId: shippingRates.standard.carrierId || null,
+              },
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('[Checkout] logistics zone lookup failed — keeping static rates:', e.message);
+      }
+
       // For US, fetch live USPS rates
       if (countryCode === 'US' && rates.liveRates) {
         container.innerHTML = '<div style="font-size:0.8rem;color:rgba(255,255,255,0.5);padding:1rem 0;text-align:center;">Fetching live USPS rates…</div>';
@@ -536,7 +564,7 @@
             const liveMap = {};
             (data.rates || []).forEach((r, i) => {
               const key = r.serviceCode || `option_${i}`;
-              liveMap[key] = { price: r.price, label: `${r.service} (${r.days})`, carrier: r.carrier, serviceCode: r.serviceCode, demo: r.demo };
+              liveMap[key] = { price: r.price, label: `${r.service} (${r.days})`, carrier: r.carrier, carrierId: 'usps', serviceCode: r.serviceCode, demo: r.demo };
             });
             if (Object.keys(liveMap).length) {
               shippingRates = liveMap;

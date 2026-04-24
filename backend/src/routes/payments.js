@@ -507,11 +507,13 @@ router.post('/stripe-intent', async (req, res) => {
     }
 
     const stripeCfg = await dynConfig.getGatewayConfig('stripe');
-    if (!stripeCfg.secretKey) {
+    const secretKey = stripeCfg.secretKey || config.stripe.secretKey;
+    // Reject placeholder explicitly — otherwise Stripe SDK throws a 500 on `Invalid API Key`.
+    if (!secretKey || secretKey === 'sk_test_placeholder') {
       return res.status(503).json({ error: 'Stripe is not configured. Add your Stripe Secret Key in Admin → Settings → Payments.' });
     }
 
-    const stripe = Stripe(stripeCfg.secretKey);
+    const stripe = Stripe(secretKey);
     const orderId = 'LB-' + Date.now().toString(36).toUpperCase();
     const totalWithTip = parseFloat(total) + parseFloat(tip || 0);
 
@@ -719,7 +721,43 @@ router.post('/stripe-webhook', express.raw({ type: 'application/json' }), async 
       const pi = event.data.object;
       const orderId = pi.metadata?.orderId;
       if (orderId) {
-        broadcast({ type: 'order:payment_failed', data: { orderId } });
+        // Mark the order as failed so it's clearly surfaced in admin Finance.
+        await updateOrderStatus(orderId, 'failed', 'card', pi.id).catch(() => {});
+        broadcast({
+          type: 'order:payment_failed',
+          data: {
+            orderId,
+            error: pi.last_payment_error?.message || 'Payment failed',
+          },
+        });
+      }
+    }
+
+    // Stripe dashboard / API-initiated refund → mark the order refunded.
+    if (event.type === 'charge.refunded') {
+      const charge = event.data.object;
+      const piId = charge.payment_intent;
+      // Try to resolve order id via payment_intent metadata (cheaper than searching).
+      let orderId = charge.metadata?.orderId || null;
+      if (!orderId && piId) {
+        try {
+          const pi = await stripe.paymentIntents.retrieve(piId);
+          orderId = pi.metadata?.orderId || null;
+        } catch (e) {
+          console.warn('[Payments] charge.refunded PI lookup failed:', e.message);
+        }
+      }
+      if (orderId) {
+        await withRetry(
+          async () => {
+            await updateOrderStatus(orderId, 'refunded', 'card', piId).catch(() => {});
+            broadcast({
+              type: 'order:refunded',
+              data: { orderId, amount: charge.amount_refunded / 100, currency: charge.currency },
+            });
+          },
+          { maxAttempts: 3, baseMs: 400 }
+        );
       }
     }
 
@@ -886,21 +924,32 @@ router.post('/cod-place', async (req, res) => {
 });
 
 // ── POST /api/payments/esewa-initiate ────────────────────────────────────────
-// Keep eSewa for legacy / fallback
+// Keep eSewa for legacy / fallback.
+// IMPORTANT: signature, product_code, and gateway URL must all come from the SAME
+// source — either dynamic-config (admin UI) or env/config. Mixing causes eSewa to
+// reject with "invalid signature".
 router.post('/esewa-initiate', async (req, res) => {
   try {
     const { orderId, amount } = req.body;
     if (!orderId || !amount) return res.status(400).json({ error: 'orderId and amount required' });
 
+    const esewaCfg = await dynConfig.getGatewayConfig('esewa').catch(() => ({}));
+    const merchantId = esewaCfg.merchantId || config.esewa.merchantId;
+    const secretKey  = esewaCfg.secretKey  || config.esewa.secretKey;
+    const isLive     = esewaCfg.isLive     || config.esewa.isLive;
+    if (!merchantId || !secretKey) {
+      return res.status(503).json({ error: 'eSewa is not configured. Add Merchant ID + Secret Key in Admin → Settings → Payments.' });
+    }
+
     const transactionUuid = `${orderId}-${Date.now()}`;
     const totalAmount = parseFloat(amount).toFixed(2);
-    const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${config.esewa.merchantId}`;
-    const signature = crypto.createHmac('sha256', config.esewa.secretKey).update(message).digest('base64');
+    const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${merchantId}`;
+    const signature = crypto.createHmac('sha256', secretKey).update(message).digest('base64');
     const origin = req.headers.origin || config.siteUrl;
 
     const formData = {
       amount: totalAmount, tax_amount: '0', total_amount: totalAmount,
-      transaction_uuid: transactionUuid, product_code: config.esewa.merchantId,
+      transaction_uuid: transactionUuid, product_code: merchantId,
       product_service_charge: '0', product_delivery_charge: '0',
       success_url: `${origin}/api/payments/esewa-verify?orderId=${orderId}`,
       failure_url: `${origin}/checkout.html?esewa_failed=true&orderId=${orderId}`,
@@ -909,8 +958,8 @@ router.post('/esewa-initiate', async (req, res) => {
     };
 
     res.json({
-      gatewayUrl: config.esewa.isLive ? config.esewa.liveUrl : config.esewa.testUrl,
-      formData, transactionUuid, isTest: !config.esewa.isLive,
+      gatewayUrl: isLive ? config.esewa.liveUrl : config.esewa.testUrl,
+      formData, transactionUuid, isTest: !isLive,
     });
   } catch (err) {
     console.error('[Payments] eSewa error:', err);

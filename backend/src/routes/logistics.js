@@ -15,6 +15,25 @@ const nzpostService = require('../services/nzpost');
 const chitchatsService = require('../services/chitchats');
 const pathaoService = require('../services/pathao');
 
+// JSON-store order helpers — storefront orders live in data/orders.json,
+// not the SQL `orders` table. Label/shipment updates need to write here too.
+let jsonOrderHelpers;
+try {
+  jsonOrderHelpers = require('./json-store/orders').helpers;
+} catch { jsonOrderHelpers = null; }
+
+/** Best-effort: update the JSON-store order (used alongside SQL `orders` updates).
+ *  Silent failure — label creation must not error if the order lives only in SQL. */
+function patchJsonOrder(orderKey, patch) {
+  if (!jsonOrderHelpers || !orderKey) return null;
+  try {
+    return jsonOrderHelpers.updateOrder(orderKey, patch);
+  } catch (err) {
+    console.warn('[Logistics] json-store order patch failed:', err.message);
+    return null;
+  }
+}
+
 const router = express.Router();
 
 /** AusPost (and similar APIs) need ISO 3166-1 alpha-2 — `EU` is not valid for rate quotes. */
@@ -358,13 +377,22 @@ router.post('/create-shipment', async (req, res) => {
       } catch {}
     }
 
-    // Update order with tracking info
+    // Update order with tracking info — SQL path
     try {
       await db.query(
         'UPDATE orders SET tracking = $1, carrier = $2, status = $3, updated_at = NOW() WHERE id = $4',
         [trackingNumber, CARRIERS[carrier]?.name || carrier, 'shipped', orderId]
       );
     } catch {}
+
+    // Also patch the JSON-store order so storefront orders stay in sync
+    patchJsonOrder(orderId, {
+      trackingNumber,
+      carrier: CARRIERS[carrier]?.name || carrier,
+      carrierId: carrier,
+      fulfillmentStatus: 'shipped',
+      shippingLabelUrl: labelUrl || null,
+    });
 
     broadcast({ type: 'order:shipped', data: { orderId, trackingNumber, carrier } });
 
@@ -483,6 +511,7 @@ router.post('/usps/rates', async (req, res) => {
 
 // ── POST /api/logistics/usps/label ───────────────────────────────────────────
 // Generate a USPS shipping label for an order (admin only).
+// Accepts either a SQL `orders` id or a JSON-store orderNumber (e.g. LWB-2026-1001).
 router.post('/usps/label', requireRole('owner', 'manager'), async (req, res) => {
   try {
     const { orderId, serviceType, fromAddress, toAddress, weightLbs, weightOz } = req.body;
@@ -501,23 +530,39 @@ router.post('/usps/label', requireRole('owner', 'manager'), async (req, res) => 
 
     if (!resolvedTo) {
       let order;
-      if (db.isUsingMemory()) {
-        order = db.getMemStore().orders.find(o => o.id === orderId);
+      // 1. Try JSON-store order first (storefront orders live here).
+      const jsonOrder = jsonOrderHelpers ? jsonOrderHelpers.findOrder(orderId) : null;
+      if (jsonOrder) {
+        const addr = jsonOrder.shippingAddress || {};
+        resolvedTo = {
+          name:   `${jsonOrder.customer?.fname || addr.fname || ''} ${jsonOrder.customer?.lname || addr.lname || ''}`.trim() || 'Customer',
+          street: addr.address1 || addr.street || addr.line1 || '',
+          city:   addr.city || '',
+          state:  addr.state || addr.province || '',
+          zip:    addr.zip || addr.postalCode || addr.postal_code || '',
+          phone:  jsonOrder.customer?.phone || addr.phone || '',
+        };
+        order = jsonOrder;
       } else {
-        order = await db.queryOne(
-          `SELECT o.*, c.fname, c.lname, c.phone, c.address
-           FROM orders o LEFT JOIN customers c ON o.customer_id = c.id WHERE o.id = $1`, [orderId]
-        );
+        // 2. Fall back to SQL orders table.
+        if (db.isUsingMemory()) {
+          order = db.getMemStore().orders.find(o => o.id === orderId);
+        } else {
+          order = await db.queryOne(
+            `SELECT o.*, c.fname, c.lname, c.phone, c.address
+             FROM orders o LEFT JOIN customers c ON o.customer_id = c.id WHERE o.id = $1`, [orderId]
+          );
+        }
+        if (!order) return res.status(404).json({ error: 'Order not found' });
+        resolvedTo = {
+          name:   `${order.fname || ''} ${order.lname || ''}`.trim() || 'Customer',
+          street: order.address || '',
+          city:   order.city    || '',
+          state:  order.state   || '',
+          zip:    order.zip     || '',
+          phone:  order.phone   || '',
+        };
       }
-      if (!order) return res.status(404).json({ error: 'Order not found' });
-      resolvedTo = {
-        name:   `${order.fname || ''} ${order.lname || ''}`.trim() || 'Customer',
-        street: order.address || '',
-        city:   order.city    || '',
-        state:  order.state   || '',
-        zip:    order.zip     || '',
-        phone:  order.phone   || '',
-      };
     }
 
     const labelResult = await uspsService.generateLabel({
@@ -547,6 +592,15 @@ router.post('/usps/label', requireRole('owner', 'manager'), async (req, res) => 
     } catch (dbErr) {
       console.error('[Logistics] Label DB save error:', dbErr.message);
     }
+
+    // Also patch JSON-store order — storefront orders live there.
+    patchJsonOrder(orderId, {
+      trackingNumber: tn,
+      carrier: 'USPS',
+      carrierId: 'usps',
+      shippingMethod: serviceType || 'PRIORITY',
+      fulfillmentStatus: 'shipped',
+    });
 
     // Send shipping notification
     (async () => {
@@ -609,21 +663,32 @@ router.get('/config', async (req, res) => {
     let rows = [];
     try {
       rows = await db.queryAll(
-        `SELECT carrier_id, account_number, is_live, is_active, created_at, updated_at
+        `SELECT carrier_id, keys_data, account_number, is_live, is_active, created_at, updated_at
          FROM logistics_config WHERE (user_id = $1 OR user_id IS NULL) ORDER BY carrier_id`, [req.user.id]
       );
     } catch {
       rows = [];
     }
 
-    const configs = rows.map(r => ({
-      carrierId: r.carrier_id,
-      carrierName: CARRIERS[r.carrier_id]?.name || r.carrier_id,
-      isLive: r.is_live || false,
-      isActive: r.is_active !== false,
-      hasKeys: true,
-      lastUpdated: r.updated_at || r.created_at,
-    }));
+    const configs = rows.map(r => {
+      // Determine whether any real credential is stored (not just a row with nulls).
+      let hasKeys = false;
+      try {
+        const keys = typeof r.keys_data === 'string' ? JSON.parse(r.keys_data) : (r.keys_data || {});
+        hasKeys = Object.values(keys || {}).some(v => v != null && String(v).length > 0);
+      } catch {
+        hasKeys = false;
+      }
+      return {
+        carrierId: r.carrier_id,
+        carrierName: CARRIERS[r.carrier_id]?.name || r.carrier_id,
+        isLive: r.is_live || false,
+        isActive: r.is_active !== false,
+        hasKeys,
+        accountNumber: r.account_number || null,
+        lastUpdated: r.updated_at || r.created_at,
+      };
+    });
 
     res.json({ configs });
   } catch (err) {
@@ -632,7 +697,8 @@ router.get('/config', async (req, res) => {
 });
 
 // ── PUT /api/logistics/config/:carrierId ────────────────────────────────────
-router.put('/config/:carrierId', async (req, res) => {
+// Owner/manager only — carrier credentials are sensitive.
+router.put('/config/:carrierId', requireRole('owner', 'manager'), async (req, res) => {
   try {
     const { carrierId } = req.params;
     if (!CARRIERS[carrierId]) return res.status(400).json({ error: `Unknown carrier: ${carrierId}` });
@@ -663,7 +729,7 @@ router.put('/config/:carrierId', async (req, res) => {
 });
 
 // ── DELETE /api/logistics/config/:carrierId ─────────────────────────────────
-router.delete('/config/:carrierId', async (req, res) => {
+router.delete('/config/:carrierId', requireRole('owner', 'manager'), async (req, res) => {
   try {
     await db.query('DELETE FROM logistics_config WHERE user_id = $1 AND carrier_id = $2', [req.user.id, req.params.carrierId]);
   } catch {}

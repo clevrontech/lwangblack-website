@@ -17,6 +17,22 @@ function saveOrders(orders) {
   fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
 }
 
+/** Patch a JSON-store order by orderNumber or id. Returns the updated order or null if not found. */
+function updateOrder(orderKey, patch) {
+  if (!orderKey) return null;
+  const orders = getOrders();
+  const idx = orders.findIndex(o => o.orderNumber === orderKey || o.id === orderKey);
+  if (idx < 0) return null;
+  orders[idx] = { ...orders[idx], ...patch, updatedAt: new Date().toISOString() };
+  saveOrders(orders);
+  return orders[idx];
+}
+
+function findOrder(orderKey) {
+  if (!orderKey) return null;
+  return getOrders().find(o => o.orderNumber === orderKey || o.id === orderKey) || null;
+}
+
 function generateOrderNumber() {
   const orders = getOrders();
   const year = new Date().getFullYear();
@@ -42,6 +58,14 @@ router.post('/', async (req, res) => {
       discountCode,
       tip,
       stripePaymentIntentId,
+      // ── Shipping/logistics fields (NEW) ─────────────────────────────────
+      shippingCost,
+      shippingMethod,
+      shippingLabel,
+      serviceCode,
+      carrier,
+      carrierId,
+      subtotal,
     } = req.body;
 
     if (!customer?.email || !lineItems?.length || !shippingAddress) {
@@ -65,6 +89,15 @@ router.post('/', async (req, res) => {
       discountCode: discountCode || null,
       tip: tip || 0,
       stripePaymentIntentId: stripePaymentIntentId || null,
+      // ── Logistics fields ─────────────────────────────────────────────────
+      subtotal: subtotal != null ? Number(subtotal) : null,
+      shippingCost: shippingCost != null ? Number(shippingCost) : null,
+      shippingMethod: shippingMethod || null,
+      shippingLabel: shippingLabel || null,
+      serviceCode: serviceCode || null,
+      carrier: carrier || null,
+      carrierId: carrierId || null,
+      // ─────────────────────────────────────────────────────────────────────
       financialStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
       fulfillmentStatus: 'unfulfilled',
       trackingNumber: null,
@@ -108,3 +141,4 @@ router.get('/:orderNumber', (req, res) => {
 });
 
 module.exports = router;
+module.exports.helpers = { getOrders, saveOrders, updateOrder, findOrder };

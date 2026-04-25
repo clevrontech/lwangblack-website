@@ -4,6 +4,8 @@
   "description": "Lwang Black ecommerce — static storefront on Vercel, Express API on Render",
   "main": "scripts/build.js",
   "scripts": {
+    "setup": "node scripts/setup.js",
+    "setup:silent": "node scripts/setup.js --no-prompt",
     "build": "node scripts/build.js",
     "preview": "node scripts/preview-site.js",
     "preview:local": "npm run build && node scripts/preview-site.js",

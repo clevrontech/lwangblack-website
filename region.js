@@ -17,14 +17,15 @@ function getGeoRouterSafe() {
 function getRegionSafe(code) {
   const map = getRegionMap();
   if (code && map[code]) return map[code];
-  return map.NP || {
-    code: 'NP',
-    slug: 'np',
-    name: 'Nepal',
-    flagEmoji: '🇳🇵',
-    phone: '+977 1 5970 800',
-    whatsapp: '+97715970800',
-    address: 'Kathmandu, Nepal',
+  // AU is the canonical fallback for any unknown / unsupported region.
+  return map.AU || map.NP || {
+    code: 'AU',
+    slug: 'au',
+    name: 'Australia',
+    flagEmoji: '🇦🇺',
+    phone: '+61 2 8005 7000',
+    whatsapp: '+61280057000',
+    address: 'Sydney, Australia',
   };
 }
 
@@ -110,7 +111,7 @@ function initRegionUI() {
   // Listen to region changes (fired by GeoRouter after init / manual set)
   document.addEventListener('lb:regionChanged', (e) => {
     const detail = e && e.detail ? e.detail : {};
-    const code = (detail.code || 'NP').toUpperCase();
+    const code = (detail.code || 'AU').toUpperCase();
     const region = detail.region || getRegionSafe(code);
     updateRegionUI(code, region);
     updateContactSection(code, region);
@@ -118,13 +119,50 @@ function initRegionUI() {
     updateFlagsGrid(code);
     updateSchemaContact(region);
     updateHomeProducts(code);
+    updateRegionContentVisibility(code);
+    updateRegionStatusBlock(code, region);
   });
 
-  // When currency converter changes, re-render product prices
+  // When currency converter changes, re-render product prices and the region badge.
   document.addEventListener('lb:currencyConverted', () => {
     const router = getGeoRouterSafe();
-    const code = router ? router.get() : 'NP';
+    const code = router ? router.get() : 'AU';
     updateHomeProducts(code);
+    updateRegionStatusBlock(code, getRegionSafe(code));
+  });
+}
+
+/**
+ * Region-scoped content visibility.
+ *
+ * Any element with [data-region-only="NP"] is shown only when current region is NP;
+ * elements with [data-region-only="AU,NP,US"] are shown for any of those codes;
+ * elements with [data-region-hide="NP"] are hidden when current region is NP.
+ *
+ * Also toggles `body.region-{code}` so CSS can react to region changes.
+ */
+function updateRegionContentVisibility(activeCode) {
+  if (typeof document === 'undefined') return;
+  const code = (activeCode || 'AU').toUpperCase();
+
+  // body class: region-AU | region-NP | …
+  if (document.body) {
+    const classes = Array.from(document.body.classList).filter(c => !c.startsWith('region-'));
+    classes.push(`region-${code}`);
+    document.body.className = classes.join(' ');
+    document.body.setAttribute('data-region', code);
+  }
+
+  // Show/hide gated content
+  document.querySelectorAll('[data-region-only]').forEach(el => {
+    const allowed = String(el.getAttribute('data-region-only') || '')
+      .split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    el.style.display = allowed.includes(code) ? '' : 'none';
+  });
+  document.querySelectorAll('[data-region-hide]').forEach(el => {
+    const blocked = String(el.getAttribute('data-region-hide') || '')
+      .split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    el.style.display = blocked.includes(code) ? 'none' : '';
   });
 }
 
@@ -288,6 +326,60 @@ function getLangCode(code) {
   return map[code] || 'en';
 }
 
+/**
+ * Region status block — shows the visitor's resolved region with the flag,
+ * currency, payment methods and shipping carrier they'll be charged under.
+ *
+ * Drop `<div id="regionStatusBlock"></div>` anywhere in a page and this
+ * function will populate it on every region change. Used on the home page
+ * hero so the visitor can see at a glance: "you'll pay in NPR via Khalti
+ * and your order ships with Pathao".
+ */
+function updateRegionStatusBlock(code, region) {
+  const host = document.getElementById('regionStatusBlock');
+  if (!host) return;
+  const safeRegion = region || getRegionSafe(code);
+  const safeCode = (code || 'AU').toUpperCase();
+  const flagSlug = safeCode === 'GB' ? 'gb' : safeCode === 'EU' ? 'eu' : safeCode.toLowerCase();
+
+  // Live currency (after au-currency-converter has done its thing).
+  const cs = window.AUCurrencyState || {};
+  const liveCurrency = cs.active && cs.targetCurrency ? cs.targetCurrency : (safeRegion.currency || 'AUD');
+  const liveSymbol   = cs.active && cs.symbol        ? cs.symbol         : (safeRegion.currencySymbol || 'A$');
+
+  const methods = Array.isArray(safeRegion.paymentMethods) ? safeRegion.paymentMethods : [];
+  const carrier = safeRegion.carrier || '—';
+  const eta     = safeRegion.estimatedDelivery || '';
+
+  host.innerHTML = `
+    <div class="region-status-card" style="
+      display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:center;
+      max-width:920px; margin: 1.5rem auto; padding: 1rem 1.25rem;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(201,168,76,0.35);
+      border-radius: 10px; color:#fff; backdrop-filter: blur(6px);
+      text-shadow:0 1px 4px rgba(0,0,0,0.6);">
+      <div style="display:flex; gap:0.75rem; align-items:center;">
+        <img src="https://flagcdn.com/${flagSlug}.svg" width="32" height="24" alt="${safeRegion.name}" style="border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.4);" />
+        <div style="line-height:1.2;">
+          <strong style="font-size:0.95rem;">${safeRegion.name}</strong>
+          <div style="font-size:0.75rem; opacity:0.85;">Pricing in ${liveCurrency} (${liveSymbol})</div>
+        </div>
+      </div>
+      <div style="height:30px; width:1px; background:rgba(255,255,255,0.2);"></div>
+      <div style="display:flex; flex-direction:column; gap:0.2rem; min-width:180px;">
+        <span style="font-size:0.7rem; opacity:0.7; text-transform:uppercase; letter-spacing:1px;">Pay with</span>
+        <span style="font-size:0.85rem;">${methods.length ? methods.join(' · ') : '—'}</span>
+      </div>
+      <div style="height:30px; width:1px; background:rgba(255,255,255,0.2);"></div>
+      <div style="display:flex; flex-direction:column; gap:0.2rem; min-width:180px;">
+        <span style="font-size:0.7rem; opacity:0.7; text-transform:uppercase; letter-spacing:1px;">Ships with</span>
+        <span style="font-size:0.85rem;">${carrier}</span>
+        ${eta ? `<span style="font-size:0.7rem; opacity:0.7;">${eta}</span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
 // ─────────────────────────────────────────────
 // BOOT — wait for DOM, then init UI, then start GeoRouter
 // ─────────────────────────────────────────────
@@ -305,11 +397,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // Backward-compat alias — set after DOMContentLoaded so GeoRouter is guaranteed available
 window.LB_REGION = getGeoRouterSafe();
 
-// Sync storefront pricing region (used by /api/store cart + product cards)
+// Sync storefront pricing region (used by /api/store cart + product cards).
+// Unknown / unmapped codes fall back to AU so the cart prices in AUD instead
+// of defaulting to NPR for non-Nepali traffic.
 (function syncLwbRegion() {
   function mapCode(code) {
-    const m = { AU: 'AU', NP: 'NP', US: 'US', GB: 'GB', EU: 'EU', CA: 'CA', JP: 'JP', NZ: 'NZ', CN: 'NP' };
-    return m[code] || 'NP';
+    const m = { AU: 'AU', NP: 'NP', US: 'US', GB: 'GB', EU: 'EU', CA: 'CA', JP: 'JP', NZ: 'NZ', CN: 'AU' };
+    return m[code] || 'AU';
   }
   document.addEventListener('lb:regionChanged', (e) => {
     try {

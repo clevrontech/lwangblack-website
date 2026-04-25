@@ -46,7 +46,20 @@ function _fetchWithTimeout(url, ms) {
 }
 
 async function _fetchRates(baseCurrency) {
-  // Primary: open.er-api.com (free, no key needed)
+  // Primary: own backend cache (1h TTL, pre-warmed on boot).
+  // Avoids hammering upstream rate APIs from every visitor's browser.
+  try {
+    const res = await _fetchWithTimeout(
+      `/api/fx/rates?base=${encodeURIComponent(baseCurrency)}`, 5000
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data.rates) return data.rates;
+    }
+  } catch (e) { /* fall through to direct upstream */ }
+
+  // Fallback 1: open.er-api.com (used when /api/fx/rates is unavailable —
+  // e.g. static-only deploys without the backend)
   try {
     const res = await _fetchWithTimeout(
       `https://open.er-api.com/v6/latest/${baseCurrency}`, 6000
@@ -55,9 +68,9 @@ async function _fetchRates(baseCurrency) {
       const data = await res.json();
       if (data.result === 'success' && data.rates) return data.rates;
     }
-  } catch(e) { /* try fallback */ }
+  } catch(e) { /* try next fallback */ }
 
-  // Fallback: frankfurter.app (ECB data, no key, covers major currencies)
+  // Fallback 2: frankfurter.app (ECB data, no key, major currencies only)
   try {
     const res = await _fetchWithTimeout(
       `https://api.frankfurter.app/latest?from=${baseCurrency}`, 6000
@@ -65,7 +78,6 @@ async function _fetchRates(baseCurrency) {
     if (res.ok) {
       const data = await res.json();
       if (data.rates) {
-        // frankfurter doesn't return the base in rates, add it
         data.rates[baseCurrency] = 1.0;
         return data.rates;
       }
@@ -230,12 +242,12 @@ function _rebuildOptions() {
 }
 
 function _restoreSelection() {
+  // 1. User's previously chosen currency wins (they explicitly picked it).
   try {
     const saved = localStorage.getItem(LB_CURRENCY_STORAGE_KEY);
     if (saved) {
       const sel = document.getElementById('lb-currency-select');
       if (sel) {
-        // Check if the saved value exists as an option
         const opt = Array.from(sel.options).find(o => o.value === saved);
         if (opt) {
           sel.value = saved;
@@ -244,7 +256,33 @@ function _restoreSelection() {
         }
       }
     }
-  } catch(e) {}
+  } catch (e) { /* fall through */ }
+
+  // 2. AU fallback case — visitor is on the AU site but their actual country is
+  //    different (e.g. Brazil → AU). Auto-select their country's currency so they
+  //    see local prices instead of AUD.
+  try {
+    const router = (typeof GeoRouter !== 'undefined') ? GeoRouter : null;
+    const resolved = router ? router.get() : 'AU';
+    const raw = router ? router.rawCountryCode : null;
+
+    if (resolved === 'AU' && raw && raw !== 'AU') {
+      const country = _countriesData.find(c => c.code === raw);
+      if (country && _exchangeRates[country.currency]) {
+        const sel = document.getElementById('lb-currency-select');
+        if (sel) {
+          const opt = Array.from(sel.options).find(o => o.value === raw);
+          if (opt) {
+            sel.value = raw;
+            sel.dispatchEvent(new Event('change'));
+            return;
+          }
+        }
+      }
+    }
+  } catch (e) { /* fall through */ }
+
+  // 3. Otherwise show prices in the region's native currency.
   _applyConversion('DEFAULT');
 }
 

@@ -151,7 +151,88 @@ app.get('/api/realtime', (req, res) => {
   });
 });
 
+// ── FX rate cache: caches per-base-currency exchange rates for 1h ───────────
+// Browsers hitting open.er-api.com / frankfurter.app on every page load is
+// wasteful and rate-limited. This endpoint fetches once an hour per base
+// currency and serves cached rates to all visitors. Falls back to stale data
+// if both upstream APIs fail.
+const FX_TTL_MS = 60 * 60 * 1000; // 1 hour
+const fxCache = new Map(); // base → { rates, fetchedAt, source }
+
+async function fetchFxRates(base) {
+  // Primary source — open.er-api.com (free, no key)
+  try {
+    const r = await fetch(`https://open.er-api.com/v6/latest/${base}`,
+      { signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined });
+    if (r.ok) {
+      const j = await r.json();
+      if (j.result === 'success' && j.rates) return { rates: j.rates, source: 'open.er-api.com' };
+    }
+  } catch { /* try fallback */ }
+
+  // Fallback — frankfurter.app (ECB, no key)
+  try {
+    const r = await fetch(`https://api.frankfurter.app/latest?from=${base}`,
+      { signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined });
+    if (r.ok) {
+      const j = await r.json();
+      if (j.rates) {
+        j.rates[base] = 1.0;
+        return { rates: j.rates, source: 'frankfurter.app' };
+      }
+    }
+  } catch { /* nothing else */ }
+
+  return null;
+}
+
+app.get('/api/fx/rates', async (req, res) => {
+  const base = String(req.query.base || 'AUD').toUpperCase().slice(0, 3);
+  if (!/^[A-Z]{3}$/.test(base)) return res.status(400).json({ error: 'Invalid base currency' });
+
+  const now = Date.now();
+  const cached = fxCache.get(base);
+  if (cached && (now - cached.fetchedAt) < FX_TTL_MS) {
+    return res.json({ base, rates: cached.rates, fetchedAt: cached.fetchedAt, source: cached.source, cached: true });
+  }
+
+  const fresh = await fetchFxRates(base);
+  if (fresh) {
+    fxCache.set(base, { ...fresh, fetchedAt: now });
+    return res.json({ base, rates: fresh.rates, fetchedAt: now, source: fresh.source, cached: false });
+  }
+
+  // Both APIs failed — serve stale data if we have any.
+  if (cached) {
+    return res.json({ base, rates: cached.rates, fetchedAt: cached.fetchedAt, source: cached.source, cached: true, stale: true });
+  }
+  return res.status(503).json({ error: 'FX rates temporarily unavailable' });
+});
+
+// Pre-warm the cache for the most common base currencies on boot so the first
+// visitor doesn't pay the upstream-fetch latency.
+(async function prewarmFxCache() {
+  for (const base of ['AUD', 'USD', 'NPR', 'GBP', 'EUR', 'JPY', 'NZD', 'CAD']) {
+    const fresh = await fetchFxRates(base).catch(() => null);
+    if (fresh) fxCache.set(base, { ...fresh, fetchedAt: Date.now() });
+  }
+})();
+// Refresh in the background every hour so visitors always see warm rates.
+// .unref() so this timer doesn't block graceful shutdown.
+const fxRefreshTimer = setInterval(() => {
+  for (const base of fxCache.keys()) {
+    fetchFxRates(base).then(fresh => {
+      if (fresh) fxCache.set(base, { ...fresh, fetchedAt: Date.now() });
+    }).catch(() => {});
+  }
+}, FX_TTL_MS);
+if (typeof fxRefreshTimer.unref === 'function') fxRefreshTimer.unref();
+
 // ── GeoIP: country detection from visitor IP ────────────────────────────────
+// Routing policy:
+//   • Real Nepali IP (geoip → 'NP') → 'NP' so the storefront serves the Nepal site.
+//   • Any recognised non-NP country → that ISO code, frontend resolves the region.
+//   • Private IPs / lookup failures → 'AU' (canonical fallback site for "rest of world").
 const geoip = require('geoip-lite');
 app.get('/api/ip-country', (req, res) => {
   // Prefer forwarded IP (Vercel, proxies) then socket IP
@@ -159,15 +240,14 @@ app.get('/api/ip-country', (req, res) => {
   const ip = (forwarded ? forwarded.split(',')[0] : null) ||
              req.headers['x-real-ip'] ||
              req.socket.remoteAddress || '';
-  const cleanIp = ip.replace(/^::ffff:/, '');
+  const cleanIp = String(ip || '').trim().replace(/^::ffff:/, '');
 
-  // Private IPs: default to NP (storefront pricing aligns with Nepal-first site)
   const isPrivate = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|^$)/.test(cleanIp);
-  if (isPrivate) return res.json({ country: 'NP', source: 'private' });
+  if (isPrivate) return res.json({ country: 'AU', source: 'private' });
 
   const geo = geoip.lookup(cleanIp);
   if (geo && geo.country) return res.json({ country: geo.country, source: 'geoip' });
-  return res.json({ country: 'NP', source: 'fallback' });
+  return res.json({ country: 'AU', source: 'fallback' });
 });
 
 // ── API Routes ──────────────────────────────────────────────────────────────

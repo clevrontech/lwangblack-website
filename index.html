@@ -260,6 +260,26 @@
       <p class="subtitle" style="margin:1rem auto 2rem; color: #fff; font-weight: 400; text-shadow: 0 2px 6px rgba(0,0,0,0.8); font-size: 1.1rem;" data-i18n="hero.subtitle">
         Din को सुरुवात एक कप Motivation बाट।
       </p>
+
+      <!-- Nepal-only hero banner: shown when geo-router detects an NP IP. -->
+      <div data-region-only="NP" style="display:none; margin: 1.5rem auto; max-width:640px; padding: 1rem 1.25rem; background: rgba(220,20,60,0.12); border: 1px solid rgba(220,20,60,0.35); border-radius: 8px; color:#fff; text-shadow:0 2px 6px rgba(0,0,0,0.7);">
+        <strong style="display:block; font-size:0.95rem; margin-bottom:0.25rem;">🇳🇵 नेपाल मा स्वागत छ — Free Kathmandu Delivery</strong>
+        <span style="font-size:0.85rem; opacity:0.92;">
+          Pay with eSewa, Khalti, Nabil Bank, or Cash on Delivery. Prices in NPR (रू).
+          <a href="contact.html" style="color:#FFD78A; text-decoration: underline;">Talk to us in Nepali →</a>
+        </span>
+      </div>
+
+      <!-- Australia / rest-of-world hero banner — hidden for Nepal visitors. -->
+      <div data-region-hide="NP" style="margin: 1.5rem auto; max-width:640px; padding: 1rem 1.25rem; background: rgba(201,168,76,0.10); border: 1px solid rgba(201,168,76,0.35); border-radius: 8px; color:#fff; text-shadow:0 2px 6px rgba(0,0,0,0.7);">
+        <strong style="display:block; font-size:0.95rem; margin-bottom:0.25rem;">🌍 Worldwide shipping — local pricing & checkout</strong>
+        <span style="font-size:0.85rem; opacity:0.92;">
+          Prices auto-detected for your region. Pay with PayPal, Stripe, Apple Pay or card.
+        </span>
+      </div>
+
+      <!-- Region status: flag · currency · payment methods · carrier. Populated by region.js -->
+      <div id="regionStatusBlock" aria-live="polite"></div>
     </div>
   </section>
 

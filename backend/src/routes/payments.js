@@ -118,6 +118,70 @@ async function createOrder({ orderId, customer, items, country, currency, symbol
   }
 }
 
+// ── Helper: decrement stock for every line item in an order ─────────────────
+// Idempotent — safe to call multiple times because we tag the order as
+// `stock_committed` once we have applied the deduction.
+async function decrementStockForPaidOrder(order) {
+  if (!order) return;
+  let items = order.items;
+  if (typeof items === 'string') {
+    try { items = JSON.parse(items); } catch { items = []; }
+  }
+  if (!Array.isArray(items) || items.length === 0) return;
+
+  if (db.isUsingMemory()) {
+    const mem = db.getMemStore();
+    const memOrder = mem.orders.find(o => o.id === order.id);
+    if (memOrder?.stock_committed) return;
+    for (const it of items) {
+      const productId = it.productId || it.id || it.handle;
+      const qty = parseInt(it.qty || it.quantity || 1, 10) || 1;
+      if (!productId) continue;
+      const prod = mem.products?.find(p => p.id === productId || p.handle === productId);
+      if (prod && typeof prod.stock === 'number') {
+        prod.stock = Math.max(0, prod.stock - qty);
+        prod.updated_at = new Date();
+      }
+    }
+    if (memOrder) memOrder.stock_committed = true;
+    return;
+  }
+
+  // Postgres path: single transaction so stock + flag flip together.
+  // Uses db.transaction() which handles BEGIN/COMMIT/ROLLBACK automatically.
+  try {
+    await db.transaction(async (client) => {
+      // Ensure the idempotency column exists (no-op after first run).
+      await client.query(
+        'ALTER TABLE orders ADD COLUMN IF NOT EXISTS stock_committed boolean DEFAULT false'
+      ).catch(() => {});
+
+      const flag = await client.query(
+        'SELECT stock_committed FROM orders WHERE id = $1 FOR UPDATE', [order.id]
+      );
+      if (flag.rows && flag.rows[0] && flag.rows[0].stock_committed) return;
+
+      for (const it of items) {
+        const productId = it.productId || it.id || it.handle;
+        const qty = parseInt(it.qty || it.quantity || 1, 10) || 1;
+        if (!productId) continue;
+        await client.query(
+          `UPDATE products
+              SET stock = GREATEST(0, COALESCE(stock,0) - $1), updated_at = NOW()
+            WHERE id = $2 OR handle = $2`,
+          [qty, productId]
+        ).catch(() => {});
+      }
+      await client.query(
+        'UPDATE orders SET stock_committed = true, updated_at = NOW() WHERE id = $1',
+        [order.id]
+      ).catch(() => {});
+    });
+  } catch (e) {
+    console.error('[Payments] Stock decrement error:', e.message);
+  }
+}
+
 // ── Helper: Cancel order (on payment initiation failure) ─────────────────────
 async function cancelOrder(orderId) {
   try {
@@ -196,9 +260,13 @@ async function updateOrderStatus(orderId, status, method, reference) {
     }
   }
 
-  // Payment confirmed → send confirmation email + generate invoice
+  // Payment confirmed → fire-and-forget: stock decrement, email, invoice.
+  // Each runs independently so a failure in one doesn't block the others.
   if (status === 'paid' && order) {
     (async () => {
+      try {
+        await decrementStockForPaidOrder(order);
+      } catch (e) { console.error('[Payments] Stock decrement error:', e.message); }
       try {
         if (customer) await sendOrderConfirmation(order, customer);
       } catch (e) { console.error('[Payments] Confirmation email error:', e.message); }

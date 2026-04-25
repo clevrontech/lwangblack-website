@@ -1,7 +1,16 @@
 /**
- * LWANG BLACK — GEO ROUTING ENGINE v2.1
+ * LWANG BLACK — GEO ROUTING ENGINE v2.2
  * IP-based detection, bot protection, region data & currency state.
+ *
+ * Routing policy:
+ *   • Nepal IP            → NP region (Nepal site / NPR pricing)
+ *   • Supported region IP → matching region (own currency)
+ *   • Anything else       → AU fallback (Australia site / AUD pricing)
  */
+
+// Default region for any visitor we cannot place — bots, private IPs,
+// unsupported country codes, geolocation failures.
+const FALLBACK_REGION = 'AU';
 
 // ─────────────────────────────────────────────
 // BOT DETECTION
@@ -23,6 +32,9 @@ const REGION_DATA = {
     heroCtaLabel: 'Explore Our Services',
     practicePriority: ['commercial', 'migration', 'corporate', 'property'],
     accent: '#C9A84C',
+    paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay', 'Afterpay'],
+    carrier: 'Australia Post',
+    estimatedDelivery: '2–5 business days',
   },
   NP: {
     code: 'NP', slug: 'np', name: 'Nepal', flag: '🇳🇵', flagEmoji: '🇳🇵',
@@ -34,6 +46,9 @@ const REGION_DATA = {
     heroCtaLabel: 'Start Your Migration',
     practicePriority: ['migration', 'student', 'family', 'commercial'],
     accent: '#C9A84C',
+    paymentMethods: ['eSewa', 'Khalti', 'Nabil Bank', 'Cash on Delivery'],
+    carrier: 'Pathao',
+    estimatedDelivery: '1–3 days inside KTM, 3–5 days nationwide',
   },
   US: {
     code: 'US', slug: 'us', name: 'United States', flag: '🇺🇸', flagEmoji: '🇺🇸',
@@ -45,6 +60,9 @@ const REGION_DATA = {
     heroCtaLabel: 'Talk to Our Team',
     practicePriority: ['commercial', 'corporate', 'migration', 'property'],
     accent: '#C9A84C',
+    paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay', 'Afterpay'],
+    carrier: 'USPS',
+    estimatedDelivery: '3–7 business days',
   },
   GB: {
     code: 'GB', slug: 'uk', name: 'United Kingdom', flag: '🇬🇧', flagEmoji: '🇬🇧',
@@ -56,6 +74,9 @@ const REGION_DATA = {
     heroCtaLabel: 'Schedule a Consultation',
     practicePriority: ['commercial', 'dispute', 'corporate', 'migration'],
     accent: '#C9A84C',
+    paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay'],
+    carrier: 'Royal Mail / Australia Post International',
+    estimatedDelivery: '7–14 business days',
   },
   EU: {
     code: 'EU', slug: 'eu', name: 'Eurozone', flag: '🇪🇺', flagEmoji: '🇪🇺',
@@ -67,6 +88,9 @@ const REGION_DATA = {
     heroCtaLabel: 'Shop the range',
     practicePriority: ['commercial', 'corporate', 'migration', 'property'],
     accent: '#C9A84C',
+    paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay'],
+    carrier: 'Australia Post International',
+    estimatedDelivery: '7–14 business days',
   },
   JP: {
     code: 'JP', slug: 'jp', name: 'Japan', flag: '🇯🇵', flagEmoji: '🇯🇵',
@@ -78,6 +102,9 @@ const REGION_DATA = {
     heroCtaLabel: 'Connect With Experts',
     practicePriority: ['commercial', 'corporate', 'migration', 'family'],
     accent: '#C9A84C',
+    paymentMethods: ['Stripe', 'PayPal', 'Google Pay'],
+    carrier: 'Japan Post',
+    estimatedDelivery: '5–10 business days',
   },
   NZ: {
     code: 'NZ', slug: 'nz', name: 'New Zealand', flag: '🇳🇿', flagEmoji: '🇳🇿',
@@ -89,6 +116,9 @@ const REGION_DATA = {
     heroCtaLabel: 'Explore Visa Options',
     practicePriority: ['migration', 'family', 'commercial', 'property'],
     accent: '#C9A84C',
+    paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay', 'Afterpay'],
+    carrier: 'NZ Post',
+    estimatedDelivery: '3–6 business days',
   },
   CN: {
     code: 'CN', slug: 'cn', name: 'China', flag: '🇨🇳', flagEmoji: '🇨🇳',
@@ -100,6 +130,9 @@ const REGION_DATA = {
     heroCtaLabel: 'Contact Our Team',
     practicePriority: ['commercial', 'migration', 'corporate', 'property'],
     accent: '#C9A84C',
+    paymentMethods: ['Stripe', 'PayPal'],
+    carrier: 'Australia Post International',
+    estimatedDelivery: '10–20 business days',
   },
   CA: {
     code: 'CA', slug: 'ca', name: 'Canada', flag: '🇨🇦', flagEmoji: '🇨🇦',
@@ -111,6 +144,9 @@ const REGION_DATA = {
     heroCtaLabel: 'Contact Our Team',
     practicePriority: ['commercial', 'migration', 'corporate', 'property'],
     accent: '#C9A84C',
+    paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay'],
+    carrier: 'Chit Chats',
+    estimatedDelivery: '4–8 business days',
   },
 };
 
@@ -152,7 +188,7 @@ const GeoRouter = {
   rawCountryCode: null,
 
   getRegion(code) {
-    return REGION_DATA[code] || REGION_DATA['NP'];
+    return REGION_DATA[code] || REGION_DATA[FALLBACK_REGION];
   },
 
   getStored() {
@@ -164,7 +200,9 @@ const GeoRouter = {
   },
 
   async detect() {
-    if (IS_BOT) return 'NP';
+    // Bots & private/lab traffic → AU fallback. Crawlers should index the
+    // canonical AU storefront; the NP detection logic stays for real Nepal IPs.
+    if (IS_BOT) return FALLBACK_REGION;
 
     // 1. Try own backend (fastest — avoids CORS & rate limits)
     try {
@@ -176,7 +214,7 @@ const GeoRouter = {
           this.rawCountryCode = raw;
           const code = raw === 'UK' ? 'GB' : raw;
           if (EU_COUNTRY_CODES.has(code)) return 'EU';
-          return SUPPORTED_CODES.includes(code) ? code : 'NP';
+          return SUPPORTED_CODES.includes(code) ? code : FALLBACK_REGION;
         }
       }
     } catch(e) { /* continue */ }
@@ -191,21 +229,24 @@ const GeoRouter = {
           this.rawCountryCode = raw;
           const code = raw === 'UK' ? 'GB' : raw;
           if (EU_COUNTRY_CODES.has(code)) return 'EU';
-          return SUPPORTED_CODES.includes(code) ? code : 'NP';
+          return SUPPORTED_CODES.includes(code) ? code : FALLBACK_REGION;
         }
       }
     } catch(e) { /* continue */ }
 
-    // 3. Timezone heuristic
+    // 3. Timezone heuristic — only used when IP geolocation completely fails.
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (tz === 'Asia/Kathmandu' || tz === 'Asia/Kolkata') return 'NP';
+      if (tz === 'Asia/Kathmandu') return 'NP';
+      if (tz && tz.startsWith('Australia/')) return 'AU';
+      if (tz && tz.startsWith('Pacific/Auckland')) return 'NZ';
       if (tz && tz.startsWith('America/')) return 'US';
       if (tz && tz.startsWith('Europe/London')) return 'GB';
       if (tz && tz.startsWith('Asia/Tokyo')) return 'JP';
+      if (tz && tz.startsWith('Europe/')) return 'EU';
     } catch(e) {}
 
-    return 'NP';
+    return FALLBACK_REGION;
   },
 
   async init() {
@@ -233,13 +274,13 @@ const GeoRouter = {
 
   set(code) {
     const normalized = code.toUpperCase() === 'UK' ? 'GB' : code.toUpperCase();
-    this.current = SUPPORTED_CODES.includes(normalized) ? normalized : 'NP';
+    this.current = SUPPORTED_CODES.includes(normalized) ? normalized : FALLBACK_REGION;
     this.persist(this.current);
     this._broadcast(this.current);
   },
 
   get() {
-    return this.current || this.getStored() || 'NP';
+    return this.current || this.getStored() || FALLBACK_REGION;
   },
 
   _broadcast(code) {

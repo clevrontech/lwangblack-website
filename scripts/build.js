@@ -44,6 +44,48 @@ function injectLwbApiBase() {
   console.log('\n===  Injected LWB_API_BASE into public/lwb-api.js  ===');
 }
 
+/**
+ * Inject Google Tag Manager container ID across every public/*.html file.
+ *  • GTM_CONTAINER_ID set     → replace placeholder with real ID
+ *  • GTM_CONTAINER_ID missing → strip the GTM <script> + <noscript> blocks
+ *                                so we don't ship a 404 to gtm.js?id=GTM-XXXXXXX
+ */
+function injectGtm() {
+  const gtmId = (process.env.GTM_CONTAINER_ID || '').trim();
+  const placeholder = 'GTM-XXXXXXX';
+  let touched = 0;
+  let stripped = 0;
+
+  for (const entry of fs.readdirSync(PUBLIC, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.html')) continue;
+    const file = path.join(PUBLIC, entry.name);
+    let s = fs.readFileSync(file, 'utf8');
+    if (!s.includes(placeholder)) continue;
+
+    if (gtmId && /^GTM-[A-Z0-9]+$/.test(gtmId)) {
+      s = s.replaceAll(placeholder, gtmId);
+      touched++;
+    } else {
+      // Remove the entire GTM <script> block and matching <noscript> tag.
+      s = s.replace(
+        /<!--[^>]*Google Tag Manager[^>]*-->[\s\S]*?<\/script>\s*/gi, ''
+      );
+      s = s.replace(
+        /<script[^>]*>\s*\(function\s*\(\s*w\s*,\s*d\s*,\s*s\s*,\s*l\s*,\s*i\s*\)[\s\S]*?GTM-XXXXXXX[\s\S]*?<\/script>\s*/g, ''
+      );
+      s = s.replace(
+        /<noscript>\s*<iframe[^>]*GTM-XXXXXXX[^>]*>\s*<\/iframe>\s*<\/noscript>\s*/g, ''
+      );
+      // Belt-and-braces: in case any stray placeholder survived, neuter it.
+      s = s.replaceAll(placeholder, '');
+      stripped++;
+    }
+    fs.writeFileSync(file, s);
+  }
+  if (gtmId) console.log(`\n===  Injected GTM ID '${gtmId}' into ${touched} HTML files  ===`);
+  else if (stripped) console.log(`\n===  No GTM_CONTAINER_ID set — stripped GTM blocks from ${stripped} HTML files  ===`);
+}
+
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
@@ -150,6 +192,7 @@ if (fs.existsSync(adminOutDir)) {
 }
 
 injectLwbApiBase();
+injectGtm();
 if (!(process.env.LWB_API_BASE || '').trim() && process.env.VERCEL) {
   console.warn('\n  NOTE: Set LWB_API_BASE in Vercel (e.g. https://YOUR-SERVICE.onrender.com/api) so the storefront hits Render.');
 }

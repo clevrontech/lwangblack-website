@@ -182,6 +182,18 @@ async function main() {
   await ask(rl, env, 'CORS_ORIGIN', 'Comma-separated allowed CORS origins', {
     default: env.CORS_ORIGIN || 'https://www.lwangblack.co,https://lwangblack.co,http://localhost:5173,http://localhost:3000',
   });
+  await ask(rl, env, 'LWB_API_BASE', 'API base URL the storefront calls (e.g. https://YOUR-API.onrender.com/api)', {
+    default: env.LWB_API_BASE || '',
+    hint: '(blank = same-origin /api via Vercel proxy)',
+  });
+  await ask(rl, env, 'BACKEND_URL', 'Render API origin (for Vercel /api proxy)', {
+    default: env.BACKEND_URL || '',
+    hint: '(blank to skip)',
+  });
+  await ask(rl, env, 'GTM_CONTAINER_ID', 'Google Tag Manager ID (e.g. GTM-ABC1234)', {
+    default: env.GTM_CONTAINER_ID || '',
+    hint: '(blank = strip GTM blocks at build time)',
+  });
 
   // ── stripe ───────────────────────────────────────────────────────────────
   if (await askYesNo(rl, 'Configure Stripe (cards / Apple Pay / Google Pay / Afterpay)?', true)) {

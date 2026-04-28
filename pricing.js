@@ -1009,35 +1009,15 @@ async function initLwbProductGrids() {
   const grid = document.querySelector(sel);
   if (!grid) return;
 
-  // Skeleton placeholders — keep layout stable while products fetch (avoids CLS).
-  const skeletonCount = 6;
-  grid.innerHTML = Array.from({ length: skeletonCount }, () =>
-    `<div class="lwb-skeleton-card" aria-hidden="true"></div>`
-  ).join('');
-
-  const products = await lwbFetchProducts('all');
-  _lwbProductCache = products;
-
-  if (!products.length) {
-    // Last-resort fallback: render local catalogue so the grid is never empty.
-    const local = lwbLocalProductsAsApiShape();
-    if (local.length) {
-      _lwbProductCache = local;
-    } else {
-      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted)">No products available.</div>`;
-      return;
-    }
-  }
-  const productList = _lwbProductCache;
-
   function safeRenderCard(p) {
     try { return lwbRenderProductCard(p); }
     catch (e) { console.warn('[lwb] card render failed', e, p); return ''; }
   }
 
-  function render(list) {
-    grid.innerHTML = list.map(safeRenderCard).join('');
-    grid.querySelectorAll('[data-lwb-add]').forEach((btn) => {
+  function attachAddHandlers(scope) {
+    scope.querySelectorAll('[data-lwb-add]').forEach((btn) => {
+      if (btn.__lwbBound) return;
+      btn.__lwbBound = true;
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1046,18 +1026,60 @@ async function initLwbProductGrids() {
     });
   }
 
-  render(productList);
+  function render(list) {
+    const html = list.map(safeRenderCard).filter(Boolean).join('');
+    if (!html) {
+      // Defensive: if render produced nothing at all, keep skeletons rather than show "No products"
+      return false;
+    }
+    grid.innerHTML = html;
+    attachAddHandlers(grid);
+    return true;
+  }
 
-  document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // Update the active state visually
-      document.querySelectorAll('.filter-btn[data-filter]').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      const cat = btn.getAttribute('data-filter') || 'all';
-      const filtered = cat === 'all' ? productList : productList.filter((p) => p.category === cat);
-      render(filtered);
+  // ── PHASE 1: render local catalogue IMMEDIATELY (synchronous, no waiting) ──
+  // Guarantees "OUR COLLECTION" never shows empty/loading-forever even if API is down.
+  const localList = lwbLocalProductsAsApiShape();
+  if (localList.length) {
+    _lwbProductCache = localList;
+    render(localList);
+  } else {
+    // Only show skeletons if we truly have no local data (shouldn't happen).
+    const skeletonCount = 6;
+    grid.innerHTML = Array.from({ length: skeletonCount }, () =>
+      `<div class="lwb-skeleton-card" aria-hidden="true"></div>`
+    ).join('');
+  }
+
+  // Wire up filter buttons against whatever is currently in the cache.
+  function bindFilters() {
+    document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
+      if (btn.__lwbFilterBound) return;
+      btn.__lwbFilterBound = true;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn[data-filter]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const cat = btn.getAttribute('data-filter') || 'all';
+        const productList = _lwbProductCache || [];
+        const filtered = cat === 'all' ? productList : productList.filter((p) => p.category === cat);
+        render(filtered);
+      });
     });
-  });
+  }
+  bindFilters();
+
+  // ── PHASE 2: try to upgrade to live API data in the background ──
+  try {
+    const apiProducts = await lwbFetchProducts('all');
+    if (Array.isArray(apiProducts) && apiProducts.length) {
+      // Only swap if API result is meaningfully different / has more items.
+      const sameLen = _lwbProductCache && _lwbProductCache.length === apiProducts.length;
+      _lwbProductCache = apiProducts;
+      if (!sameLen) render(apiProducts);
+    }
+  } catch (e) {
+    console.warn('[lwb] background API upgrade failed; keeping local catalogue', e);
+  }
 }
 
 // Inject Product / ItemList JSON-LD for SEO when a grid is on the page.

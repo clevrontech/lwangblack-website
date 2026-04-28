@@ -57,14 +57,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
   <!-- All app scripts deferred and dependency-ordered for fast, non-blocking load -->
-  <script src="lwb-api.js" defer></script>
-  <script src="shopify-bridge.js" defer></script>
-  <script src="i18n.js" defer></script>
-  <script src="pricing.js" defer></script>
-  <script src="geo-router.js" defer></script>
-  <script src="au-currency-converter.js" defer></script>
-  <script src="region.js" defer></script>
-  <script src="cart.js" defer></script>
+  <script src="lwb-api.js?v=4" defer></script>
+  <script src="shopify-bridge.js?v=4" defer></script>
+  <script src="i18n.js?v=4" defer></script>
+  <script src="pricing.js?v=4" defer></script>
+  <script src="geo-router.js?v=4" defer></script>
+  <script src="au-currency-converter.js?v=4" defer></script>
+  <script src="region.js?v=4" defer></script>
+  <script src="cart.js?v=4" defer></script>
 
   <!-- Google Tag Manager (disabled — set window.LWB_GTM_ID = 'GTM-XXXXXXX' to enable) -->
   <script>(function(){var id=(window.LWB_GTM_ID||'').trim();
@@ -278,9 +278,9 @@
 
   <!-- Toast -->
 
-  <script src="lwb-realtime.js" defer></script>
-  <script src="lwb-trust.js" defer></script>
-  <script src="script.js" defer></script>
+  <script src="lwb-realtime.js?v=4" defer></script>
+  <script src="lwb-trust.js?v=4" defer></script>
+  <script src="script.js?v=4" defer></script>
   <script>
   document.addEventListener('lb:regionChanged', () => {
     if (window.lwbPricing && typeof window.lwbPricing.initLwbProductGrids === 'function') {

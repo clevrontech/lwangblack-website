@@ -262,13 +262,27 @@ function updateHomeProducts(code) {
   if (!grid || !products || typeof products !== 'object') return;
   const safeCode = (code || 'NP').toUpperCase();
 
-  const showcaseIds = [
+  // Preferred showcase order. Any ID that doesn't exist in window.LB_PRODUCTS
+  // falls through to the next available product so the home grid is never empty.
+  const preferredIds = [
     'lb-pot-and-press-gift-set',
     'lwang-black-drip-set',
     '5oog-lwang-black-mix',
     '250g-lwang-black-mix',
-    'lwang-black-drip-coffee-bags'
+    'lwang-black-drip-coffee-bags',
   ];
+
+  // Build the actual showcase: preferred IDs that exist, padded with whatever
+  // catalog products are available for this region.
+  const allIds = Object.keys(products);
+  const showcaseIds = [];
+  for (const id of preferredIds) {
+    if (products[id]) showcaseIds.push(id);
+  }
+  for (const id of allIds) {
+    if (showcaseIds.length >= 5) break;
+    if (!showcaseIds.includes(id)) showcaseIds.push(id);
+  }
   let html = '';
 
   showcaseIds.forEach(id => {

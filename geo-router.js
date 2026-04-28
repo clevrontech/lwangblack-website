@@ -26,10 +26,10 @@ const REGION_DATA = {
     code: 'AU', slug: 'au', name: 'Australia', flag: '🇦🇺', flagEmoji: '🇦🇺',
     currency: 'AUD', currencySymbol: 'A$',
     phone: '+61 2 8005 7000', whatsapp: '+61280057000',
-    address: '135 King St, Sydney NSW 2000, Australia',
-    heroTitle: 'GLOBAL FIRM,\nAUSTRALIAN HEART.',
-    heroSubtitle: 'Premium legal counsel across Australia. Your goals, our expertise — delivered with precision and care.',
-    heroCtaLabel: 'Explore Our Services',
+    address: 'Sydney, NSW, Australia',
+    heroTitle: 'PREMIUM CLOVE COFFEE,\nDELIVERED ACROSS AUSTRALIA.',
+    heroSubtitle: 'Specialty Arabica fused with hand-selected cloves. No fillers, no additives — bold, smooth, and unmistakably Lwang Black.',
+    heroCtaLabel: 'Shop Now',
     practicePriority: ['commercial', 'migration', 'corporate', 'property'],
     accent: '#C9A84C',
     paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay', 'Afterpay'],
@@ -41,9 +41,9 @@ const REGION_DATA = {
     currency: 'NPR', currencySymbol: 'रू',
     phone: '+977 1 5970 800', whatsapp: '+97715970800',
     address: 'Durbarmarg, Kathmandu 44600, Nepal',
-    heroTitle: 'YOUR PATH TO\nAUSTRALIA STARTS\nHERE.',
-    heroSubtitle: 'Expert migration law services for Nepali nationals. Skilled visas, partner visas, and student pathways — handled seamlessly.',
-    heroCtaLabel: 'Start Your Migration',
+    heroTitle: 'विशेष क्लोभ कफी —\nनेपालमै तयार।',
+    heroSubtitle: 'हस्तचयन गरिएका लवङ र विशेषश्रेणीको अरेबिका कफीको मिश्रण। शुद्ध, सशक्त, र पूर्ण नेपाली।',
+    heroCtaLabel: 'अहिले किन्नुहोस्',
     practicePriority: ['migration', 'student', 'family', 'commercial'],
     accent: '#C9A84C',
     paymentMethods: ['eSewa', 'Khalti', 'Nabil Bank', 'Cash on Delivery'],
@@ -54,10 +54,10 @@ const REGION_DATA = {
     code: 'US', slug: 'us', name: 'United States', flag: '🇺🇸', flagEmoji: '🇺🇸',
     currency: 'USD', currencySymbol: '$',
     phone: '+1 (415) 800 7000', whatsapp: '+14158007000',
-    address: '580 California St, San Francisco CA 94104, USA',
-    heroTitle: 'ELITE COMMERCIAL\nLEGAL COUNSEL.',
-    heroSubtitle: 'Cross-border business law, M&A advisory, and corporate governance. Serving US-based clients with global reach.',
-    heroCtaLabel: 'Talk to Our Team',
+    address: 'Ships from Sydney to all 50 states · USPS',
+    heroTitle: 'BOLD CLOVE COFFEE,\nSHIPPED ACROSS AMERICA.',
+    heroSubtitle: 'Specialty-grade Arabica fused with hand-selected cloves. USPS delivery in 3–7 business days. Pay in USD.',
+    heroCtaLabel: 'Shop Now',
     practicePriority: ['commercial', 'corporate', 'migration', 'property'],
     accent: '#C9A84C',
     paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay', 'Afterpay'],
@@ -68,10 +68,10 @@ const REGION_DATA = {
     code: 'GB', slug: 'uk', name: 'United Kingdom', flag: '🇬🇧', flagEmoji: '🇬🇧',
     currency: 'GBP', currencySymbol: '£',
     phone: '+44 20 7946 0800', whatsapp: '+442079460800',
-    address: '10 Finsbury Square, London EC2A 1AF, UK',
-    heroTitle: 'SOPHISTICATED\nLEGAL STRATEGY,\nGLOBALLY.',
-    heroSubtitle: 'Commercial law, dispute resolution, and cross-border advisory for UK businesses operating at the highest level.',
-    heroCtaLabel: 'Schedule a Consultation',
+    address: 'International shipping · VAT included',
+    heroTitle: 'PREMIUM CLOVE COFFEE,\nDELIVERED ACROSS THE UK.',
+    heroSubtitle: 'Hand-roasted Arabica with whole-clove infusion. International delivery in 7–14 business days. GBP checkout.',
+    heroCtaLabel: 'Shop Now',
     practicePriority: ['commercial', 'dispute', 'corporate', 'migration'],
     accent: '#C9A84C',
     paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay'],
@@ -96,10 +96,10 @@ const REGION_DATA = {
     code: 'JP', slug: 'jp', name: 'Japan', flag: '🇯🇵', flagEmoji: '🇯🇵',
     currency: 'JPY', currencySymbol: '¥',
     phone: '+81 3 6800 7000', whatsapp: '+81368007000',
-    address: '2-1-1 Nihonbashi, Chuo-ku, Tokyo 103-0027, Japan',
-    heroTitle: 'BRIDGING JAPAN\n& THE WORLD.',
-    heroSubtitle: 'Corporate law, cross-border commerce, and immigration advisory for Japanese corporations and individuals.',
-    heroCtaLabel: 'Connect With Experts',
+    address: 'Japan Post EMS · all 47 prefectures',
+    heroTitle: '本格クローブコーヒー、\n日本全国へお届け。',
+    heroSubtitle: '厳選されたアラビカ豆と手摘みクローブの融合。Japan Post EMSで5〜10営業日以内にお届け。',
+    heroCtaLabel: '今すぐ購入',
     practicePriority: ['commercial', 'corporate', 'migration', 'family'],
     accent: '#C9A84C',
     paymentMethods: ['Stripe', 'PayPal', 'Google Pay'],
@@ -110,10 +110,10 @@ const REGION_DATA = {
     code: 'NZ', slug: 'nz', name: 'New Zealand', flag: '🇳🇿', flagEmoji: '🇳🇿',
     currency: 'NZD', currencySymbol: 'NZ$',
     phone: '+64 9 800 7000', whatsapp: '+6498007000',
-    address: '151 Queen St, Auckland CBD 1010, New Zealand',
-    heroTitle: 'MIGRATION &\nBEYOND.',
-    heroSubtitle: 'Expert New Zealand immigration counsel. Residency pathways, work visas, and skilled migrant programs.',
-    heroCtaLabel: 'Explore Visa Options',
+    address: 'NZ Post · nationwide tracked delivery',
+    heroTitle: 'BOLD CLOVE COFFEE,\nDELIVERED ACROSS NEW ZEALAND.',
+    heroSubtitle: 'Specialty Arabica with hand-selected cloves. NZ Post tracked delivery in 3–6 business days. NZD checkout.',
+    heroCtaLabel: 'Shop Now',
     practicePriority: ['migration', 'family', 'commercial', 'property'],
     accent: '#C9A84C',
     paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay', 'Afterpay'],
@@ -124,10 +124,10 @@ const REGION_DATA = {
     code: 'CN', slug: 'cn', name: 'China', flag: '🇨🇳', flagEmoji: '🇨🇳',
     currency: 'CNY', currencySymbol: '¥',
     phone: '+86 21 6800 7000', whatsapp: '+862168007000',
-    address: '88 Century Avenue, Pudong, Shanghai 200120, China',
-    heroTitle: 'YOUR GLOBAL\nLEGAL PARTNER.',
-    heroSubtitle: 'Cross-border investment, immigration pathways, and commercial law — bridging China and Australia.',
-    heroCtaLabel: 'Contact Our Team',
+    address: 'International shipping via Australia Post',
+    heroTitle: '精品丁香咖啡,\n全球直邮。',
+    heroSubtitle: '精选阿拉比卡咖啡豆与手选丁香的完美融合。由澳大利亚直邮,支持人民币结算。',
+    heroCtaLabel: '立即购买',
     practicePriority: ['commercial', 'migration', 'corporate', 'property'],
     accent: '#C9A84C',
     paymentMethods: ['Stripe', 'PayPal'],
@@ -138,10 +138,10 @@ const REGION_DATA = {
     code: 'CA', slug: 'ca', name: 'Canada', flag: '🇨🇦', flagEmoji: '🇨🇦',
     currency: 'CAD', currencySymbol: 'CA$',
     phone: '+1 (416) 800 7000', whatsapp: '+14168007000',
-    address: '100 King St W, Toronto ON M5X 1A9, Canada',
+    address: 'Chit Chats · cross-border to all provinces',
     heroTitle: 'YOUR PREMIUM\nCANADIAN ROAST.',
-    heroSubtitle: 'Bold flavor, pure clove fusion, and real health benefits—shipped directly to you across Canada.',
-    heroCtaLabel: 'Contact Our Team',
+    heroSubtitle: 'Bold flavour, pure clove fusion, and real health benefits — shipped directly to you across Canada with Chit Chats.',
+    heroCtaLabel: 'Shop Now',
     practicePriority: ['commercial', 'migration', 'corporate', 'property'],
     accent: '#C9A84C',
     paymentMethods: ['Stripe', 'PayPal', 'Apple Pay', 'Google Pay'],
@@ -268,8 +268,44 @@ const GeoRouter = {
       }).catch(() => {});
     } catch(e) {}
 
+    // Nepal-aware redirect: a Nepali IP landing on the global home/shop should
+    // see the Nepal catalogue (NPR pricing, Pathao logistics, eSewa/Khalti).
+    // Skip if the user explicitly navigated to a non-NP page (e.g. they tapped
+    // the AU flag in the region switcher) — we honour stored preference.
+    try { this._maybeRedirectForRegion(); } catch (e) {}
+
     this._broadcast(this.current);
     return this.current;
+  },
+
+  /** Redirect logic — runs once per init.
+   *
+   *  Rule:
+   *    NP visitor on /, /index.html, /shop.html, /catalogue.html → /np_cat.html
+   *
+   *  We do NOT redirect away from product/checkout/order pages (would break
+   *  deep-links and active checkouts). We also skip the redirect if the URL
+   *  carries `?region=` (operator override) or if the user previously chose
+   *  a different region via the switcher (stored !== detected).
+   */
+  _maybeRedirectForRegion() {
+    if (typeof window === 'undefined' || !window.location) return;
+    if (this.current !== 'NP') return;
+
+    const params = new URLSearchParams(window.location.search || '');
+    if (params.has('region') || params.has('noredirect')) return;
+
+    const path = (window.location.pathname || '/').toLowerCase();
+    const npRedirectablePaths = ['/', '/index.html', '/shop.html', '/catalogue.html'];
+    if (!npRedirectablePaths.includes(path)) return;
+
+    // Honour explicit user override: if they previously picked a non-NP region.
+    const stored = this.getStored();
+    if (stored && stored !== 'NP') return;
+
+    const target = '/np_cat.html';
+    if (path === target.toLowerCase()) return;
+    window.location.replace(target + window.location.search + window.location.hash);
   },
 
   set(code) {

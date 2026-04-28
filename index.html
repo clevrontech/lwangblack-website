@@ -36,9 +36,16 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+  <link rel="preconnect" href="https://cdn.shopify.com" crossorigin />
+  <link rel="dns-prefetch" href="https://cdn2.blanxer.com" />
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap"
-    rel="stylesheet" />
+    rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" /></noscript>
+
+  <!-- Preload above-the-fold hero background -->
+  <link rel="preload" as="image" href="images/hero-bg-new.jpg" fetchpriority="high" />
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="style.css?v=3" />
@@ -49,7 +56,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
 
-  <!-- Core scripts (deferred for performance) -->
+  <!-- Core scripts (deferred for performance, ordered by dependency) -->
+  <script src="lwb-api.js" defer></script>
+  <script src="shopify-bridge.js" defer></script>
   <script src="geo-router.js" defer></script>
   <script src="i18n.js" defer></script>
   <script src="pricing.js" defer></script>
@@ -57,15 +66,16 @@
   <script src="region.js" defer></script>
   <script src="cart.js" defer></script>
 
-  <!-- Google Tag Manager — replace GTM-XXXXXXX with your container ID -->
-  <script>(function (w, d, s, l, i) {
-      w[l] = w[l] || []; w[l].push({
-        'gtm.start':
-          new Date().getTime(), event: 'gtm.js'
-      }); var f = d.getElementsByTagName(s)[0],
-        j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
-          'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
-    })(window, document, 'script', 'dataLayer', 'GTM-XXXXXXX');</script>
+  <!-- Google Tag Manager (disabled — no container ID configured). To enable, set window.LWB_GTM_ID = 'GTM-XXXXXXX'. -->
+  <script>(function () {
+      var id = (window.LWB_GTM_ID || '').trim();
+      if (!id || id.indexOf('GTM-XXXXXXX') !== -1) return;
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+      var s = document.createElement('script');
+      s.async = true; s.src = 'https://www.googletagmanager.com/gtm.js?id=' + id;
+      document.head.appendChild(s);
+    })();</script>
 
   <!-- JSON-LD Schema -->
   <script type="application/ld+json" id="schemaOrg">
@@ -144,9 +154,7 @@
 </head>
 
 <body>
-  <!-- GTM noscript -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX" height="0" width="0"
-      style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- GTM noscript fallback (only injected when LWB_GTM_ID is configured) -->
 
   <!-- Skip to Content (Accessibility) -->
   <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -156,7 +164,7 @@
   ══════════════════════════════════════════ -->
   <div id="preloader">
     <div class="spinner"></div>
-    <img loading="lazy" decoding="async" src="images/Image 1.png" alt="Lwang Black" style="height:60px; object-fit:contain;"
+    <img loading="eager" decoding="async" fetchpriority="high" src="images/Image 1.png" alt="Lwang Black" style="height:60px; object-fit:contain;"
       onerror="this.style.display='none'" />
   </div>
 
@@ -188,7 +196,7 @@
     <!-- Center: logo -->
     <div class="nav-center">
       <a href="index.html" class="nav-brand" id="navBrand">
-        <img loading="lazy" decoding="async" src="images/Image 1.png" alt="Lwang Black Logo" />
+        <img loading="eager" decoding="async" fetchpriority="high" src="images/Image 1.png" alt="Lwang Black Logo" />
       </a>
     </div>
 
@@ -230,17 +238,17 @@
 
       <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:1rem;">
         <img src="https://flagcdn.com/au.svg" width="36" height="27" style="border-radius:3px;" alt="Australia flag"
-          title="Australia" loading="lazy" />
+          title="Australia" loading="eager" decoding="async" />
         <img src="https://flagcdn.com/np.svg" width="36" height="27" style="border-radius:3px;" alt="Nepal flag"
-          title="Nepal" loading="lazy" />
+          title="Nepal" loading="eager" decoding="async" />
         <img src="https://flagcdn.com/us.svg" width="36" height="27" style="border-radius:3px;" alt="United States flag"
-          title="United States" loading="lazy" />
+          title="United States" loading="eager" decoding="async" />
         <img src="https://flagcdn.com/jp.svg" width="36" height="27" style="border-radius:3px;" alt="Japan flag"
-          title="Japan" loading="lazy" />
+          title="Japan" loading="eager" decoding="async" />
         <img src="https://flagcdn.com/ca.svg" width="36" height="27" style="border-radius:3px;" alt="Canada flag"
-          title="Canada" loading="lazy" />
+          title="Canada" loading="eager" decoding="async" />
         <img src="https://flagcdn.com/nz.svg" width="36" height="27" style="border-radius:3px;" alt="New Zealand flag"
-          title="New Zealand" loading="lazy" />
+          title="New Zealand" loading="eager" decoding="async" />
       </div>
       <span class="label-micro" style="margin:0; font-weight:700; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.8); font-size:0.7rem;">DELIVERING TO 7+ COUNTRIES</span>
 
@@ -311,7 +319,7 @@
       <span class="label-micro" data-i18n="products.label">SHOP THE RANGE</span>
       <h2 class="title-large" data-i18n="products.title">OUR COLLECTION</h2>
 
-      <div class="product-grid">
+      <div class="product-grid" id="lb-shop-grid">
       </div>
     </div>
   </section>
@@ -360,8 +368,9 @@
         </div>
       </div>
       <div style="display:flex; align-items:center; justify-content:center; min-height:500px;">
-        <video autoplay loop muted playsinline
-          style="width:100%; height:500px; border-radius:16px; object-fit:cover; display:block; box-shadow:0 20px 60px rgba(0,0,0,0.5);"
+        <video autoplay loop muted playsinline preload="none"
+          poster="images/hero-bg-new.jpg" loading="lazy"
+          style="width:100%; height:500px; border-radius:16px; object-fit:cover; display:block; box-shadow:0 20px 60px rgba(0,0,0,0.5); background:#222;"
           onerror="this.style.background='#222'">
           <source src="videomaking.mp4" type="video/mp4" />
         </video>
@@ -596,12 +605,10 @@
     </div>
   </div>
 
-  <!-- Main Script -->
-  <script src="lwb-api.js"></script>
+  <!-- Trailing scripts (deferred). lwb-api.js + shopify-bridge.js are loaded in <head> for dependency order. -->
   <script src="lwb-realtime.js" defer></script>
   <script src="lwb-trust.js" defer></script>
-  <script src="shopify-bridge.js"></script>
-  <script src="script.js"></script>
+  <script src="script.js" defer></script>
 
   <!-- Footer dynamic update -->
   <script>

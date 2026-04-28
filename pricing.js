@@ -826,8 +826,58 @@ window.getShippingOptions = getShippingOptions;
 window.formatPrice = formatPrice;
 
 // ── API product grid (shop + catalogue) ─────────────────────────────────────
+// Map LB_PRODUCTS (local fallback) → API shape used by lwbRenderProductCard.
+function lwbLocalProductsAsApiShape() {
+  const out = [];
+  try {
+    const dict = window.LB_PRODUCTS || {};
+    for (const id in dict) {
+      const p = dict[id];
+      if (!p) continue;
+      // Convert local prices ({amount,currency,symbol,display}) → numeric amount per region.
+      const prices = {};
+      const compareAt = {};
+      for (const r in (p.prices || {})) {
+        const px = p.prices[r];
+        if (px && typeof px.amount === 'number') prices[r] = px.amount;
+      }
+      out.push({
+        id: p.id || id,
+        handle: p.id || id,
+        title: p.name || id,
+        category: p.category || 'coffee',
+        images: [p.image].filter(Boolean),
+        prices,
+        compareAtPrices: compareAt,
+        variants: [{ id: (p.id || id) + '-default', title: 'Default' }],
+        rating: p.rating || 0,
+        reviewCount: p.reviewCount || 0,
+      });
+    }
+  } catch (e) {
+    console.warn('[lwb] local fallback build failed', e);
+  }
+  return out;
+}
+
+// Race a promise against a timeout so the page never hangs on a slow/dead API.
+function lwbWithTimeout(promise, ms) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const t = setTimeout(() => {
+      if (!settled) { settled = true; resolve(null); }
+    }, ms);
+    Promise.resolve(promise).then((v) => {
+      if (!settled) { settled = true; clearTimeout(t); resolve(v); }
+    }).catch(() => {
+      if (!settled) { settled = true; clearTimeout(t); resolve(null); }
+    });
+  });
+}
+
 async function lwbFetchProducts(category) {
-  await (window.__lwbShopifyReady || Promise.resolve());
+  // Don't let a stuck Shopify-config probe block product rendering forever.
+  await lwbWithTimeout(window.__lwbShopifyReady || Promise.resolve(), 1500);
   const qs = category && category !== 'all' ? `?category=${encodeURIComponent(category)}` : '';
   const basePath = window.__LWB_SHOPIFY_ACTIVE__ ? '/shopify/products' : '/products';
   const url =
@@ -835,12 +885,17 @@ async function lwbFetchProducts(category) {
       ? window.lwbApiUrl(basePath + qs)
       : `${window.LWB_API_BASE}${basePath}${qs}`;
   try {
-    const res = await fetch(url);
+    const ctrl = ('AbortController' in window) ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), 4000) : null;
+    const res = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+    if (timer) clearTimeout(timer);
     const data = await res.json();
-    return data.products || [];
+    const list = (data && data.products) || [];
+    if (list.length) return list;
+    return lwbLocalProductsAsApiShape();
   } catch (e) {
-    console.warn('[lwb] products fetch failed', e);
-    return [];
+    console.warn('[lwb] products fetch failed, using local fallback', e);
+    return lwbLocalProductsAsApiShape();
   }
 }
 
@@ -867,14 +922,31 @@ function lwbRenderStars(rating) {
   return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0));
 }
 
+function lwbFormatPriceSafe(amount, region) {
+  if (amount == null) return '';
+  if (window.lwbCart && typeof window.lwbCart.formatPrice === 'function') {
+    try { return window.lwbCart.formatPrice(amount, region); } catch (e) { /* fall through */ }
+  }
+  // Minimal fallback formatter so cards still render before cart.js is ready.
+  const map = { NP: 'Rs ', AU: 'A$', US: '$', GB: '£', CA: 'C$', NZ: 'NZ$', JP: '¥', EU: '€' };
+  const sym = map[region] || '$';
+  const num = Number(amount);
+  if (!isFinite(num)) return '';
+  return sym + num.toFixed(2);
+}
+
 function lwbRenderProductCard(product) {
-  const region = (typeof window.lwbCart !== 'undefined' && window.lwbCart.getRegion) ? window.lwbCart.getRegion() : (localStorage.getItem('lwb_region') || 'NP');
-  const price = window.lwbCart
-    ? window.lwbCart.formatPrice(product.prices[region] ?? product.prices.EU ?? product.prices.NP, region)
-    : '';
-  const cmp = product.compareAtPrices && (product.compareAtPrices[region] ?? product.compareAtPrices.EU);
-  const comparePrice = cmp ? window.lwbCart.formatPrice(cmp, region) : '';
-  const hasCompare = !!cmp;
+  if (!product || typeof product !== 'object') return '';
+  const region = (typeof window.lwbCart !== 'undefined' && window.lwbCart && window.lwbCart.getRegion)
+    ? window.lwbCart.getRegion()
+    : (localStorage.getItem('lwb_region') || 'NP');
+  const prices = product.prices || {};
+  const priceVal = prices[region] != null ? prices[region] : (prices.EU != null ? prices.EU : prices.NP);
+  const price = lwbFormatPriceSafe(priceVal, region);
+  const cmpMap = product.compareAtPrices || {};
+  const cmp = cmpMap[region] != null ? cmpMap[region] : cmpMap.EU;
+  const comparePrice = (cmp != null) ? lwbFormatPriceSafe(cmp, region) : '';
+  const hasCompare = !!comparePrice;
 
   const variantSelect =
     product.variants && product.variants.length > 1
@@ -883,11 +955,14 @@ function lwbRenderProductCard(product) {
         </select>`
       : '';
 
+  const cat = product.category || 'coffee';
+  const handle = product.handle || product.id || '';
+  const img0 = (product.images && product.images[0]) || (product.image || '');
   return `
-    <div class="product-card" data-category="${product.category}" data-product-id="${product.id}">
+    <div class="product-card" data-category="${cat}" data-product-id="${product.id}">
       ${hasCompare ? '<div class="product-badge">SALE</div>' : ''}
-      <a href="product.html?id=${encodeURIComponent(product.handle)}" class="product-image-wrap">
-        <img src="${product.images[0]}" alt="" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover" />
+      <a href="product.html?id=${encodeURIComponent(handle)}" class="product-image-wrap">
+        <img src="${img0}" alt="${(product.title || '').replace(/"/g, '&quot;')}" loading="lazy" decoding="async" style="width:100%;aspect-ratio:1;object-fit:cover" onerror="this.style.opacity=0.2" />
       </a>
       <div class="product-info">
         <p class="product-category" style="font-size:10px;letter-spacing:2px;color:var(--text-muted);margin:0">${String(product.category).toUpperCase()}</p>
@@ -918,8 +993,12 @@ async function lwbAddFromGrid(productId) {
     return;
   }
   const sel = document.querySelector(`select[data-lwb-product="${productId}"]`);
-  const vid = sel ? sel.value : p.variants[0].id;
-  window.lwbCart.addToCart(p, vid, 1);
+  const vid = sel ? sel.value : ((p.variants && p.variants[0] && p.variants[0].id) || p.id);
+  if (window.lwbCart && typeof window.lwbCart.addToCart === 'function') {
+    window.lwbCart.addToCart(p, vid, 1);
+  } else {
+    console.warn('[lwb] cart not ready');
+  }
 }
 
 async function initLwbProductGrids() {
@@ -936,12 +1015,24 @@ async function initLwbProductGrids() {
   _lwbProductCache = products;
 
   if (!products.length) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted)">No products available.</div>`;
-    return;
+    // Last-resort fallback: render local catalogue so the grid is never empty.
+    const local = lwbLocalProductsAsApiShape();
+    if (local.length) {
+      _lwbProductCache = local;
+    } else {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted)">No products available.</div>`;
+      return;
+    }
+  }
+  const productList = _lwbProductCache;
+
+  function safeRenderCard(p) {
+    try { return lwbRenderProductCard(p); }
+    catch (e) { console.warn('[lwb] card render failed', e, p); return ''; }
   }
 
   function render(list) {
-    grid.innerHTML = list.map(lwbRenderProductCard).join('');
+    grid.innerHTML = list.map(safeRenderCard).join('');
     grid.querySelectorAll('[data-lwb-add]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -951,12 +1042,15 @@ async function initLwbProductGrids() {
     });
   }
 
-  render(products);
+  render(productList);
 
   document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
     btn.addEventListener('click', () => {
+      // Update the active state visually
+      document.querySelectorAll('.filter-btn[data-filter]').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
       const cat = btn.getAttribute('data-filter') || 'all';
-      const filtered = cat === 'all' ? products : products.filter((p) => p.category === cat);
+      const filtered = cat === 'all' ? productList : productList.filter((p) => p.category === cat);
       render(filtered);
     });
   });

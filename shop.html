@@ -40,15 +40,19 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+  <link rel="preconnect" href="https://cdn.shopify.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" /></noscript>
   <link rel="stylesheet" href="style.css?v=3" />
   <link rel="stylesheet" href="region-style.css?v=3" />
   <link rel="stylesheet" href="ecommerce.css?v=3" />
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
-  <script src="lwb-api.js"></script>
-  <script src="shopify-bridge.js"></script>
+  <!-- All app scripts deferred and dependency-ordered for fast, non-blocking load -->
+  <script src="lwb-api.js" defer></script>
+  <script src="shopify-bridge.js" defer></script>
   <script src="i18n.js" defer></script>
   <script src="pricing.js" defer></script>
   <script src="geo-router.js" defer></script>
@@ -56,12 +60,14 @@
   <script src="region.js" defer></script>
   <script src="cart.js" defer></script>
 
-  <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
+  <!-- Google Tag Manager (disabled — set window.LWB_GTM_ID = 'GTM-XXXXXXX' to enable) -->
+  <script>(function(){var id=(window.LWB_GTM_ID||'').trim();
+    if(!id||id.indexOf('GTM-XXXXXXX')!==-1)return;
+    window.dataLayer=window.dataLayer||[];
+    window.dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});
+    var s=document.createElement('script');s.async=true;
+    s.src='https://www.googletagmanager.com/gtm.js?id='+id;
+    document.head.appendChild(s);})();</script>
 
   <style>
     .filters-container {
@@ -124,13 +130,12 @@
     <link rel="icon" type="image/png" href="/images/logo-hero.png" />
 </head>
 <body>
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- PRELOADER -->
   <div id="preloader">
       <div class="spinner"></div>
-      <img loading="lazy" decoding="async" src="images/Image 1.png" alt="Lwang Black" style="height: 60px; object-fit: contain;" onerror="this.style.display='none'" />
+      <img loading="eager" decoding="async" fetchpriority="high" src="images/Image 1.png" alt="Lwang Black" style="height: 60px; object-fit: contain;" onerror="this.style.display='none'" />
   </div>
 
   <!-- NAVIGATION -->
@@ -147,7 +152,7 @@
     </div>
     <div class="nav-center">
       <a href="index.html" class="nav-brand" id="navBrand">
-        <img loading="lazy" decoding="async" src="images/Image 1.png" alt="Lwang Black Logo" onerror="this.src='https://www.lwangblack.co/images/Image 1.png'" />
+        <img loading="eager" decoding="async" fetchpriority="high" src="images/Image 1.png" alt="Lwang Black Logo" onerror="this.src='https://www.lwangblack.co/images/Image 1.png'" />
       </a>
     </div>
     <div class="nav-links nav-right">
@@ -269,7 +274,7 @@
 
   <script src="lwb-realtime.js" defer></script>
   <script src="lwb-trust.js" defer></script>
-  <script src="script.js"></script>
+  <script src="script.js" defer></script>
   <script>
   document.addEventListener('lb:regionChanged', () => {
     if (window.lwbPricing && typeof window.lwbPricing.initLwbProductGrids === 'function') {

@@ -32,12 +32,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
 
-  <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
+  <!-- Google Tag Manager (disabled — set window.LWB_GTM_ID = 'GTM-XXXXXXX' to enable) -->
+  <script>(function(){var id=(window.LWB_GTM_ID||'').trim();
+    if(!id||id.indexOf('GTM-XXXXXXX')!==-1)return;
+    window.dataLayer=window.dataLayer||[];
+    window.dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});
+    var s=document.createElement('script');s.async=true;
+    s.src='https://www.googletagmanager.com/gtm.js?id='+id;
+    document.head.appendChild(s);})();</script>
   
   <style>
       .filters-container {
@@ -69,13 +71,12 @@
     <link rel="icon" type="image/png" href="/images/logo-hero.png" />
 </head>
 <body>
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- PRELOADER -->
   <div id="preloader">
       <div class="spinner"></div>
-      <img loading="lazy" decoding="async" src="images/Image 1.png" alt="Lwang Black" style="height: 60px; object-fit: contain;" onerror="this.style.display='none'" />
+      <img loading="eager" decoding="async" fetchpriority="high" src="images/Image 1.png" alt="Lwang Black" style="height: 60px; object-fit: contain;" onerror="this.style.display='none'" />
   </div>
 
   <!-- Removed bottle animation -->
@@ -134,7 +135,7 @@
               <button class="filter-btn" data-filter="apparel">APPAREL</button>
           </div>
 
-          <div class="product-grid">
+          <div class="product-grid" id="lb-shop-grid">
           </div>
       </div>
   </section>
@@ -151,8 +152,8 @@
   <!-- Toast -->
   <div id="cartToast">ADDED TO CART</div>
 
-  <script src="lwb-api.js"></script>
-  <script src="shopify-bridge.js"></script>
+  <script src="lwb-api.js" defer></script>
+  <script src="shopify-bridge.js" defer></script>
   <script src="i18n.js" defer></script>
   <script src="pricing.js" defer></script>
   <script src="geo-router.js" defer></script>

@@ -1,7 +1,18 @@
+// ── JSON-store email service ────────────────────────────────────────────────
+// Storefront orders go through this. We unify on SendGrid via the canonical
+// notifications.js, falling back to Nodemailer/Gmail if EMAIL_USER/EMAIL_PASS
+// are present and SendGrid isn't configured. The previous implementation
+// used Nodemailer only — which silently dropped emails in production where
+// only SENDGRID_API_KEY was set.
+
 const config = require('../config');
+const notifications = require('./notifications');
+
+const BRAND_COLOR = '#1a1a1a';
+const GOLD = '#c8a96e';
 
 let _transporter;
-function getTransporter() {
+function getNodemailerTransporter() {
   if (_transporter) return _transporter;
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
@@ -17,9 +28,6 @@ function getTransporter() {
     return null;
   }
 }
-
-const BRAND_COLOR = '#1a1a1a';
-const GOLD = '#c8a96e';
 
 function emailBase(content) {
   return `
@@ -45,17 +53,42 @@ function emailBase(content) {
     </html>`;
 }
 
-function fromAddress() {
-  const user = process.env.EMAIL_USER || config.email.fromEmail;
-  return `"Lwang Black" <${user}>`;
+/**
+ * Unified send: try SendGrid (via notifications.sendEmail), then Nodemailer/Gmail,
+ * then dry-run log. Returns { ok, provider } so callers can audit.
+ */
+async function sendUnified({ to, subject, html }) {
+  if (!to) return { ok: false, provider: 'none', error: 'missing recipient' };
+
+  // 1. Prefer SendGrid (matches admin path).
+  if (config.email && config.email.apiKey) {
+    const r = await notifications.sendEmail({ to, subject, html });
+    if (r && r.success) return { ok: true, provider: 'sendgrid' };
+    // fall through to nodemailer if sendgrid failed
+  }
+
+  // 2. Fallback to Nodemailer/Gmail.
+  const t = getNodemailerTransporter();
+  if (t) {
+    try {
+      await t.sendMail({
+        from: `"Lwang Black" <${process.env.EMAIL_USER}>`,
+        to,
+        subject,
+        html,
+      });
+      return { ok: true, provider: 'nodemailer' };
+    } catch (err) {
+      console.error('[json-store-email] Nodemailer error:', err.message);
+    }
+  }
+
+  // 3. Final fallback: notifications.sendEmail's dry-run logger.
+  await notifications.sendEmail({ to, subject, html });
+  return { ok: false, provider: 'dry-run' };
 }
 
 async function sendOrderConfirmation(order) {
-  const t = getTransporter();
-  if (!t) {
-    console.warn('[json-store-email] Nodemailer not configured — skipping order email');
-    return;
-  }
   const items = (order.lineItems || []).map(
     (i) =>
       `<tr>
@@ -84,23 +117,16 @@ async function sendOrderConfirmation(order) {
     </p>
     <p>Questions? <a href="https://wa.me/9779857059386" style="color:#c8a96e">WhatsApp us</a> or reply to this email.</p>`;
 
-  await t.sendMail({
-    from: fromAddress(),
-    to: order.customer.email,
+  await sendUnified({
+    to: order.customer?.email,
     subject: `Order Confirmed — ${order.orderNumber} ☕`,
     html: emailBase(content),
   });
 }
 
 async function sendContactNotification(contact) {
-  const t = getTransporter();
-  if (!t) return;
   const adminTo = process.env.ADMIN_EMAIL || config.email.fromEmail;
-  await t.sendMail({
-    from: `"Lwang Black Website" <${process.env.EMAIL_USER || config.email.fromEmail}>`,
-    to: adminTo,
-    subject: `New Contact: ${contact.name} — ${contact.email}`,
-    html: emailBase(`
+  const content = `
       <h2>New Contact Submission</h2>
       <p><strong>Name:</strong> ${contact.name}</p>
       <p><strong>Email:</strong> ${contact.email}</p>
@@ -109,18 +135,16 @@ async function sendContactNotification(contact) {
       <div style="background:#f5f5f5;padding:15px;border-radius:6px">${contact.message}</div>
       <p style="margin-top:20px">
         <a href="mailto:${contact.email}" style="background:#1a1a1a;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px">Reply to ${contact.name}</a>
-      </p>`),
+      </p>`;
+  await sendUnified({
+    to: adminTo,
+    subject: `New Contact: ${contact.name} — ${contact.email}`,
+    html: emailBase(content),
   });
 }
 
 async function sendWelcomeEmail({ name, email }) {
-  const t = getTransporter();
-  if (!t) return;
-  await t.sendMail({
-    from: fromAddress(),
-    to: email,
-    subject: "Welcome to Lwang Black — Here's 10% Off ☕",
-    html: emailBase(`
+  const content = `
       <h2>Welcome, ${name || 'Coffee Lover'}!</h2>
       <p>Thank you for joining the Lwang Black community — Nepal's premium clove-infused coffee.</p>
       <div style="background:#1a1a1a;padding:20px;border-radius:6px;text-align:center;margin:20px 0">
@@ -131,7 +155,11 @@ async function sendWelcomeEmail({ name, email }) {
       <p>Use code <strong>WELCOME10</strong> at checkout.</p>
       <div style="text-align:center;margin-top:20px">
         <a href="https://www.lwangblack.co/shop.html" style="background:#c8a96e;color:#1a1a1a;padding:14px 28px;text-decoration:none;border-radius:4px;font-weight:bold">SHOP NOW</a>
-      </div>`),
+      </div>`;
+  await sendUnified({
+    to: email,
+    subject: "Welcome to Lwang Black — Here's 10% Off ☕",
+    html: emailBase(content),
   });
 }
 

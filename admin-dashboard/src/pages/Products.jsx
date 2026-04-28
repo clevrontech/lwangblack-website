@@ -179,6 +179,35 @@ function ImageUploader({ value, onChange }) {
 // ── Product modal ─────────────────────────────────────────────────────────────
 const EMPTY = { name: '', description: '', price: '', stock: '', category: '', image: '', weight: '', sku: '', low_stock_threshold: '10' };
 
+// Static fallback FX (used only if /api/fx/rates is unreachable).
+const FX_FALLBACK_USD = {
+  AUD: 1.54, USD: 1.0, GBP: 0.79, NPR: 135, CAD: 1.38, NZD: 1.66, JPY: 150, CNY: 7.2, EUR: 0.93,
+};
+
+const REGION_TO_CURRENCY = {
+  AU: { currency: 'AUD', symbol: 'A$', decimals: 2 },
+  US: { currency: 'USD', symbol: '$',  decimals: 2 },
+  GB: { currency: 'GBP', symbol: '£',  decimals: 2 },
+  EU: { currency: 'EUR', symbol: '€',  decimals: 2 },
+  NP: { currency: 'NPR', symbol: 'Rs', decimals: 0 },
+  CA: { currency: 'CAD', symbol: 'CA$', decimals: 2 },
+  NZ: { currency: 'NZD', symbol: 'NZ$', decimals: 2 },
+  JP: { currency: 'JPY', symbol: '¥', decimals: 0 },
+  CN: { currency: 'CNY', symbol: '¥', decimals: 2 },
+};
+
+/** Fetch live FX rates with USD base. Falls back to constants on network failure. */
+async function getLiveFxUSD() {
+  try {
+    const r = await fetch('/api/fx/rates?base=USD', { credentials: 'omit' });
+    if (r.ok) {
+      const j = await r.json();
+      if (j && j.rates) return { ...FX_FALLBACK_USD, ...j.rates };
+    }
+  } catch { /* fall through */ }
+  return FX_FALLBACK_USD;
+}
+
 function ProductModal({ product, onClose, onSaved }) {
   const [form, setForm]   = useState(product
     ? { ...EMPTY, ...product, price: product.price ?? '', stock: product.stock ?? '', low_stock_threshold: product.low_stock_threshold || '10' }
@@ -194,18 +223,20 @@ function ProductModal({ product, onClose, onSaved }) {
     setSaving(true);
     try {
       const usdPrice = parseFloat(form.price) || 0;
-      // Build multi-currency prices object from the USD base price
-      const prices = {
-        AU: { amount: +(usdPrice * 1.54).toFixed(2), currency: 'AUD', symbol: 'A$', display: `A$${(usdPrice * 1.54).toFixed(2)}` },
-        US: { amount: usdPrice, currency: 'USD', symbol: '$', display: `$${usdPrice.toFixed(2)}` },
-        GB: { amount: +(usdPrice * 0.79).toFixed(2), currency: 'GBP', symbol: '£', display: `£${(usdPrice * 0.79).toFixed(2)}` },
-        NP: { amount: +(usdPrice * 135).toFixed(0), currency: 'NPR', symbol: 'Rs', display: `Rs ${(usdPrice * 135).toFixed(0)}` },
-        CA: { amount: +(usdPrice * 1.38).toFixed(2), currency: 'CAD', symbol: 'CA$', display: `CA$${(usdPrice * 1.38).toFixed(2)}` },
-        NZ: { amount: +(usdPrice * 1.66).toFixed(2), currency: 'NZD', symbol: 'NZ$', display: `NZ$${(usdPrice * 1.66).toFixed(2)}` },
-        JP: { amount: +(usdPrice * 150).toFixed(0), currency: 'JPY', symbol: '¥', display: `¥${(usdPrice * 150).toFixed(0)}` },
-        CN: { amount: +(usdPrice * 7.2).toFixed(2), currency: 'CNY', symbol: '¥', display: `¥${(usdPrice * 7.2).toFixed(2)}` },
-        DEFAULT: { amount: usdPrice, currency: 'USD', symbol: '$', display: `$${usdPrice.toFixed(2)}` },
-      };
+      // Build multi-currency prices object from the USD base price using LIVE FX.
+      const fx = await getLiveFxUSD();
+      const prices = {};
+      for (const [region, meta] of Object.entries(REGION_TO_CURRENCY)) {
+        const rate = Number(fx[meta.currency]) || FX_FALLBACK_USD[meta.currency] || 1;
+        const amt = +(usdPrice * rate).toFixed(meta.decimals);
+        prices[region] = {
+          amount: amt,
+          currency: meta.currency,
+          symbol: meta.symbol,
+          display: `${meta.symbol}${meta.decimals === 0 ? amt.toFixed(0) : amt.toFixed(2)}`,
+        };
+      }
+      prices.DEFAULT = { amount: usdPrice, currency: 'USD', symbol: '$', display: `$${usdPrice.toFixed(2)}` };
 
       const body = {
         name: form.name,

@@ -40,16 +40,109 @@ function normalizeCatalogProduct(p) {
   };
 }
 
+const JSON_CATALOG_PATH = path.join(__dirname, '..', '..', 'data', 'products.json');
+
 function loadJsonCatalogProducts() {
   try {
-    const p = path.join(__dirname, '..', '..', 'data', 'products.json');
-    if (!fs.existsSync(p)) return null;
-    const arr = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (!fs.existsSync(JSON_CATALOG_PATH)) return null;
+    const arr = JSON.parse(fs.readFileSync(JSON_CATALOG_PATH, 'utf8'));
     if (!Array.isArray(arr) || !arr.length) return null;
     return arr.filter((x) => x && x.status === 'active').map(normalizeCatalogProduct);
   } catch {
     return null;
   }
+}
+
+/** Read the raw JSON catalog (no filtering, no normalization). Returns [] if missing. */
+function readRawCatalog() {
+  try {
+    if (!fs.existsSync(JSON_CATALOG_PATH)) return [];
+    const arr = JSON.parse(fs.readFileSync(JSON_CATALOG_PATH, 'utf8'));
+    return Array.isArray(arr) ? arr : [];
+  } catch (err) {
+    console.warn('[Products] Failed to read JSON catalog:', err.message);
+    return [];
+  }
+}
+
+/** Atomic write to data/products.json. Crash-safe via tmp-then-rename. */
+function writeRawCatalog(arr) {
+  try {
+    const dir = path.dirname(JSON_CATALOG_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const tmp = `${JSON_CATALOG_PATH}.tmp-${process.pid}-${Date.now()}`;
+    fs.writeFileSync(tmp, JSON.stringify(arr, null, 2));
+    fs.renameSync(tmp, JSON_CATALOG_PATH);
+    return true;
+  } catch (err) {
+    console.error('[Products] Failed to write JSON catalog:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Mirror a write from the SQL/memory store into the JSON catalog so the
+ * storefront (which reads data/products.json) sees the same products as
+ * the admin (which reads from the SQL store via routes/products.js).
+ *
+ * `op` is 'upsert' or 'delete'.
+ */
+function mirrorToJsonCatalog(op, productLike) {
+  if (!productLike || !productLike.id) return;
+  const arr = readRawCatalog();
+  const idx = arr.findIndex((p) => p && (p.id === productLike.id || p.handle === productLike.id));
+
+  if (op === 'delete') {
+    if (idx === -1) return;
+    arr.splice(idx, 1);
+    writeRawCatalog(arr);
+    return;
+  }
+
+  // Build a JSON-catalog-shaped record from the admin payload. We keep both
+  // `name` (admin) and `title` (storefront) so either reader works.
+  const variants = Array.isArray(productLike.variants) ? productLike.variants : [];
+  const aggregateStock = variants.reduce((s, v) => s + (Number(v?.inventory ?? v?.stock ?? 0) || 0), 0);
+  const images = (() => {
+    if (Array.isArray(productLike.images) && productLike.images.length) return productLike.images;
+    if (productLike.image) return [productLike.image];
+    return [];
+  })();
+
+  const record = {
+    id: productLike.id,
+    handle: productLike.slug || productLike.handle || productLike.id,
+    title: productLike.name || productLike.title || productLike.id,
+    name: productLike.name || productLike.title || productLike.id,
+    subtitle: productLike.subtitle || '',
+    category: productLike.category || 'coffee',
+    description: productLike.description || '',
+    image: productLike.image || images[0] || '',
+    images,
+    variants,
+    variant_images: productLike.variant_images || productLike.variantImages || {},
+    prices: productLike.prices || {},
+    compareAtPrices: productLike.compareAtPrices || productLike.compare_at_prices || {},
+    stock: Number.isFinite(Number(productLike.stock)) && Number(productLike.stock) > 0
+      ? Number(productLike.stock) : aggregateStock,
+    allowed_regions: productLike.allowed_regions || 'ALL',
+    badge: productLike.badge || null,
+    status: productLike.status || 'active',
+    tags: Array.isArray(productLike.tags) ? productLike.tags : [],
+    rating: Number(productLike.rating) || 0,
+    reviewCount: Number(productLike.reviewCount || productLike.review_count) || 0,
+    features: Array.isArray(productLike.features) ? productLike.features : [],
+    low_stock_threshold: Number(productLike.low_stock_threshold) || 10,
+    updatedAt: new Date().toISOString(),
+    createdAt: idx === -1 ? new Date().toISOString() : (arr[idx]?.createdAt || new Date().toISOString()),
+  };
+
+  if (idx === -1) {
+    arr.push(record);
+  } else {
+    arr[idx] = { ...arr[idx], ...record };
+  }
+  writeRawCatalog(arr);
 }
 
 // ── GET /api/products (public) ──────────────────────────────────────────────
@@ -236,7 +329,10 @@ router.post('/', requireAuth, requireRole('owner', 'manager'), async (req, res) 
         status: 'active', created_at: new Date(), updated_at: new Date(),
       };
       mem.products.push(product);
+      mirrorToJsonCatalog('upsert', product);
       await cacheFlush('products:*');
+      await cacheFlush('store:product*');
+      await cacheFlush('store:products*');
       broadcast({ type: 'product:created', data: { productId, name } });
       return res.status(201).json({ message: 'Product created', productId, product });
     }
@@ -249,8 +345,18 @@ router.post('/', requireAuth, requireRole('owner', 'manager'), async (req, res) 
        JSON.stringify(variantImages || {}), JSON.stringify(allowed_regions || 'ALL'), badge || null]
     );
 
+    // Mirror to JSON catalog so the storefront sees the new product immediately.
+    mirrorToJsonCatalog('upsert', {
+      id: productId, name, slug: slug || productId, category: category || 'coffee',
+      description, image, prices: prices || {}, stock: stock || 0,
+      variants: variants || [], variantImages: variantImages || {},
+      allowed_regions: allowed_regions || 'ALL', badge: badge || null, status: 'active',
+    });
+
     // FIXED: was cacheDel('products:*') — cacheDel only deletes exact key, not patterns
     await cacheFlush('products:*');
+    await cacheFlush('store:product*');
+    await cacheFlush('store:products*');
     broadcast({ type: 'product:created', data: { productId, name } });
 
     if ((stock || 0) <= 0) {
@@ -291,7 +397,10 @@ router.put('/:id', requireAuth, requireRole('owner', 'manager'), async (req, res
       if (status) product.status = status;
       if (category) product.category = category;
       product.updated_at = new Date();
+      mirrorToJsonCatalog('upsert', product);
       await cacheFlush('products:*');
+      await cacheFlush('store:product*');
+      await cacheFlush('store:products*');
       broadcast({ type: 'product:updated', data: { productId: req.params.id } });
       return res.json({ message: 'Product updated', product });
     }
@@ -315,8 +424,16 @@ router.put('/:id', requireAuth, requireRole('owner', 'manager'), async (req, res
        badge !== undefined ? badge : undefined, status, category, req.params.id]
     );
 
+    // Mirror SQL update to JSON catalog (storefront reads JSON).
+    mirrorToJsonCatalog('upsert', {
+      id: req.params.id, name, description, image, prices, stock,
+      variants, variantImages, allowed_regions, badge, status, category,
+    });
+
     // FIXED: was cacheDel — now uses cacheFlush for pattern-based invalidation
     await cacheFlush('products:*');
+    await cacheFlush('store:product*');
+    await cacheFlush('store:products*');
     broadcast({ type: 'product:updated', data: { productId: req.params.id } });
 
     await auditLog(db, {
@@ -344,7 +461,11 @@ router.delete('/:id', requireAuth, requireRole('owner'), async (req, res) => {
     } else {
       await db.query("UPDATE products SET status = 'archived', updated_at = NOW() WHERE id = $1", [req.params.id]);
     }
+    // Archive in JSON catalog by marking status — storefront filters status=='active'.
+    mirrorToJsonCatalog('upsert', { id: req.params.id, status: 'archived' });
     await cacheFlush('products:*');
+    await cacheFlush('store:product*');
+    await cacheFlush('store:products*');
 
     await auditLog(db, {
       userId: req.user.id, username: req.user.username,
@@ -387,7 +508,11 @@ router.patch('/:id/stock', requireAuth, requireRole('owner', 'manager'), async (
       newStock = product.stock;
     }
 
+    // Mirror stock change to JSON catalog.
+    mirrorToJsonCatalog('upsert', { id: req.params.id, stock: newStock });
     await cacheFlush('products:*');
+    await cacheFlush('store:product*');
+    await cacheFlush('store:products*');
     broadcast({ type: 'product:stock_updated', data: { productId: req.params.id, stock: newStock } });
     broadcastInventoryUpdate({
       productId: req.params.id,

@@ -61,7 +61,8 @@ module.exports = {
   esewa: {
     merchantId: process.env.ESEWA_MERCHANT_ID || 'EPAYTEST',
     secretKey: process.env.ESEWA_SECRET_KEY || '8gBm/:&EnhH.1/q',
-    isLive: process.env.ESEWA_LIVE === 'true',
+    // Support both ESEWA_LIVE (legacy) and ESEWA_MODE (current — used by render.yaml)
+    isLive: process.env.ESEWA_LIVE === 'true' || process.env.ESEWA_MODE === 'live',
     testUrl: 'https://rc-epay.esewa.com.np/api/epay/main/v2/form',
     liveUrl: 'https://epay.esewa.com.np/api/epay/main/v2/form',
   },
@@ -71,7 +72,8 @@ module.exports = {
     merchantId: process.env.NABIL_MERCHANT_ID || 'NB_MERCHANT_PLACEHOLDER',
     apiKey: process.env.NABIL_API_KEY || '',
     secretKey: process.env.NABIL_SECRET_KEY || '',
-    isLive: process.env.NABIL_LIVE === 'true',
+    // Support both NABIL_LIVE (legacy) and NABIL_MODE (current — used by render.yaml)
+    isLive: process.env.NABIL_LIVE === 'true' || process.env.NABIL_MODE === 'live',
     sandboxUrl: 'https://payment-sandbox.nabilbank.com/checkout',
     liveUrl: 'https://payment.nabilbank.com/checkout',
   },
@@ -80,7 +82,8 @@ module.exports = {
   khalti: {
     secretKey: process.env.KHALTI_SECRET_KEY || '',
     publicKey: process.env.KHALTI_PUBLIC_KEY || '',
-    isLive: process.env.KHALTI_LIVE === 'true',
+    // Support both KHALTI_LIVE (legacy) and KHALTI_MODE (current — used by render.yaml)
+    isLive: process.env.KHALTI_LIVE === 'true' || process.env.KHALTI_MODE === 'live',
     testUrl: 'https://a.khalti.com/api/v2',
     liveUrl: 'https://khalti.com/api/v2',
   },
